@@ -4,7 +4,7 @@
     "version-string": "0.1.0-dev",
     "description": "Embeddable computer-vision runtime for face & person understanding",
     "homepage": "https://github.com/jvoltci/naina",
-    "license": "MIT",
+    "license": "Apache-2.0",
     "dependencies": [],
     "features": {
         "onnxruntime": {
