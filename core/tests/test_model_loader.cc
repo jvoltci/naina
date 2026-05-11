@@ -93,16 +93,20 @@ int main() {
         EXPECT(p1.string().find("face_detect") != std::string::npos);
     }
 
-    // ── ensure_local with a TBD-hash entry (accepts on-disk file as-is) ──
+    // ── ensure_local: missing file in offline mode → NAINA_E_MODEL_NOT_FOUND ──
     if (fd.has_value()) {
         const auto expected_path = reg.cache_path_for(*fd, "onnx");
         fs::path actual;
         EXPECT(reg.ensure_local(*fd, "onnx", &actual) == NAINA_E_MODEL_NOT_FOUND);
         EXPECT(actual == expected_path);
 
-        // Pre-place a (fake) file; manifest hash is "TBD-...", so it's accepted.
-        write_file(expected_path, "stand-in onnx bytes");
-        EXPECT(reg.ensure_local(*fd, "onnx", &actual) == NAINA_OK);
+        // Pre-place a (fake) file. The manifest now has a real sha256, so the
+        // loader should reject the wrong content with NAINA_E_IO and remove it.
+        write_file(expected_path, "stand-in onnx bytes (wrong content)");
+        const auto rc = reg.ensure_local(*fd, "onnx", &actual);
+        EXPECT(rc == NAINA_E_IO || rc == NAINA_E_MODEL_NOT_FOUND);
+        // File should have been removed after the failed verify.
+        EXPECT(!fs::exists(expected_path));
     }
 
     // ── ensure_local with a real sha256: synthesize an entry for one of

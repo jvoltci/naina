@@ -25,7 +25,21 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_JS_INC})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB} naina::core)
+
+# Backends self-register via static initialisers; force-load the static
+# archive so the linker doesn't drop them (no other code references them).
+if(APPLE)
+    target_link_options(${PROJECT_NAME} PRIVATE
+        "LINKER:-force_load,$<TARGET_FILE:naina-core>")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB} naina::core)
+elseif(MSVC)
+    target_link_options(${PROJECT_NAME} PRIVATE "/WHOLEARCHIVE:naina")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB} naina::core)
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${CMAKE_JS_LIB}
+        -Wl,--whole-archive naina::core -Wl,--no-whole-archive)
+endif()
 
 # node-addon-api header path — discovered via `node -p`.
 execute_process(
