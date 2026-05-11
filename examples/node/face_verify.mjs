@@ -7,7 +7,7 @@
 //
 // Requires `sharp` to decode images:  npm install sharp
 
-import { Engine, similarity } from 'naina';
+import { Engine, similarity } from '@jvoltci/naina';
 import sharp from 'sharp';
 import { argv, exit } from 'node:process';
 

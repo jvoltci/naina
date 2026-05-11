@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "naina"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Embeddable computer-vision runtime for face & person understanding"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -54,8 +54,14 @@ sdist.exclude = [
     "docs/",
     "images/",
     "build/",
+    "bindings/node/",       # Node binding lives in its own npm package
+    "examples/",
+    "benchmarks/results/",
     "**/__pycache__/",
+    "**/.pytest_cache/",
+    "**/node_modules/",
     "**/*.onnx",
+    "**/.DS_Store",
 ]
 
 [tool.scikit-build.cmake.define]

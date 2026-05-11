@@ -28,7 +28,7 @@ Built so you can:
 
 ```bash
 pip install naina       # Python
-npm  install naina      # Node / TypeScript
+npm  install @jvoltci/naina      # Node / TypeScript
 ```
 
 …and ship the same model to a Raspberry Pi, a phone, an Apple Silicon
@@ -69,7 +69,7 @@ print("similarity:", naina.similarity(emb_a, emb_b))   # 0..1, higher = same
 ### Node / TypeScript
 
 ```ts
-import { Engine, similarity, loadImage } from 'naina';
+import { Engine, similarity, loadImage } from '@jvoltci/naina';
 
 const engine = new Engine();
 const a = await loadImage('alice_1.jpg');
