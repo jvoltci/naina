@@ -13,7 +13,8 @@
       "additionalProperties": false,
       "properties": {
         "cache_root":   { "type": "string" },
-        "release_base": { "type": "string", "format": "uri-reference" }
+        "release_base": { "type": "string", "format": "uri-reference" },
+        "opencv_zoo":   { "type": "string", "format": "uri-reference" }
       }
     },
     "models": {
