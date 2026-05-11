@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/JAI/naina/models/manifest.schema.json",
+  "$id": "https://github.com/jvoltci/naina/models/manifest.schema.json",
   "title": "naina Model Registry",
   "description": "Schema for models/registry.yaml. Validates at CI time.",
   "type": "object",

@@ -16,7 +16,7 @@ schema_version: 1
 
 defaults:
   cache_root: "${NAINA_CACHE:-~/.cache/naina/models}"
-  release_base: "https://github.com/JAI/naina/releases/download/models-v1"
+  release_base: "https://github.com/jvoltci/naina/releases/download/models-v1"
 
 models:
 

@@ -4,7 +4,7 @@ Live in-browser face recognition using the same model artifacts naina's
 native runtime will load. Everything runs locally — no images leave the
 browser.
 
-**Live demo:** https://JAI.github.io/naina/
+**Live demo:** https://jvoltci.github.io/naina/
 
 ## What it does
 

@@ -10,7 +10,7 @@
 [![PyPI](https://img.shields.io/badge/pip-naina-blue.svg)]()
 [![npm](https://img.shields.io/badge/npm-naina-cb3837.svg)]()
 
-[**Live demo**](https://JAI.github.io/naina/) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
+[**Live demo**](https://jvoltci.github.io/naina/) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
 
 </div>
 
@@ -83,7 +83,7 @@ console.log('similarity:', similarity(embA, embB));
 
 ### Browser (live demo)
 
-[**naina.github.io/naina**](https://JAI.github.io/naina/) — open it in any
+[**jvoltci.github.io/naina**](https://jvoltci.github.io/naina/) — open it in any
 modern browser and run live face recognition on your webcam, no install.
 Detects **N faces simultaneously**, lets you enrol any of them, then
 recognises them across frames. Same models as the native lib.
