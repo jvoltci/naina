@@ -24,30 +24,49 @@ namespace {
 
 DType ort_to_dtype(ONNXTensorElementDataType t) {
     switch (t) {
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:    return DType::F32;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:  return DType::F16;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16: return DType::BF16;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:    return DType::I64;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:    return DType::I32;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:    return DType::I16;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:     return DType::I8;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:    return DType::U8;
-        case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:     return DType::Bool;
-        default:                                     return DType::F32;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
+            return DType::F32;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:
+            return DType::F16;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16:
+            return DType::BF16;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:
+            return DType::I64;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+            return DType::I32;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:
+            return DType::I16;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:
+            return DType::I8;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
+            return DType::U8;
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:
+            return DType::Bool;
+        default:
+            return DType::F32;
     }
 }
 
 ONNXTensorElementDataType dtype_to_ort(DType d) {
     switch (d) {
-        case DType::F32:  return ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT;
-        case DType::F16:  return ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16;
-        case DType::BF16: return ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16;
-        case DType::I64:  return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64;
-        case DType::I32:  return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32;
-        case DType::I16:  return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16;
-        case DType::I8:   return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8;
-        case DType::U8:   return ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8;
-        case DType::Bool: return ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL;
+        case DType::F32:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT;
+        case DType::F16:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16;
+        case DType::BF16:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16;
+        case DType::I64:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64;
+        case DType::I32:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32;
+        case DType::I16:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16;
+        case DType::I8:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8;
+        case DType::U8:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8;
+        case DType::Bool:
+            return ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL;
     }
     return ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT;
 }
@@ -95,7 +114,7 @@ public:
                 const auto& t = ins[i];
                 in_values.push_back(Ort::Value::CreateTensor(
                     mem_info,
-                    const_cast<void*>(t.data()),       // ORT takes non-const but doesn't mutate
+                    const_cast<void*>(t.data()),  // ORT takes non-const but doesn't mutate
                     t.nbytes(),
                     t.shape().data(),
                     t.shape().size(),
@@ -115,14 +134,11 @@ public:
                 if (ort_to_dtype(info.GetElementType()) != outs[i].dtype()) {
                     return NAINA_E_INVALID_ARG;
                 }
-                const size_t bytes =
-                    info.GetElementCount() * dtype_size(outs[i].dtype());
+                const size_t bytes = info.GetElementCount() * dtype_size(outs[i].dtype());
                 if (bytes > outs[i].nbytes()) {
                     return NAINA_E_INVALID_ARG;
                 }
-                std::memcpy(outs[i].data(),
-                            out_values[i].GetTensorRawData(),
-                            bytes);
+                std::memcpy(outs[i].data(), out_values[i].GetTensorRawData(), bytes);
             }
             return NAINA_OK;
         } catch (const Ort::Exception&) {
@@ -166,9 +182,18 @@ public:
             ort_opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
             // ORT silently ignores EP appends if the EP isn't compiled in,
             // so it's safe to ask for the lot.
-            try { ort_opts.AppendExecutionProvider("CoreML", {}); } catch (...) {}
-            try { ort_opts.AppendExecutionProvider("CUDA",   {}); } catch (...) {}
-            try { ort_opts.AppendExecutionProvider("ROCm",   {}); } catch (...) {}
+            try {
+                ort_opts.AppendExecutionProvider("CoreML", {});
+            } catch (...) {
+            }
+            try {
+                ort_opts.AppendExecutionProvider("CUDA", {});
+            } catch (...) {
+            }
+            try {
+                ort_opts.AppendExecutionProvider("ROCm", {});
+            } catch (...) {
+            }
 
 #if defined(_WIN32)
             std::wstring wpath = model_path.wstring();

@@ -63,12 +63,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install clang-format (pinned via pip wheel)
+        # pip's clang-format ships the upstream LLVM binary; pinning the version
+        # makes local and CI deterministic.
+        run: pip install clang-format==19.1.4
       - name: Check formatting
         run: |
           mapfile -t files < <(git ls-files 'core/**/*.h' 'core/**/*.hpp' 'core/**/*.cc' 'core/**/*.c')
           if [ ${#files[@]} -gt 0 ]; then
+            clang-format --version
             clang-format --dry-run --Werror "${files[@]}"
           fi
 

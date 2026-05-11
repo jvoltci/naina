@@ -10,7 +10,9 @@ namespace naina {
 
 namespace {
 constexpr size_t kArenaAlign = 64;
-size_t round_up(size_t v, size_t a) { return (v + a - 1) & ~(a - 1); }
+size_t round_up(size_t v, size_t a) {
+    return (v + a - 1) & ~(a - 1);
+}
 }  // namespace
 
 Arena::Arena(size_t initial_bytes) {
@@ -42,7 +44,9 @@ void* Arena::allocate(size_t bytes, size_t alignment) {
     return buf_ + aligned;
 }
 
-void Arena::reset() noexcept { used_ = 0; }
+void Arena::reset() noexcept {
+    used_ = 0;
+}
 
 void Arena::grow(size_t need) {
     // Reserved for a future chunked-arena impl; intentionally unused for now.
@@ -87,10 +91,10 @@ Tensor::~Tensor() {
 }
 
 Tensor::Tensor(Tensor&& other) noexcept
-    : data_(other.data_),
-      shape_(std::move(other.shape_)),
-      dtype_(other.dtype_),
-      owned_(other.owned_) {
+    : data_(other.data_)
+    , shape_(std::move(other.shape_))
+    , dtype_(other.dtype_)
+    , owned_(other.owned_) {
     other.data_ = nullptr;
     other.owned_ = false;
 }
