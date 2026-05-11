@@ -1,3 +1,9 @@
-add_executable(test_version test_version.cc)
-target_link_libraries(test_version PRIVATE naina::core naina_warnings)
-add_test(NAME version COMMAND test_version)
+function(naina_add_test name)
+    add_executable(${name} ${name}.cc)
+    target_link_libraries(${name} PRIVATE naina::core naina_warnings)
+    add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
+naina_add_test(test_version)
+naina_add_test(test_tensor)
+naina_add_test(test_backend_registry)
