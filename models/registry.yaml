@@ -1,0 +1,180 @@
+# naina — Model Registry
+#
+# Source of truth for every model the runtime can load.
+#
+#   tier = default   → permissively licensed (Apache-2.0 / MIT). Ships in the
+#                      default install. Safe for commercial use.
+#   tier = research  → max-accuracy SOTA, often non-commercial weights.
+#                      Downloaded only when `naina_config.enable_research_models = 1`.
+#
+# Lookup happens by (task, tier). Multiple model variants per (task, tier) are
+# allowed; the runtime picks based on (device, backend) hints.
+#
+# Validated by models/manifest.schema.json. CI fails on schema violations.
+
+schema_version: 1
+
+defaults:
+  cache_root: "${NAINA_CACHE:-~/.cache/naina/models}"
+  release_base: "https://github.com/JAI/naina/releases/download/models-v1"
+
+models:
+
+  # ─── Face Detection ────────────────────────────────────────────────────
+
+  - id: face_detect.default
+    task: face_detect
+    tier: default
+    arch: yunet
+    license: Apache-2.0
+    paper: "Wu et al. 2023, 'YuNet'"
+    files:
+      onnx:
+        url:    "${release_base}/yunet_n_640_640_2024.onnx"
+        sha256: "TBD-after-first-release-upload"
+        bytes:  337000
+      ncnn_param:
+        url:    "${release_base}/yunet_n_640_640.param"
+        sha256: "TBD"
+      ncnn_bin:
+        url:    "${release_base}/yunet_n_640_640.bin"
+        sha256: "TBD"
+    input:
+      shape:     [1, 3, -1, -1]      # dynamic H/W
+      pixfmt:    rgb
+      dtype:     f32
+      preprocess:
+        mean:    [0.0, 0.0, 0.0]
+        scale:   [1.0, 1.0, 1.0]
+        # YuNet wants raw uint8 -> float32 with no normalization; resize to 640x640
+        resize:  {mode: letterbox, target: [640, 640], pad_value: 0}
+    output:
+      type: face_detections
+      decode:
+        # YuNet anchor-free; 3 strides, each emits (cls, bbox, kps)
+        strides:     [8, 16, 32]
+        num_kps:     5
+        conf_thresh: 0.6
+        nms_iou:     0.3
+    benchmark_placeholders:
+      widerface_easy:   0.0
+      widerface_medium: 0.0
+      widerface_hard:   0.0
+      latency_ms_pi5_ncnn_int8: 0.0
+      latency_ms_mac_m3_coreml: 0.0
+      latency_ms_x86_ort_cpu:   0.0
+
+  - id: face_detect.research
+    task: face_detect
+    tier: research
+    arch: scrfd_10g
+    license: non-commercial
+    paper: "Guo et al. 2021, 'Sample and Computation Redistribution for Efficient Face Detection'"
+    files:
+      onnx:
+        url:    "${release_base}/scrfd_10g_bnkps.onnx"
+        sha256: "TBD"
+        bytes:  16000000
+    input:
+      shape:  [1, 3, 640, 640]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        mean:  [127.5, 127.5, 127.5]
+        scale: [128.0, 128.0, 128.0]
+        resize: {mode: letterbox, target: [640, 640], pad_value: 0}
+    output:
+      type: face_detections
+      decode:
+        strides:     [8, 16, 32]
+        num_kps:     5
+        conf_thresh: 0.5
+        nms_iou:     0.4
+    benchmark_placeholders:
+      widerface_easy:   0.0
+      widerface_medium: 0.0
+      widerface_hard:   0.0
+
+  # ─── Face Embedding ────────────────────────────────────────────────────
+
+  - id: face_embed.default
+    task: face_embed
+    tier: default
+    arch: edgeface_xs
+    license: MIT
+    paper: "George et al. 2024, 'EdgeFace: Efficient Face Recognition Model for Edge Devices'"
+    files:
+      onnx:
+        url:    "${release_base}/edgeface_xs_gamma_06.onnx"
+        sha256: "TBD"
+        bytes:  6700000
+    input:
+      shape:  [1, 3, 112, 112]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        mean:  [0.5, 0.5, 0.5]
+        scale: [0.5, 0.5, 0.5]
+        align: {method: similarity_5pt, target: [112, 112]}
+    output:
+      type:    embedding
+      dim:     512
+      l2norm:  true
+    benchmark_placeholders:
+      ijbc_tar_at_far_1e_4: 0.0
+      lfw_accuracy:         0.0
+      latency_ms_pi5_ncnn_int8: 0.0
+
+  - id: face_embed.research
+    task: face_embed
+    tier: research
+    arch: transface_l
+    license: non-commercial
+    paper: "Dan et al. 2023, 'TransFace: Calibrating Transformer Training for Face Recognition'"
+    files:
+      onnx:
+        url:    "${release_base}/transface_l_glint360k.onnx"
+        sha256: "TBD"
+        bytes:  340000000
+    input:
+      shape:  [1, 3, 112, 112]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        mean:  [0.5, 0.5, 0.5]
+        scale: [0.5, 0.5, 0.5]
+        align: {method: similarity_5pt, target: [112, 112]}
+    output:
+      type:    embedding
+      dim:     512
+      l2norm:  true
+    benchmark_placeholders:
+      ijbc_tar_at_far_1e_4: 0.0
+      lfw_accuracy:         0.0
+
+  # ─── Face Liveness / Anti-spoofing ─────────────────────────────────────
+
+  - id: face_liveness.default
+    task: face_liveness
+    tier: default
+    arch: minifasnet_v2
+    license: Apache-2.0
+    paper: "Yu et al. 2021, 'MiniFASNet'"
+    files:
+      onnx:
+        url:    "${release_base}/minifasnet_v2.onnx"
+        sha256: "TBD"
+        bytes:  1900000
+    input:
+      shape:  [1, 3, 80, 80]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        mean:  [0.0, 0.0, 0.0]
+        scale: [255.0, 255.0, 255.0]
+        crop:  {method: face_bbox_expand, scale: 2.7, target: [80, 80]}
+    output:
+      type: liveness_score
+      live_class_index: 1
+    benchmark_placeholders:
+      casia_surf_acer: 0.0

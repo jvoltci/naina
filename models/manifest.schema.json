@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/JAI/naina/models/manifest.schema.json",
+  "title": "naina Model Registry",
+  "description": "Schema for models/registry.yaml. Validates at CI time.",
+  "type": "object",
+  "required": ["schema_version", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cache_root":   { "type": "string" },
+        "release_base": { "type": "string", "format": "uri-reference" }
+      }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/model" }
+    }
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "required": ["id", "task", "tier", "arch", "license", "files", "input", "output"],
+      "additionalProperties": false,
+      "properties": {
+        "id":      { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
+        "task":    { "enum": ["face_detect", "face_embed", "face_liveness",
+                              "person_detect", "person_reid"] },
+        "tier":    { "enum": ["default", "research"] },
+        "arch":    { "type": "string" },
+        "license": { "type": "string" },
+        "paper":   { "type": "string" },
+        "files":   { "$ref": "#/$defs/files" },
+        "input":   { "$ref": "#/$defs/input" },
+        "output":  { "$ref": "#/$defs/output" },
+        "benchmark_placeholders": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "onnx":       { "$ref": "#/$defs/file_entry" },
+        "ncnn_param": { "$ref": "#/$defs/file_entry" },
+        "ncnn_bin":   { "$ref": "#/$defs/file_entry" },
+        "coreml":     { "$ref": "#/$defs/file_entry" },
+        "tensorrt":   { "$ref": "#/$defs/file_entry" },
+        "openvino":   { "$ref": "#/$defs/file_entry" }
+      }
+    },
+    "file_entry": {
+      "type": "object",
+      "required": ["url", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "url":    { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^([A-Fa-f0-9]{64}|TBD.*)$" },
+        "bytes":  { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "input": {
+      "type": "object",
+      "required": ["shape", "pixfmt", "dtype"],
+      "additionalProperties": false,
+      "properties": {
+        "shape":      { "type": "array", "items": { "type": "integer" }, "minItems": 1 },
+        "pixfmt":     { "enum": ["rgb", "bgr", "nv12", "yuv420p", "gray"] },
+        "dtype":      { "enum": ["f32", "f16", "u8"] },
+        "preprocess": { "$ref": "#/$defs/preprocess" }
+      }
+    },
+    "preprocess": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mean":   { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "scale":  { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "resize": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode":      { "enum": ["letterbox", "stretch", "center_crop"] },
+            "target":    { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+            "pad_value": { "type": "integer" }
+          }
+        },
+        "align": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["similarity_5pt"] },
+            "target": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }
+          }
+        },
+        "crop": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["face_bbox_expand"] },
+            "scale":  { "type": "number" },
+            "target": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }
+          }
+        }
+      }
+    },
+
+    "output": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type":   { "enum": ["face_detections", "person_detections",
+                             "embedding", "liveness_score"] },
+        "decode": {
+          "type": "object",
+          "properties": {
+            "strides":     { "type": "array", "items": { "type": "integer" } },
+            "num_kps":     { "type": "integer", "minimum": 0 },
+            "conf_thresh": { "type": "number", "minimum": 0, "maximum": 1 },
+            "nms_iou":     { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "dim":              { "type": "integer", "minimum": 1 },
+        "l2norm":           { "type": "boolean" },
+        "live_class_index": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
