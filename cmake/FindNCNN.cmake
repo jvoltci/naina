@@ -8,6 +8,21 @@
 
 include(FindPackageHandleStandardArgs)
 
+# NCNN's CMake config references OpenMP::OpenMP_CXX; ensure it exists before
+# the consume call. On Apple's clang, point find_package(OpenMP) at Homebrew's
+# libomp so it can be located.
+if(APPLE AND NOT TARGET OpenMP::OpenMP_CXX)
+    foreach(_omp_root /opt/homebrew/opt/libomp /usr/local/opt/libomp)
+        if(EXISTS "${_omp_root}/include/omp.h")
+            set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${_omp_root}/include")
+            set(OpenMP_CXX_LIB_NAMES "omp")
+            set(OpenMP_omp_LIBRARY "${_omp_root}/lib/libomp.dylib")
+            break()
+        endif()
+    endforeach()
+endif()
+find_package(OpenMP QUIET)
+
 # Config-mode first (works for vcpkg, brew, build-from-source installs).
 find_package(ncnn QUIET CONFIG)
 
