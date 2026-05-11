@@ -10,13 +10,19 @@ set(NAINA_PUBLIC_HEADERS
     include/naina/naina.hpp
     include/naina/backend.hpp
     include/naina/tensor.hpp
+    include/naina/model_loader.hpp
 )
 
 set(NAINA_SOURCES
     src/version.cc
     src/tensor.cc
     src/backend_registry.cc
+    src/sha256.cc
+    src/model_loader.cc
 )
+
+# yaml-cpp is required for parsing models/registry.yaml.
+find_package(yaml-cpp REQUIRED)
 
 # Backends are added conditionally; each backend file is gated on its option
 # and Find* result, so a build without ONNX Runtime / NCNN still produces a
@@ -46,7 +52,7 @@ target_include_directories(naina-core
 )
 
 target_compile_features(naina-core PUBLIC cxx_std_20)
-target_link_libraries(naina-core PRIVATE naina_warnings)
+target_link_libraries(naina-core PRIVATE naina_warnings yaml-cpp::yaml-cpp)
 
 # Export symbols on Windows, hide on Unix (visibility is set at project level).
 set_target_properties(naina-core PROPERTIES
