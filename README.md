@@ -83,6 +83,8 @@ const embB   = await engine.embedFace(b, facesB[0]);
 console.log('similarity:', similarity(embA, embB));
 ```
 
+**More examples:** [examples/](examples/) — `face_verify` in Python and Node, plus notes on threshold selection.
+
 ### Browser (live demo)
 
 [**jvoltci.github.io/naina**](https://jvoltci.github.io/naina/) — open it in any
