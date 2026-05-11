@@ -1,0 +1,79 @@
+# Build outputs
+build/
+out/
+cmake-build-*/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.pdb
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Node / TypeScript
+node_modules/
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnp.*
+prebuilds/
+*.tgz
+package-lock.json.bak
+
+# Vite / web demo
+demo/web/dist/
+demo/web/.vite/
+
+# Model cache (downloaded weights live in ~/.cache/naina by default,
+# but ignore any local model drops too)
+.cache/
+models/cache/
+models/downloaded/
+*.onnx
+*.param
+*.bin
+*.mlmodel
+*.mlmodelc
+*.engine
+# Allow our hand-written manifests
+!models/registry.yaml
+!models/manifest.schema.json
+
+# Datasets (benchmarks)
+benchmarks/datasets/data/
+benchmarks/results/*.local.json
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# CMake user presets
+CMakeUserPresets.json
