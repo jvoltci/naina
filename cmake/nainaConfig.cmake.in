@@ -1,0 +1,19 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Re-locate backend deps when consumer asks for them. We only require the ones
+# the build was configured with.
+set(NAINA_WITH_ONNXRUNTIME @NAINA_WITH_ONNXRUNTIME@)
+set(NAINA_WITH_NCNN        @NAINA_WITH_NCNN@)
+
+if(NAINA_WITH_ONNXRUNTIME)
+    find_dependency(ONNXRuntime)
+endif()
+if(NAINA_WITH_NCNN)
+    find_dependency(NCNN)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/nainaTargets.cmake")
+
+check_required_components(naina)

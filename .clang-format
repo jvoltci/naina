@@ -1,0 +1,50 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++20
+
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+
+BreakBeforeBraces: Attach
+BreakConstructorInitializers: BeforeComma
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+QualifierAlignment: Custom
+QualifierOrder: ['static', 'inline', 'constexpr', 'const', 'volatile', 'type']
+
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive
+IncludeCategories:
+  - Regex: '^"naina/'
+    Priority: 1
+  - Regex: '^".*"'
+    Priority: 2
+  - Regex: '^<[a-z_]+>'     # C++ standard headers
+    Priority: 4
+  - Regex: '^<.*\\.h>'      # C-style system headers
+    Priority: 5
+  - Regex: '^<.*>'          # third-party
+    Priority: 3
+
+SpaceAfterTemplateKeyword: true
+SpaceBeforeCpp11BracedList: false
+SpacesInContainerLiterals: false
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
