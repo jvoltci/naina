@@ -31,6 +31,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # Backends start OFF; they turn ON in Phase C when their wrappers land.
 option(NAINA_BUILD_TESTS         "Build naina unit tests"          ON)
 option(NAINA_BUILD_SHARED        "Build naina as a shared library" ON)
+option(NAINA_BUILD_PYTHON        "Build the Python binding (naina-py)" OFF)
 option(NAINA_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors" ON)
 
 option(NAINA_WITH_ONNXRUNTIME    "Enable ONNX Runtime backend" OFF)
@@ -69,36 +70,46 @@ if(NAINA_BUILD_TESTS)
     add_subdirectory(core/tests)
 endif()
 
+if(NAINA_BUILD_PYTHON)
+    add_subdirectory(bindings/python)
+endif()
+
 # ─── Install + export ──────────────────────────────────────────────────
 
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+# C++ install / package-config rules fire for the standalone library
+# install, NOT for the Python wheel build (where we only want the .so and
+# the registry.yaml). NAINA_BUILD_PYTHON suppresses these so the wheel
+# stays small and self-contained.
+if(NOT NAINA_BUILD_PYTHON)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
 
-set(NAINA_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/naina")
+    set(NAINA_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/naina")
 
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/nainaConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/nainaConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
 
-configure_package_config_file(
-    cmake/nainaConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/nainaConfig.cmake"
-    INSTALL_DESTINATION "${NAINA_INSTALL_CMAKEDIR}"
-)
+    configure_package_config_file(
+        cmake/nainaConfig.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/nainaConfig.cmake"
+        INSTALL_DESTINATION "${NAINA_INSTALL_CMAKEDIR}"
+    )
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/nainaConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/nainaConfigVersion.cmake"
-    DESTINATION "${NAINA_INSTALL_CMAKEDIR}"
-)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/nainaConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/nainaConfigVersion.cmake"
+        DESTINATION "${NAINA_INSTALL_CMAKEDIR}"
+    )
 
-install(EXPORT naina-targets
-    FILE nainaTargets.cmake
-    NAMESPACE naina::
-    DESTINATION "${NAINA_INSTALL_CMAKEDIR}"
-)
+    install(EXPORT naina-targets
+        FILE nainaTargets.cmake
+        NAMESPACE naina::
+        DESTINATION "${NAINA_INSTALL_CMAKEDIR}"
+    )
+endif()
 
 # ─── Summary ───────────────────────────────────────────────────────────
 

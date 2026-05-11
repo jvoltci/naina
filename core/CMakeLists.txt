@@ -58,7 +58,14 @@ target_include_directories(naina-core
 )
 
 target_compile_features(naina-core PUBLIC cxx_std_20)
-target_link_libraries(naina-core PRIVATE naina_warnings yaml-cpp::yaml-cpp CURL::libcurl)
+# naina_warnings is a build-only INTERFACE target (compile flags). Wrap it
+# in BUILD_INTERFACE so it isn't required by the install/export set.
+target_link_libraries(naina-core
+    PRIVATE
+        $<BUILD_INTERFACE:naina_warnings>
+        yaml-cpp::yaml-cpp
+        CURL::libcurl
+)
 
 # Export symbols on Windows, hide on Unix (visibility is set at project level).
 set_target_properties(naina-core PROPERTIES
@@ -84,10 +91,13 @@ if(NAINA_WITH_NCNN)
     target_compile_definitions(naina-core PRIVATE NAINA_HAVE_NCNN=1)
 endif()
 
-install(TARGETS naina-core
-    EXPORT naina-targets
-    RUNTIME       DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+if(NOT NAINA_BUILD_PYTHON)
+    include(GNUInstallDirs)
+    install(TARGETS naina-core
+        EXPORT naina-targets
+        RUNTIME       DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+endif()
