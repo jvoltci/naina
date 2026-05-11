@@ -19,10 +19,16 @@ set(NAINA_SOURCES
     src/backend_registry.cc
     src/sha256.cc
     src/model_loader.cc
+    src/image_ops.cc
+    src/api.cc
+    src/api_cpp.cc
+    src/modules/face_detect.cc
+    src/modules/face_embed.cc
 )
 
-# yaml-cpp is required for parsing models/registry.yaml.
+# yaml-cpp parses models/registry.yaml; libcurl fetches model weights.
 find_package(yaml-cpp REQUIRED)
+find_package(CURL REQUIRED)
 
 # Backends are added conditionally; each backend file is gated on its option
 # and Find* result, so a build without ONNX Runtime / NCNN still produces a
@@ -52,7 +58,7 @@ target_include_directories(naina-core
 )
 
 target_compile_features(naina-core PUBLIC cxx_std_20)
-target_link_libraries(naina-core PRIVATE naina_warnings yaml-cpp::yaml-cpp)
+target_link_libraries(naina-core PRIVATE naina_warnings yaml-cpp::yaml-cpp CURL::libcurl)
 
 # Export symbols on Windows, hide on Unix (visibility is set at project level).
 set_target_properties(naina-core PROPERTIES

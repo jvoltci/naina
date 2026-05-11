@@ -42,10 +42,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake libyaml-cpp-dev
+          sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
 
       - name: Install build deps (macOS)
         if: runner.os == 'macOS'
+        # libcurl ships with macOS; nothing extra to install for it.
         run: brew install ninja cmake yaml-cpp
 
       - name: Configure

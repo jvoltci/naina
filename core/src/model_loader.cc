@@ -4,12 +4,16 @@
 
 #include "sha256.hpp"
 
+#include <curl/curl.h>
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -97,6 +101,66 @@ std::string lower(std::string s) {
         return static_cast<char>(std::tolower(c));
     });
     return s;
+}
+
+// One-time libcurl global init. Thread-safe via std::call_once.
+void curl_global_init_once() {
+    static std::once_flag flag;
+    std::call_once(flag, [] { curl_global_init(CURL_GLOBAL_DEFAULT); });
+}
+
+size_t curl_write_to_file(void* buf, size_t size, size_t nmemb, void* user) {
+    auto* fp = static_cast<std::FILE*>(user);
+    return std::fwrite(buf, size, nmemb, fp);
+}
+
+// Download `url` → `dest` atomically (writes to dest+".part", renames on
+// success). Returns NAINA_OK or an error code.
+naina_status download_atomic(const std::string& url, const fs::path& dest) {
+    curl_global_init_once();
+
+    std::error_code ec;
+    fs::create_directories(dest.parent_path(), ec);
+
+    const fs::path tmp = dest.string() + ".part";
+    std::FILE* fp = std::fopen(tmp.string().c_str(), "wb");
+    if (fp == nullptr) {
+        return NAINA_E_IO;
+    }
+
+    CURL* curl = curl_easy_init();
+    if (curl == nullptr) {
+        std::fclose(fp);
+        std::remove(tmp.string().c_str());
+        return NAINA_E_IO;
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_to_file);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 60L);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1024L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "naina/0.1 (+https://github.com/jvoltci/naina)");
+
+    const CURLcode rc = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    std::fclose(fp);
+
+    if (rc != CURLE_OK) {
+        std::remove(tmp.string().c_str());
+        return rc == CURLE_OPERATION_TIMEDOUT ? NAINA_E_IO : NAINA_E_IO;
+    }
+
+    // Atomic move into final location.
+    fs::rename(tmp, dest, ec);
+    if (ec) {
+        std::remove(tmp.string().c_str());
+        return NAINA_E_IO;
+    }
+    return NAINA_OK;
 }
 
 }  // namespace
@@ -195,26 +259,47 @@ naina_status ModelRegistry::ensure_local(const ModelEntry& m,
     }
 
     std::error_code ec;
-    if (!fs::exists(path, ec) || fs::is_directory(path, ec)) {
-        // Download is not implemented yet; the caller is expected to
-        // pre-place the file at the returned path.
+    const bool exists = fs::exists(path, ec) && !fs::is_directory(path, ec);
+
+    auto verify_or_remove = [&]() -> naina_status {
+        if (sha256_unverified(f.sha256)) {
+            return NAINA_OK;
+        }
+        try {
+            if (internal::sha256_file_hex(path) == f.sha256) {
+                return NAINA_OK;
+            }
+        } catch (const std::exception&) {
+            // fall through and try to recover
+        }
+        // Hash mismatch or unreadable: remove and signal IO error.
+        std::error_code rmec;
+        fs::remove(path, rmec);
+        return NAINA_E_IO;
+    };
+
+    if (exists) {
+        const naina_status s = verify_or_remove();
+        if (s == NAINA_OK) {
+            return NAINA_OK;
+        }
+        // Fall through to re-download if hash mismatched.
+    }
+
+    if (f.url.empty()) {
         return NAINA_E_MODEL_NOT_FOUND;
     }
 
-    if (sha256_unverified(f.sha256)) {
-        // Manifest hash is a placeholder; trust the on-disk file.
-        return NAINA_OK;
+    // NAINA_OFFLINE=1 disables network — useful for tests and air-gapped runs.
+    if (const char* off = std::getenv("NAINA_OFFLINE"); off != nullptr && off[0] != '0') {
+        return NAINA_E_MODEL_NOT_FOUND;
     }
 
-    try {
-        const std::string actual = internal::sha256_file_hex(path);
-        if (actual != f.sha256) {
-            return NAINA_E_IO;
-        }
-    } catch (const std::exception&) {
-        return NAINA_E_IO;
+    const naina_status dl = download_atomic(f.url, path);
+    if (dl != NAINA_OK) {
+        return dl;
     }
-    return NAINA_OK;
+    return verify_or_remove();
 }
 
 }  // namespace naina
