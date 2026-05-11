@@ -1,2 +1,2 @@
 # naina
-An advanced computer vision module.
+An advance computer vision module.
