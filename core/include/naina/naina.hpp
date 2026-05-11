@@ -15,12 +15,16 @@
 
 namespace naina {
 
-enum class Backend  { Auto, ONNXRuntime, OpenVINO, NCNN, MNN, CoreML, TensorRT, ExecuTorch };
-enum class Device   { Auto, CPU, GPU, NPU };
-enum class PixFmt   { RGB8, BGR8, NV12, YUV420P, Gray8 };
+enum class Backend { Auto, ONNXRuntime, OpenVINO, NCNN, MNN, CoreML, TensorRT, ExecuTorch };
+enum class Device { Auto, CPU, GPU, NPU };
+enum class PixFmt { RGB8, BGR8, NV12, YUV420P, Gray8 };
 
-struct BBox  { float x, y, w, h, score; };
-struct Point { float x, y; };
+struct BBox {
+    float x, y, w, h, score;
+};
+struct Point {
+    float x, y;
+};
 
 struct Face {
     BBox bbox;
@@ -37,9 +41,9 @@ struct Person {
 
 struct Config {
     Backend backend = Backend::Auto;
-    Device  device  = Device::Auto;
+    Device device = Device::Auto;
     std::filesystem::path models_root;
-    int  num_threads = 0;
+    int num_threads = 0;
     bool enable_research_models = false;
 };
 
@@ -48,6 +52,7 @@ public:
     Error(naina_status s, const char* where)
         : std::runtime_error(std::string(where) + ": " + naina_status_str(s)), code_(s) {}
     naina_status code() const noexcept { return code_; }
+
 private:
     naina_status code_;
 };
@@ -63,6 +68,7 @@ public:
     Image& operator=(const Image&) = delete;
 
     const naina_image_t* handle() const noexcept { return h_; }
+
 private:
     naina_image_t* h_ = nullptr;
 };
@@ -73,6 +79,7 @@ public:
     ~Tracker();
     Tracker(Tracker&&) noexcept;
     Tracker& operator=(Tracker&&) noexcept;
+
 private:
     friend class Engine;
     explicit Tracker(naina_tracker_t* t) : h_(t) {}
@@ -108,10 +115,11 @@ public:
     }
 
     naina_ctx_t* raw() noexcept { return ctx_; }
+
 private:
     naina_ctx_t* ctx_ = nullptr;
 };
 
-} // namespace naina
+}  // namespace naina
 
-#endif // NAINA_HPP
+#endif  // NAINA_HPP

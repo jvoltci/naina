@@ -21,15 +21,15 @@ namespace naina::backend {
 
 struct TensorDesc {
     std::string name;
-    std::vector<int64_t> shape;   // -1 for dynamic dims
+    std::vector<int64_t> shape;  // -1 for dynamic dims
     DType dtype;
 };
 
 struct SessionOptions {
-    Device device           = Device::Auto;
-    int    num_threads      = 0;       // 0 = backend default
-    bool   enable_fp16      = true;    // backends that support it
-    bool   enable_int8      = false;   // requires quantized weights
+    Device device = Device::Auto;
+    int num_threads = 0;                                     // 0 = backend default
+    bool enable_fp16 = true;                                 // backends that support it
+    bool enable_int8 = false;                                // requires quantized weights
     std::vector<std::pair<std::string, std::string>> extra;  // backend-specific
 };
 
@@ -38,13 +38,12 @@ class ISession {
 public:
     virtual ~ISession() = default;
 
-    virtual std::vector<TensorDesc> inputs()  const = 0;
+    virtual std::vector<TensorDesc> inputs() const = 0;
     virtual std::vector<TensorDesc> outputs() const = 0;
 
     // Synchronous run. Tensors must match inputs()/outputs() in count and dtype;
     // shapes may resolve dynamic dims. Backend owns no tensor memory.
-    virtual naina_status run(Span<const Tensor> inputs,
-                             Span<Tensor>       outputs) = 0;
+    virtual naina_status run(Span<const Tensor> inputs, Span<Tensor> outputs) = 0;
 };
 
 // Backend = factory for ISessions, plus a capability probe.
@@ -52,9 +51,9 @@ class IBackend {
 public:
     virtual ~IBackend() = default;
 
-    virtual std::string_view name()    const = 0;          // "onnxruntime", "ncnn", ...
-    virtual naina_backend    id()      const = 0;          // matches the C enum
-    virtual bool             available() const = 0;        // runtime probe
+    virtual std::string_view name() const = 0;  // "onnxruntime", "ncnn", ...
+    virtual naina_backend id() const = 0;       // matches the C enum
+    virtual bool available() const = 0;         // runtime probe
 
     // Model path is what the manifest points at. Backend interprets it
     // (.onnx, .param/.bin pair, .mlmodelc, .engine, ...).
@@ -91,17 +90,15 @@ std::vector<IBackend*> available_backends();
 //
 // where OnnxRuntimeBackend is a class deriving from IBackend with a default
 // constructor.
-#define NAINA_REGISTER_BACKEND(ClassName)                                       \
-    namespace {                                                                 \
-    struct ClassName##_Registrar {                                              \
-        ClassName##_Registrar() {                                               \
-            ::naina::backend::register_backend([] {                             \
-                return std::unique_ptr<::naina::backend::IBackend>(             \
-                    new ClassName());                                           \
-            });                                                                 \
-        }                                                                       \
-    };                                                                          \
-    static ClassName##_Registrar g_##ClassName##_registrar;                     \
+#define NAINA_REGISTER_BACKEND(ClassName)                                                     \
+    namespace {                                                                               \
+    struct ClassName##_Registrar {                                                            \
+        ClassName##_Registrar() {                                                             \
+            ::naina::backend::register_backend(                                               \
+                [] { return std::unique_ptr<::naina::backend::IBackend>(new ClassName()); }); \
+        }                                                                                     \
+    };                                                                                        \
+    static ClassName##_Registrar g_##ClassName##_registrar;                                   \
     }
 
 #endif  // NAINA_BACKEND_HPP

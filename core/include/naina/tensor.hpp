@@ -33,15 +33,24 @@ enum class DType : uint8_t {
 
 constexpr size_t dtype_size(DType d) noexcept {
     switch (d) {
-        case DType::F32:  return 4;
-        case DType::F16:  return 2;
-        case DType::BF16: return 2;
-        case DType::I64:  return 8;
-        case DType::I32:  return 4;
-        case DType::I16:  return 2;
-        case DType::I8:   return 1;
-        case DType::U8:   return 1;
-        case DType::Bool: return 1;
+        case DType::F32:
+            return 4;
+        case DType::F16:
+            return 2;
+        case DType::BF16:
+            return 2;
+        case DType::I64:
+            return 8;
+        case DType::I32:
+            return 4;
+        case DType::I16:
+            return 2;
+        case DType::I8:
+            return 1;
+        case DType::U8:
+            return 1;
+        case DType::Bool:
+            return 1;
     }
     return 0;
 }
@@ -57,21 +66,20 @@ public:
     template <size_t N>
     constexpr Span(T (&arr)[N]) noexcept : data_(arr), size_(N) {}
 
-    Span(std::vector<std::remove_const_t<T>>& v) noexcept
-        : data_(v.data()), size_(v.size()) {}
+    Span(std::vector<std::remove_const_t<T>>& v) noexcept : data_(v.data()), size_(v.size()) {}
     Span(const std::vector<std::remove_const_t<T>>& v) noexcept
         : data_(v.data()), size_(v.size()) {}
 
-    constexpr T*     data()  const noexcept { return data_; }
-    constexpr size_t size()  const noexcept { return size_; }
-    constexpr bool   empty() const noexcept { return size_ == 0; }
+    constexpr T* data() const noexcept { return data_; }
+    constexpr size_t size() const noexcept { return size_; }
+    constexpr bool empty() const noexcept { return size_ == 0; }
 
     constexpr T& operator[](size_t i) const noexcept { return data_[i]; }
     constexpr T* begin() const noexcept { return data_; }
-    constexpr T* end()   const noexcept { return data_ + size_; }
+    constexpr T* end() const noexcept { return data_ + size_; }
 
 private:
-    T*     data_ = nullptr;
+    T* data_ = nullptr;
     size_t size_ = 0;
 };
 
@@ -85,7 +93,7 @@ public:
     Arena& operator=(const Arena&) = delete;
 
     void* allocate(size_t bytes, size_t alignment = 16);
-    void  reset() noexcept;
+    void reset() noexcept;
     size_t used() const noexcept { return used_; }
     size_t capacity() const noexcept { return cap_; }
 
@@ -93,8 +101,8 @@ private:
     void grow(size_t need);
 
     std::byte* buf_ = nullptr;
-    size_t     used_ = 0;
-    size_t     cap_  = 0;
+    size_t used_ = 0;
+    size_t cap_ = 0;
 };
 
 // Tensor: shape + dtype + non-owning OR owning buffer. Backends consume tensors
@@ -110,7 +118,7 @@ public:
 
     static Tensor view(void* data, std::vector<int64_t> shape, DType dtype) {
         Tensor t;
-        t.data_  = data;
+        t.data_ = data;
         t.shape_ = std::move(shape);
         t.dtype_ = dtype;
         t.owned_ = false;
@@ -126,28 +134,34 @@ public:
     Tensor(const Tensor&) = delete;
     Tensor& operator=(const Tensor&) = delete;
 
-    void*       data()       noexcept { return data_; }
+    void* data() noexcept { return data_; }
     const void* data() const noexcept { return data_; }
 
-    template <typename T> T*       as()       noexcept { return static_cast<T*>(data_); }
-    template <typename T> const T* as() const noexcept { return static_cast<const T*>(data_); }
+    template <typename T>
+    T* as() noexcept {
+        return static_cast<T*>(data_);
+    }
+    template <typename T>
+    const T* as() const noexcept {
+        return static_cast<const T*>(data_);
+    }
 
     DType dtype() const noexcept { return dtype_; }
     const std::vector<int64_t>& shape() const noexcept { return shape_; }
 
     size_t numel() const noexcept {
-        if (shape_.empty()) return 0;
-        return std::accumulate(shape_.begin(), shape_.end(),
-                               size_t{1}, std::multiplies<size_t>());
+        if (shape_.empty())
+            return 0;
+        return std::accumulate(shape_.begin(), shape_.end(), size_t{1}, std::multiplies<size_t>());
     }
     size_t nbytes() const noexcept { return numel() * dtype_size(dtype_); }
-    bool   empty()  const noexcept { return data_ == nullptr || numel() == 0; }
+    bool empty() const noexcept { return data_ == nullptr || numel() == 0; }
 
 private:
     void* data_ = nullptr;
     std::vector<int64_t> shape_;
     DType dtype_ = DType::F32;
-    bool  owned_ = false;  // free in dtor iff true
+    bool owned_ = false;  // free in dtor iff true
 };
 
 }  // namespace naina

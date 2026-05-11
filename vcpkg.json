@@ -1,0 +1,29 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "name": "naina",
+    "version-string": "0.1.0-dev",
+    "description": "Embeddable computer-vision runtime for face & person understanding",
+    "homepage": "https://github.com/jvoltci/naina",
+    "license": "MIT",
+    "dependencies": [],
+    "features": {
+        "onnxruntime": {
+            "description": "ONNX Runtime backend",
+            "dependencies": [ "onnxruntime-gpu" ]
+        },
+        "ncnn": {
+            "description": "NCNN backend (Tencent, edge CPU/GPU)",
+            "dependencies": [
+                { "name": "ncnn", "features": [ "vulkan" ] }
+            ]
+        },
+        "yaml": {
+            "description": "YAML manifest parser (Phase C)",
+            "dependencies": [ "yaml-cpp" ]
+        },
+        "http": {
+            "description": "Model downloader (Phase C)",
+            "dependencies": [ "cpp-httplib" ]
+        }
+    }
+}

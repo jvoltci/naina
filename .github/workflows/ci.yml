@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+    paths-ignore:
+      - 'demo/**'
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    paths-ignore:
+      - 'demo/**'
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.preset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  preset: linux-x86_64,       cc: gcc,   cxx: g++ }
+          - { os: ubuntu-latest,  preset: linux-x86_64-debug, cc: clang, cxx: clang++ }
+          - { os: macos-14,       preset: macos-arm64,        cc: clang, cxx: clang++ }
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      CMAKE_GENERATOR: Ninja
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake
+
+      - name: Install build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja cmake
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset == 'macos-arm64' && 'macos-arm64' || 'linux-x86_64' }}
+        continue-on-error: false
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Check formatting
+        run: |
+          mapfile -t files < <(git ls-files 'core/*.h' 'core/*.hpp' 'core/*.cc' 'core/*.c')
+          if [ ${#files[@]} -gt 0 ]; then
+            clang-format --dry-run --Werror "${files[@]}"
+          fi
+
+  manifest-schema:
+    name: validate model registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install validators
+        run: pip install jsonschema pyyaml
+      - name: Validate models/registry.yaml
+        run: |
+          python - <<'PY'
+          import json, yaml, sys
+          from jsonschema import Draft202012Validator
+          schema = json.load(open('models/manifest.schema.json'))
+          data   = yaml.safe_load(open('models/registry.yaml'))
+          errs = sorted(Draft202012Validator(schema).iter_errors(data),
+                        key=lambda e: list(e.path))
+          if errs:
+              for e in errs:
+                  print(f"  • {'/'.join(str(p) for p in e.path) or '<root>'}: {e.message}")
+              sys.exit(1)
+          print("registry.yaml validates")
+          PY
