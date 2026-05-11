@@ -47,7 +47,7 @@ Face detect + align + embed + verify + liveness, both backends, Python
 - [ ] `face_detect` (YuNet default, SCRFD research)
 - [ ] `face_align` (5-pt similarity transform, SIMD)
 - [ ] `face_embed` (EdgeFace default, TransFace research)
-- [ ] `face_liveness` (MiniFASNet)
+- [x] `face_liveness` module implemented (MiniFASNet-compatible; model URL pending upload)
 - [ ] Python wheels: `pip install naina`
 - [ ] Node prebuilds: `npm install naina`
 - [ ] Eval harness: WIDERFACE, IJB-C, LFW

@@ -43,6 +43,18 @@ void warp_5pt_rgb_planar_f32(const ImageView& src,
                              const float scale[3],
                              float* dst);
 
+// Square-crop around a face bbox with `expand` ratio (e.g. 2.7 for liveness),
+// resize to `out_size`x`out_size`, and write to RGB planar float32 with
+// per-channel (x - mean) / scale normalisation. Out-of-bounds samples fall
+// back to nearest-edge clamping (no padding).
+void crop_face_rgb_planar_f32(const ImageView& src,
+                              const naina_bbox& bbox,
+                              float expand,
+                              int out_size,
+                              const float mean[3],
+                              const float scale[3],
+                              float* dst);
+
 }  // namespace naina::internal
 
 #endif  // NAINA_INTERNAL_IMAGE_OPS_HPP

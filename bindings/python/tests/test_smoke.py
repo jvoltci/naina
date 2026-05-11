@@ -5,6 +5,7 @@ shape/typing of the public surface."""
 from __future__ import annotations
 
 import os
+import tempfile
 
 import numpy as np
 import pytest
@@ -28,10 +29,11 @@ def test_similarity_orthogonal():
     assert naina.similarity(a, b) == pytest.approx(0.0, abs=1e-6)
 
 
-def test_engine_lifecycle_offline():
-    """Engine should construct cleanly. detect_faces will fail with no
-    weights on disk (offline mode); we just verify the API contract."""
+def test_engine_lifecycle_offline(tmp_path):
+    """Engine should construct cleanly. With a clean cache + NAINA_OFFLINE=1,
+    detect_faces must fail (model not on disk, no network allowed)."""
     os.environ["NAINA_OFFLINE"] = "1"
+    os.environ["NAINA_CACHE"] = str(tmp_path / "naina-cache")
     try:
         engine = naina.Engine()
     except naina.NainaError as e:
@@ -40,4 +42,10 @@ def test_engine_lifecycle_offline():
 
     img = np.full((128, 128, 3), 128, dtype=np.uint8)
     with pytest.raises(naina.NainaError):
-        engine.detect_faces(img)  # weights not on disk and NAINA_OFFLINE=1
+        engine.detect_faces(img)
+
+
+def test_face_liveness_api_present():
+    """face_liveness method exists on Engine (model URL is a placeholder
+    until a permissively-licensed weight file is published)."""
+    assert hasattr(naina.Engine, "face_liveness")

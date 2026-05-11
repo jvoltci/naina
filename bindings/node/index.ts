@@ -92,6 +92,7 @@ export interface EngineOptions {
 interface NativeEngine {
     detectFaces(image: ImageInput): Promise<Face[]>;
     embedFace(image: ImageInput, face: Face): Promise<Float32Array>;
+    faceLiveness(image: ImageInput, face: Face): Promise<number>;
     faceEmbedDim(): number;
 }
 
@@ -123,6 +124,11 @@ export class Engine {
 
     embedFace(image: ImageInput, face: Face): Promise<Float32Array> {
         return this.inner.embedFace(image, face);
+    }
+
+    /** Liveness probability in [0, 1]; pick a threshold (~0.5 to start). */
+    faceLiveness(image: ImageInput, face: Face): Promise<number> {
+        return this.inner.faceLiveness(image, face);
     }
 
     faceEmbedDim(): number {
