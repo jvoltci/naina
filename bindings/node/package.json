@@ -1,6 +1,6 @@
 {
-    "name": "naina",
-    "version": "0.1.0-dev.0",
+    "name": "@jvoltci/naina",
+    "version": "0.1.0",
     "description": "Embeddable computer-vision runtime for face & person understanding",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

@@ -19,7 +19,7 @@ for stricter matching, lower it for more permissive matching.
 ## Node / TypeScript
 
 ```bash
-npm install naina sharp
+npm install @jvoltci/naina sharp
 
 node examples/node/face_verify.mjs path/to/alice_1.jpg path/to/alice_2.jpg
 ```
