@@ -78,6 +78,37 @@ jobs:
             clang-format --dry-run --Werror "${files[@]}"
           fi
 
+  python:
+    name: python ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
+      - name: Install system deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja cmake yaml-cpp
+
+      - name: pip install naina
+        # Plain install (not editable) so it runs through the full sdist path
+        # the way end-users would.
+        run: pip install -v .
+
+      - name: Smoke tests
+        run: |
+          pip install pytest numpy
+          python -m pytest bindings/python/tests/ -v
+
   manifest-schema:
     name: validate model registry
     runs-on: ubuntu-latest
