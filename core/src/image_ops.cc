@@ -212,4 +212,39 @@ void warp_5pt_rgb_planar_f32(const ImageView& src,
     }
 }
 
+void crop_face_rgb_planar_f32(const ImageView& src,
+                              const naina_bbox& bbox,
+                              float expand,
+                              int out_size,
+                              const float mean[3],
+                              const float scale[3],
+                              float* dst) {
+    // Square crop centred on bbox, side = max(w, h) * expand.
+    const float cx = bbox.x + bbox.w * 0.5F;
+    const float cy = bbox.y + bbox.h * 0.5F;
+    const float side = std::max(bbox.w, bbox.h) * expand;
+    const float half = side * 0.5F;
+    const float x0 = cx - half;
+    const float y0 = cy - half;
+
+    const size_t plane = static_cast<size_t>(out_size) * static_cast<size_t>(out_size);
+    float* pr = dst + 0 * plane;
+    float* pg = dst + 1 * plane;
+    float* pb = dst + 2 * plane;
+
+    const float step = side / static_cast<float>(out_size);
+    for (int uy = 0; uy < out_size; ++uy) {
+        const float sy = y0 + (static_cast<float>(uy) + 0.5F) * step;
+        for (int ux = 0; ux < out_size; ++ux) {
+            const float sx = x0 + (static_cast<float>(ux) + 0.5F) * step;
+            const RGB c = sample_rgb_bilinear(src, sx, sy);
+            const size_t idx =
+                static_cast<size_t>(uy) * static_cast<size_t>(out_size) + static_cast<size_t>(ux);
+            pr[idx] = (c.r - mean[0]) / scale[0];
+            pg[idx] = (c.g - mean[1]) / scale[1];
+            pb[idx] = (c.b - mean[2]) / scale[2];
+        }
+    }
+}
+
 }  // namespace naina::internal

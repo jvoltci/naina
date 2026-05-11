@@ -11,6 +11,7 @@
 #include "image_ops.hpp"
 #include "modules/face_detect.hpp"
 #include "modules/face_embed.hpp"
+#include "modules/face_liveness.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -308,12 +309,19 @@ extern "C" naina_status naina_face_embed(naina_ctx_t* ctx,
     return NAINA_OK;
 }
 
-extern "C" naina_status naina_face_liveness(naina_ctx_t* /*ctx*/,
-                                            const naina_image_t* /*image*/,
-                                            const naina_face* /*face*/,
-                                            float* /*out_score*/) {
-    // Stubbed: liveness module ships in v1.3.
-    return NAINA_E_UNSUPPORTED;
+extern "C" naina_status naina_face_liveness(naina_ctx_t* ctx,
+                                            const naina_image_t* image,
+                                            const naina_face* face,
+                                            float* out_score) {
+    if (ctx == nullptr || image == nullptr || face == nullptr || out_score == nullptr) {
+        return NAINA_E_INVALID_ARG;
+    }
+    naina_status s = NAINA_OK;
+    auto* session = ctx->session_for("face_liveness", &s);
+    if (session == nullptr) {
+        return s;
+    }
+    return naina::internal::face_liveness::liveness(session, view_of(image), *face, {}, out_score);
 }
 
 extern "C" float naina_embed_similarity(const float* a, const float* b, int32_t dim) {

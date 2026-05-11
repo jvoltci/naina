@@ -126,6 +126,7 @@ public:
 private:
     Napi::Value detect_faces(const Napi::CallbackInfo& info);
     Napi::Value embed_face(const Napi::CallbackInfo& info);
+    Napi::Value face_liveness(const Napi::CallbackInfo& info);
     Napi::Value face_embed_dim(const Napi::CallbackInfo& info);
 
     std::shared_ptr<naina::Engine> engine_;
@@ -164,6 +165,40 @@ private:
     ImageRef image_;
     Napi::Promise::Deferred deferred_;
     std::vector<naina::Face> faces_;
+};
+
+class LivenessWorker : public Napi::AsyncWorker {
+public:
+    LivenessWorker(Napi::Env env,
+                   std::shared_ptr<naina::Engine> engine,
+                   ImageRef image,
+                   naina::Face face,
+                   Napi::Promise::Deferred deferred)
+        : Napi::AsyncWorker(env)
+        , engine_(std::move(engine))
+        , image_(std::move(image))
+        , face_(face)
+        , deferred_(std::move(deferred)) {}
+
+    void Execute() override {
+        try {
+            score_ = engine_->face_liveness(image_.to_image(), face_);
+        } catch (const std::exception& e) {
+            SetError(e.what());
+        }
+    }
+    void OnOK() override {
+        Napi::HandleScope scope(Env());
+        deferred_.Resolve(Napi::Number::New(Env(), score_));
+    }
+    void OnError(const Napi::Error& e) override { deferred_.Reject(e.Value()); }
+
+private:
+    std::shared_ptr<naina::Engine> engine_;
+    ImageRef image_;
+    naina::Face face_;
+    Napi::Promise::Deferred deferred_;
+    float score_ = 0.0F;
 };
 
 class EmbedWorker : public Napi::AsyncWorker {
@@ -209,6 +244,7 @@ Napi::Function Engine::init(Napi::Env env) {
                        {
                            InstanceMethod("detectFaces", &Engine::detect_faces),
                            InstanceMethod("embedFace", &Engine::embed_face),
+                           InstanceMethod("faceLiveness", &Engine::face_liveness),
                            InstanceMethod("faceEmbedDim", &Engine::face_embed_dim),
                        });
 }
@@ -269,6 +305,20 @@ Napi::Value Engine::embed_face(const Napi::CallbackInfo& info) {
         ImageRef ref = parse_image_arg(info[0].As<Napi::Object>());
         naina::Face f = object_to_face(info[1].As<Napi::Object>());
         auto* w = new EmbedWorker(env, engine_, std::move(ref), f, deferred);
+        w->Queue();
+    } catch (const std::exception& e) {
+        deferred.Reject(Napi::Error::New(env, e.what()).Value());
+    }
+    return deferred.Promise();
+}
+
+Napi::Value Engine::face_liveness(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    auto deferred = Napi::Promise::Deferred::New(env);
+    try {
+        ImageRef ref = parse_image_arg(info[0].As<Napi::Object>());
+        naina::Face f = object_to_face(info[1].As<Napi::Object>());
+        auto* w = new LivenessWorker(env, engine_, std::move(ref), f, deferred);
         w->Queue();
     } catch (const std::exception& e) {
         deferred.Reject(Napi::Error::New(env, e.what()).Value());

@@ -134,7 +134,18 @@ PYBIND11_MODULE(_binding, m) {
             },
             py::arg("image"),
             py::arg("face"))
-        .def("face_embed_dim", &naina::Engine::face_embed_dim);
+        .def("face_embed_dim", &naina::Engine::face_embed_dim)
+        .def(
+            "face_liveness",
+            [](naina::Engine& self, py::array_t<uint8_t> image, const naina::Face& face) {
+                auto img = image_from_numpy(image);
+                py::gil_scoped_release rel;
+                return self.face_liveness(img, face);
+            },
+            py::arg("image"),
+            py::arg("face"),
+            "Liveness probability for `face`. Caller picks a threshold; "
+            "0.5 is a reasonable starting point.");
 
     m.def(
         "similarity",
