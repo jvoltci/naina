@@ -48,7 +48,9 @@ threshold(); // init label
   try {
     engine = await Engine.create({
       modelBase: `${import.meta.env.BASE_URL}models`,
-      detectorInputSize: 320,
+      // OpenCV Zoo's YuNet 2023mar has a fixed 640x640 input. Don't
+      // change this unless you swap to a dynamic-input variant.
+      detectorInputSize: 640,
       confidenceThreshold: 0.6,
       nmsIouThreshold: 0.3,
     });
