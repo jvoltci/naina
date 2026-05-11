@@ -1,11 +1,13 @@
 <div align="center">
 
+![naina](https://github.com/jvoltci/naina/blob/master/images/naina.jpg)
+
 # naina
 
 **An embeddable computer-vision runtime for face & person understanding.**
 *C++ core, plug-and-play bindings, runs everywhere — Pi to phone to GPU server.*
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue.svg)]()
 [![PyPI](https://img.shields.io/badge/pip-naina-blue.svg)]()
 [![npm](https://img.shields.io/badge/npm-naina-cb3837.svg)]()
@@ -157,7 +159,6 @@ on the architecture doc.
 
 ## License
 
-MIT (planned upgrade to Apache-2.0 before v1.0 for the patent grant —
-see roadmap). Default model weights are permissive-licensed and ship
+Apache-2.0. Default model weights are permissive-licensed and ship
 with the library. Research-tier weights are opt-in and may carry
 non-commercial restrictions; see `models/registry.yaml` per-model.

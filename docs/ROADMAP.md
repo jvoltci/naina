@@ -26,7 +26,7 @@ CMake + presets, CI matrix, dep pinning. No real ML yet; just
 - [ ] vcpkg / Conan dep manifest
 - [ ] GitHub Actions: build + smoke test matrix
 - [ ] clang-format / clang-tidy gates
-- [ ] License switch MIT → Apache-2.0
+- [x] License switch MIT → Apache-2.0
 
 ## v0.3 — Backend layer
 
