@@ -61,6 +61,8 @@ int main() {
     fs::remove_all(cache);
     fs::create_directories(cache);
     setenv("NAINA_CACHE", cache.c_str(), 1);
+    // Don't actually hit the network during unit tests.
+    setenv("NAINA_OFFLINE", "1", 1);
 
     const auto reg = ModelRegistry::load(repo / "models" / "registry.yaml");
 

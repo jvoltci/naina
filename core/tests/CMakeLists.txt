@@ -9,11 +9,12 @@ naina_add_test(test_tensor)
 naina_add_test(test_backend_registry)
 naina_add_test(test_sha256)
 naina_add_test(test_model_loader)
+naina_add_test(test_engine_lifecycle)
 
 # Sha256 test reaches into core/src/ for the internal header.
 target_include_directories(test_sha256 PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
 
-# Model-loader test runs from the build dir; ensure it can find the repo.
-set_tests_properties(test_model_loader PROPERTIES
+# These tests need to resolve paths under the repo root (models/, etc).
+set_tests_properties(test_model_loader test_engine_lifecycle PROPERTIES
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
