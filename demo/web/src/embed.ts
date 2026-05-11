@@ -27,8 +27,12 @@ export class FaceEmbedder {
   }
 
   static async load(modelUrl: string): Promise<FaceEmbedder> {
+    // SFace under onnxruntime-web's WebGPU EP intermittently throws
+    // 'Cannot read properties of null' during run(). The model is small
+    // enough that WASM-SIMD is plenty fast (~40ms on Apple Silicon), so
+    // we trade theoretical perf for actual stability.
     const session = await ort.InferenceSession.create(modelUrl, {
-      executionProviders: ['webgpu', 'wasm'],
+      executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     });
     const inputName  = session.inputNames[0];

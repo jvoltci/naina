@@ -42,8 +42,12 @@ export class FaceDetector {
   ) {}
 
   static async load(modelUrl: string, opts: DetectOptions): Promise<FaceDetector> {
+    // WASM-only: WebGPU EP in onnxruntime-web 1.18 intermittently throws
+    // 'Cannot read properties of null (reading Kd)' during run() and can
+    // lock up the tab. WASM-SIMD threading is stable and fast enough
+    // (~15-25ms on Apple Silicon at 640x640).
     const session = await ort.InferenceSession.create(modelUrl, {
-      executionProviders: ['webgpu', 'wasm'],
+      executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     });
     return new FaceDetector(session, opts);

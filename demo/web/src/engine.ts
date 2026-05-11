@@ -5,13 +5,16 @@
 // is swapped for a wrapper around the native WASM module — the UI code
 // (main.ts) doesn't change.
 
-import * as ort from 'onnxruntime-web';
 import type { EngineOptions, Face, FrameResult, RecognitionMatch } from './types';
 import { FaceDetector } from './detect';
 import { FaceEmbedder } from './embed';
 import { Gallery } from './gallery';
 
 export class Engine {
+  // Single-flight lock: ONNX sessions are not safe to call concurrently.
+  // Every public method that touches a session queues behind this.
+  private inflight: Promise<unknown> = Promise.resolve();
+
   private constructor(
     private readonly detector: FaceDetector,
     private readonly embedder: FaceEmbedder,
@@ -21,11 +24,7 @@ export class Engine {
 
   static async create(opts: EngineOptions = {}): Promise<Engine> {
     const base = (opts.modelBase ?? 'models').replace(/\/$/, '');
-    const inputSize = opts.detectorInputSize ?? 320;
-
-    // Best-effort backend negotiation report (onnxruntime-web picks
-    // automatically; we just report what was probably used).
-    const backend = (await detectBackend());
+    const inputSize = opts.detectorInputSize ?? 640;
 
     const [detector, embedder] = await Promise.all([
       FaceDetector.load(`${base}/yunet.onnx`, {
@@ -36,20 +35,20 @@ export class Engine {
       FaceEmbedder.load(`${base}/sface.onnx`),
     ]);
 
-    return new Engine(detector, embedder, new Gallery(), backend);
+    return new Engine(detector, embedder, new Gallery(), 'WASM · SIMD');
   }
 
   async detectFaces(
     source: HTMLVideoElement | HTMLCanvasElement | ImageBitmap,
   ): Promise<Face[]> {
-    return this.detector.detect(source);
+    return this.serial(() => this.detector.detect(source));
   }
 
   async embedFace(
     source: HTMLVideoElement | HTMLCanvasElement | ImageBitmap,
     face: Face,
   ): Promise<Float32Array> {
-    return this.embedder.embed(source, face);
+    return this.serial(() => this.embedder.embed(source, face));
   }
 
   // One-shot: detect → embed each → match each → return everything.
@@ -58,38 +57,30 @@ export class Engine {
     source: HTMLVideoElement | HTMLCanvasElement | ImageBitmap,
     threshold: number,
   ): Promise<FrameResult> {
-    const detectStart = performance.now();
-    const faces = await this.detector.detect(source);
-    const detectMs = performance.now() - detectStart;
+    return this.serial(async () => {
+      const detectStart = performance.now();
+      const faces = await this.detector.detect(source);
+      const detectMs = performance.now() - detectStart;
 
-    const matches: RecognitionMatch[] = new Array(faces.length);
-    const embedStart = performance.now();
-    for (let i = 0; i < faces.length; i++) {
-      const emb = await this.embedder.embed(source, faces[i]);
-      matches[i] = this.gallery.match(emb, threshold);
-    }
-    const totalEmbedMs = performance.now() - embedStart;
-    const embedMsPerFace = faces.length > 0 ? totalEmbedMs / faces.length : 0;
+      const matches: RecognitionMatch[] = new Array(faces.length);
+      const embedStart = performance.now();
+      for (let i = 0; i < faces.length; i++) {
+        const emb = await this.embedder.embed(source, faces[i]);
+        matches[i] = this.gallery.match(emb, threshold);
+      }
+      const totalEmbedMs = performance.now() - embedStart;
+      const embedMsPerFace = faces.length > 0 ? totalEmbedMs / faces.length : 0;
 
-    return { faces, matches, timings: { detectMs, embedMsPerFace } };
+      return { faces, matches, timings: { detectMs, embedMsPerFace } };
+    });
+  }
+
+  // Chain `fn` onto the in-flight queue. Errors don't poison the chain.
+  private serial<T>(fn: () => Promise<T>): Promise<T> {
+    const next = this.inflight.then(fn, fn);
+    // Keep the chain alive on error so subsequent calls aren't rejected.
+    this.inflight = next.catch(() => undefined);
+    return next;
   }
 }
 
-async function detectBackend(): Promise<string> {
-  // onnxruntime-web negotiates WebGPU → WASM internally. We surface a
-  // best-guess label for the UI's metrics panel.
-  type NavGpu = Navigator & { gpu?: { requestAdapter(): Promise<unknown> } };
-  const nav = navigator as NavGpu;
-  if (nav.gpu) {
-    try {
-      const adapter = await nav.gpu.requestAdapter();
-      if (adapter) return 'WebGPU';
-    } catch { /* fall through */ }
-  }
-  // onnxruntime-web's WASM EP supports SIMD + threads when available.
-  const wasm = ort.env.wasm;
-  const parts = ['WASM'];
-  if (wasm?.simd) parts.push('SIMD');
-  if ((wasm?.numThreads ?? 1) > 1) parts.push(`x${wasm.numThreads}`);
-  return parts.join(' · ');
-}

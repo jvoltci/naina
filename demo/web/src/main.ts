@@ -39,6 +39,8 @@ let lastFrameTs = 0;
 let fpsEMA = 0;
 let selectedFaceIdx = -1;
 let lastFrameResult: FrameResult | null = null;
+let consecutiveErrors = 0;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 threshold(); // init label
 
@@ -123,7 +125,6 @@ function syncCanvasToVideo() {
 // ── main loop ───────────────────────────────────────────────────────────
 async function loop() {
   if (!engine || !stream) return;
-  syncCanvasToVideo();
 
   const now = performance.now();
   const dt = now - lastFrameTs;
@@ -144,17 +145,28 @@ async function loop() {
       };
     }
   } catch (err) {
+    consecutiveErrors++;
     console.error(err);
-    setStatus(`Inference error: ${(err as Error).message}`);
+    setStatus(`Inference error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${(err as Error).message}`);
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      stopCamera();
+      setStatus(`Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors. Try refreshing the page.`);
+      return;
+    }
+    // Re-draw last good result so bbox doesn't flicker on transient errors.
+    syncCanvasToVideo();
+    if (lastFrameResult) draw(lastFrameResult);
     rafId = requestAnimationFrame(loop);
     return;
   }
 
+  consecutiveErrors = 0;
   lastFrameResult = result;
 
   // Clamp selection if face count changed.
   if (selectedFaceIdx >= result.faces.length) selectedFaceIdx = -1;
 
+  syncCanvasToVideo();
   draw(result);
   updateMetrics(result, fpsEMA);
 
