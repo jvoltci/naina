@@ -14,6 +14,8 @@ set(NAINA_PUBLIC_HEADERS
 
 set(NAINA_SOURCES
     src/version.cc
+    src/tensor.cc
+    src/backend_registry.cc
 )
 
 # Backends are added conditionally; each backend file is gated on its option
@@ -51,8 +53,6 @@ set_target_properties(naina-core PROPERTIES
     OUTPUT_NAME naina
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    C_VISIBILITY_PRESET hidden
-    CXX_VISIBILITY_PRESET hidden
 )
 
 # Tell naina.h to emit `__attribute__((visibility("default")))` / dllexport

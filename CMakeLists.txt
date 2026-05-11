@@ -15,8 +15,10 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+# Don't hide-default the whole project: naina.hpp, backend.hpp, and tensor.hpp
+# expose C++ APIs that consumers (and our own tests) link against directly.
+# The C ABI in naina.h has its own NAINA_API decoration for cross-binary safety
+# (dllimport/dllexport on Windows, default visibility on POSIX).
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
