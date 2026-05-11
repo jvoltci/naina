@@ -44,6 +44,11 @@ package-lock.json.bak
 demo/web/dist/
 demo/web/.vite/
 
+# Node binding outputs
+bindings/node/dist/
+bindings/node/build/
+bindings/node/prebuilds/
+
 # Model cache (downloaded weights live in ~/.cache/naina by default,
 # but ignore any local model drops too)
 .cache/

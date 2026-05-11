@@ -109,6 +109,42 @@ jobs:
           pip install pytest numpy
           python -m pytest bindings/python/tests/ -v
 
+  node:
+    name: node ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: bindings/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: bindings/node/package-lock.json
+
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
+      - name: Install system deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja cmake yaml-cpp
+
+      - name: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Build native + ts
+        run: npm run build
+
+      - name: Test
+        run: npx vitest run
+
   manifest-schema:
     name: validate model registry
     runs-on: ubuntu-latest

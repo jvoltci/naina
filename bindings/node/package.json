@@ -1,0 +1,50 @@
+{
+    "name": "naina",
+    "version": "0.1.0-dev.0",
+    "description": "Embeddable computer-vision runtime for face & person understanding",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "commonjs",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/jvoltci/naina",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jvoltci/naina.git"
+    },
+    "bugs": {
+        "url": "https://github.com/jvoltci/naina/issues"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "scripts": {
+        "build:native": "cmake-js compile --runtime=node",
+        "build:ts": "tsc",
+        "build": "npm run build:native && npm run build:ts",
+        "rebuild": "cmake-js rebuild --runtime=node && npm run build:ts",
+        "test": "npm run build && vitest run",
+        "test:watch": "vitest"
+    },
+    "files": [
+        "dist/",
+        "build/Release/naina-node.node",
+        "src/",
+        "CMakeLists.txt"
+    ],
+    "dependencies": {
+        "node-addon-api": "^7.1.0"
+    },
+    "devDependencies": {
+        "cmake-js": "^7.3.0",
+        "typescript": "^5.4.0",
+        "vitest": "^1.6.0",
+        "@types/node": "^20.11.0"
+    },
+    "binary": {
+        "module_name": "naina-node",
+        "module_path": "./build/Release/",
+        "host": "https://github.com/jvoltci/naina/releases/download/",
+        "remote_path": "v{version}",
+        "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz"
+    }
+}
