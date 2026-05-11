@@ -38,10 +38,44 @@ naina::internal::ImageView view_of(const naina_image_t* img) {
 }
 }  // namespace
 
+namespace {
+
+// File-kind → backend-id mapping for session selection.
+naina_backend backend_for_kind(const std::string& kind) {
+    if (kind == "onnx")
+        return NAINA_BACKEND_ONNXRUNTIME;
+    if (kind == "ncnn_param")
+        return NAINA_BACKEND_NCNN;
+    if (kind == "coreml")
+        return NAINA_BACKEND_COREML;
+    if (kind == "tensorrt")
+        return NAINA_BACKEND_TENSORRT;
+    if (kind == "openvino")
+        return NAINA_BACKEND_OPENVINO;
+    return NAINA_BACKEND_AUTO;
+}
+
+// Priority order for file kinds when multiple are present in the manifest.
+// We prefer accelerated/native formats first, then ONNX as the portable
+// fallback that every platform can read.
+const std::vector<std::string>& kind_priority() {
+    static const std::vector<std::string> p = {
+#if defined(__APPLE__)
+        "coreml",
+#endif
+        "tensorrt",
+        "ncnn_param",
+        "openvino",
+        "onnx",
+    };
+    return p;
+}
+
+}  // namespace
+
 struct naina_ctx {
     naina::ModelRegistry registry;
-    naina::backend::IBackend* backend = nullptr;
-    naina_backend backend_id = NAINA_BACKEND_AUTO;
+    naina_backend preferred_backend = NAINA_BACKEND_AUTO;
     bool enable_research = false;
     int num_threads = 0;
 
@@ -62,37 +96,61 @@ struct naina_ctx {
             return nullptr;
         }
 
-        // Choose file kind based on backend.
-        std::string kind;
-        switch (backend->id()) {
-            case NAINA_BACKEND_ONNXRUNTIME:
-                kind = "onnx";
-                break;
-            case NAINA_BACKEND_NCNN:
-                kind = "ncnn_param";
-                break;
-            default:
-                kind = "onnx";
-                break;
+        // Walk available file kinds in priority order, taking the first
+        // (kind, backend) pair where the backend is compiled in.
+        auto avail = naina::backend::available_backends();
+        for (const auto& kind : kind_priority()) {
+            if (entry->files.find(kind) == entry->files.end()) {
+                continue;
+            }
+            const naina_backend wanted = backend_for_kind(kind);
+            if (wanted == NAINA_BACKEND_AUTO) {
+                continue;
+            }
+            // Honour the user's preferred backend when possible.
+            if (preferred_backend != NAINA_BACKEND_AUTO && wanted != preferred_backend) {
+                continue;
+            }
+            naina::backend::IBackend* be = nullptr;
+            for (auto* b : avail) {
+                if (b->id() == wanted) {
+                    be = b;
+                    break;
+                }
+            }
+            if (be == nullptr) {
+                continue;
+            }
+
+            std::filesystem::path path;
+            const naina_status ls = registry.ensure_local(*entry, kind, &path);
+            if (ls != NAINA_OK) {
+                *out_status = ls;
+                return nullptr;
+            }
+            naina::backend::SessionOptions opts;
+            opts.device = naina::Device::Auto;
+            opts.num_threads = num_threads;
+            opts.enable_fp16 = true;
+            auto sess = be->load(path, opts, out_status);
+            if (sess == nullptr) {
+                return nullptr;
+            }
+            auto* raw = sess.get();
+            sessions.emplace(task, std::move(sess));
+            *out_status = NAINA_OK;
+            return raw;
         }
-        std::filesystem::path path;
-        const naina_status ls = registry.ensure_local(*entry, kind, &path);
-        if (ls != NAINA_OK) {
-            *out_status = ls;
-            return nullptr;
+
+        // If preferred_backend was set but no (kind, preferred) match, try
+        // again with no preference.
+        if (preferred_backend != NAINA_BACKEND_AUTO) {
+            preferred_backend = NAINA_BACKEND_AUTO;
+            return session_for(task, out_status);
         }
-        naina::backend::SessionOptions opts;
-        opts.device = naina::Device::Auto;
-        opts.num_threads = num_threads;
-        opts.enable_fp16 = true;
-        auto sess = backend->load(path, opts, out_status);
-        if (sess == nullptr) {
-            return nullptr;
-        }
-        auto* raw = sess.get();
-        sessions.emplace(task, std::move(sess));
-        *out_status = NAINA_OK;
-        return raw;
+
+        *out_status = NAINA_E_BACKEND_UNAVAIL;
+        return nullptr;
     }
 };
 
@@ -122,12 +180,13 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
         return NAINA_E_MODEL_NOT_FOUND;
     }
 
-    const naina_backend hint = (cfg != nullptr) ? cfg->backend : NAINA_BACKEND_AUTO;
-    ctx->backend = naina::backend::select_best(hint, naina::Device::Auto);
-    if (ctx->backend == nullptr) {
+    // Verify at least one backend is compiled in; per-task selection happens
+    // lazily in session_for() based on the file kinds available in the
+    // manifest.
+    if (naina::backend::available_backends().empty()) {
         return NAINA_E_BACKEND_UNAVAIL;
     }
-    ctx->backend_id = ctx->backend->id();
+    ctx->preferred_backend = (cfg != nullptr) ? cfg->backend : NAINA_BACKEND_AUTO;
     ctx->enable_research = (cfg != nullptr) && cfg->enable_research_models != 0;
     ctx->num_threads = (cfg != nullptr) ? cfg->num_threads : 0;
 

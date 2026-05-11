@@ -66,17 +66,23 @@ fs::path expand_home(const std::string& s) {
     return fs::path(s);
 }
 
-std::string substitute_release_base(const std::string& s, const std::string& release_base) {
-    std::string out = s;
-    const std::string key = "${release_base}";
+std::string substitute_placeholder(std::string s, std::string_view key, const std::string& value) {
     for (;;) {
-        const size_t pos = out.find(key);
+        const size_t pos = s.find(key);
         if (pos == std::string::npos) {
             break;
         }
-        out.replace(pos, key.size(), release_base);
+        s.replace(pos, key.size(), value);
     }
-    return out;
+    return s;
+}
+
+std::string substitute_release_base(const std::string& s, const std::string& release_base) {
+    return substitute_placeholder(s, "${release_base}", release_base);
+}
+
+std::string substitute_opencv_zoo(const std::string& s, const std::string& opencv_zoo) {
+    return substitute_placeholder(s, "${opencv_zoo}", opencv_zoo);
 }
 
 Tier parse_tier(const std::string& s) {
@@ -175,6 +181,7 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
     ModelRegistry reg;
     std::string cache_root_raw = "${NAINA_CACHE:-~/.cache/naina/models}";
     reg.release_base_ = "";
+    std::string opencv_zoo;
 
     if (root["defaults"]) {
         const auto& d = root["defaults"];
@@ -183,6 +190,9 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
         }
         if (d["release_base"]) {
             reg.release_base_ = d["release_base"].as<std::string>();
+        }
+        if (d["opencv_zoo"]) {
+            opencv_zoo = d["opencv_zoo"].as<std::string>();
         }
     }
     reg.cache_root_ = expand_home(substitute_env(cache_root_raw));
@@ -203,8 +213,10 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
             for (const auto& kv : m["files"]) {
                 const auto kind = kv.first.as<std::string>();
                 FileEntry fe;
-                fe.url = substitute_release_base(kv.second["url"].as<std::string>(""),
-                                                 reg.release_base_);
+                fe.url = substitute_opencv_zoo(
+                    substitute_release_base(kv.second["url"].as<std::string>(""),
+                                            reg.release_base_),
+                    opencv_zoo);
                 fe.sha256 = lower(kv.second["sha256"].as<std::string>(""));
                 fe.bytes = kv.second["bytes"].as<int64_t>(0);
                 entry.files.emplace(kind, std::move(fe));
