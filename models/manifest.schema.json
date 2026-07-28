@@ -55,7 +55,8 @@
         "ncnn_bin":   { "$ref": "#/$defs/file_entry" },
         "coreml":     { "$ref": "#/$defs/file_entry" },
         "tensorrt":   { "$ref": "#/$defs/file_entry" },
-        "openvino":   { "$ref": "#/$defs/file_entry" }
+        "openvino":   { "$ref": "#/$defs/file_entry" },
+        "charset_yaml": { "$ref": "#/$defs/file_entry" }
       }
     },
     "file_entry": {
