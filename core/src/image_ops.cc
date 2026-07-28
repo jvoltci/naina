@@ -247,4 +247,38 @@ void crop_face_rgb_planar_f32(const ImageView& src,
     }
 }
 
+namespace {
+
+// Round `v` up to the next multiple of `m`, never below `m`.
+int32_t round_to_multiple(float v, int32_t m) {
+    if (m <= 1) {
+        return static_cast<int32_t>(v) > 0 ? static_cast<int32_t>(v) : 1;
+    }
+    const int32_t n = static_cast<int32_t>(std::ceil(v / static_cast<float>(m)));
+    return (n < 1 ? 1 : n) * m;
+}
+
+}  // namespace
+
+DetResize plan_det_resize(int32_t src_w, int32_t src_h, int32_t limit, int32_t multiple_of) {
+    DetResize r{};
+    if (src_w <= 0 || src_h <= 0) {
+        r.out_w = multiple_of > 0 ? multiple_of : 1;
+        r.out_h = r.out_w;
+        r.scale_x = 1.0F;
+        r.scale_y = 1.0F;
+        return r;
+    }
+    const int32_t longest = src_w > src_h ? src_w : src_h;
+    float ratio = 1.0F;
+    if (limit > 0 && longest > limit) {
+        ratio = static_cast<float>(limit) / static_cast<float>(longest);
+    }
+    r.out_w = round_to_multiple(static_cast<float>(src_w) * ratio, multiple_of);
+    r.out_h = round_to_multiple(static_cast<float>(src_h) * ratio, multiple_of);
+    r.scale_x = static_cast<float>(r.out_w) / static_cast<float>(src_w);
+    r.scale_y = static_cast<float>(r.out_h) / static_cast<float>(src_h);
+    return r;
+}
+
 }  // namespace naina::internal
