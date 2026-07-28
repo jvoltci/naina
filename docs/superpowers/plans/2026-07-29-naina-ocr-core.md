@@ -92,14 +92,35 @@ Postprocess (`DBPostProcess`): `thresh = 0.2` (binarisation),
 ```
 opset 11, ir_version 6
 INPUT   name "x"             FLOAT  [N, 3, 48, W]    height FIXED at 48, W dynamic
-OUTPUT  name "fetch_name_0"  FLOAT  [N, T, 6906]     T ≈ W/8
-219 nodes
+OUTPUT  name "fetch_name_0"  FLOAT  [N, T, C]        T ≈ W/8
+219 nodes (tiny)
 ```
 
-`6906 = 1 CTC blank + 6905 characters`. Postprocess is `CTCLabelDecode`;
-PaddleOCR places blank at **index 0**, so charset entry `i` maps to class
-`i + 1`. The charset is the `PostProcess.character_dict` list in the rec
-model's `inference.yml` (6905 single-character entries).
+**`C` is not constant across tiers.** Verified by loading each ONNX graph
+and each `inference.yml`:
+
+| Tier | charset chars | `C` (num_classes) |
+| --- | --- | --- |
+| tiny | 6904 | **6906** |
+| small | 18708 | **18710** |
+| medium | 18708 | **18710** |
+
+`C = chars + 1 CTC blank + 1 space`. Postprocess is `CTCLabelDecode`;
+PaddleOCR places blank at **index 0**, charset entry `i` maps to class
+`i + 1`, and the final class is a space (`use_space_char`). A wrong `C`
+shifts every character in the output, so it is per-tier registry data.
+
+small and medium share a byte-identical charset (sha256 of the joined list
+matches) but ship `inference.yml` files differing by one byte in
+`model_name`, so each carries its own hash in the manifest.
+
+The charset is fetched as the `charset_yaml` file kind — each model's own
+`inference.yml`, hash-verified like any other artifact — rather than
+committed to the repo as a derived copy.
+
+**tiny's charset is much smaller and is mostly CJK + Latin.** The
+"50 languages" claim applies to small and medium only; do not repeat it for
+tiny in docs or the README.
 
 ### Model registry facts
 
@@ -3023,4 +3044,637 @@ expensive per-pixel pass.
 
 Corners are clamped to the probability map so the recognition warp can
 never sample outside the image."
+```
+
+---
+
+## Task 12: Charset loading
+
+The CTC decoder needs to map class indices to characters. The charset is the
+`PostProcess.character_dict` list inside each rec model's `inference.yml`,
+fetched as the `charset_yaml` file kind. yaml-cpp is already a dependency.
+
+**Files:**
+- Create: `core/src/modules/charset.hpp`, `core/src/modules/charset.cc`
+- Create: `core/tests/test_charset.cc`
+- Modify: `core/CMakeLists.txt`, `core/tests/CMakeLists.txt`
+
+- [ ] **Step 1: Write the failing test**
+
+Create `core/tests/test_charset.cc`:
+
+```cpp
+// Charset parsing from a PaddleOCR inference.yml PostProcess.character_dict.
+#include "modules/charset.hpp"
+
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+namespace fs = std::filesystem;
+using naina::internal::charset::Charset;
+using naina::internal::charset::load_from_yaml;
+
+static int failures = 0;
+
+#define EXPECT(cond)                                                             \
+    do {                                                                         \
+        if (!(cond)) {                                                           \
+            std::fprintf(stderr, "FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+            ++failures;                                                          \
+        }                                                                        \
+    } while (0)
+
+static fs::path write_temp(const std::string& name, const std::string& body) {
+    const fs::path p = fs::temp_directory_path() / name;
+    std::ofstream f(p, std::ios::binary);
+    f.write(body.data(), static_cast<std::streamsize>(body.size()));
+    return p;
+}
+
+static void test_parses_character_dict() {
+    // Minimal stand-in for a real inference.yml.
+    const std::string yml =
+        "Global:\n"
+        "  model_name: fake_rec\n"
+        "PostProcess:\n"
+        "  name: CTCLabelDecode\n"
+        "  character_dict:\n"
+        "  - a\n"
+        "  - b\n"
+        "  - c\n";
+    const fs::path p = write_temp("naina_charset_ok.yml", yml);
+
+    Charset cs;
+    EXPECT(load_from_yaml(p, &cs));
+    // 3 chars + blank + space = 5 classes.
+    EXPECT(cs.num_classes() == 5);
+    // Index 0 is the CTC blank and maps to no character.
+    EXPECT(cs.at(0).empty());
+    EXPECT(cs.at(1) == "a");
+    EXPECT(cs.at(2) == "b");
+    EXPECT(cs.at(3) == "c");
+    // The final class is a space (PaddleOCR use_space_char).
+    EXPECT(cs.at(4) == " ");
+    // Out of range is empty, never a crash.
+    EXPECT(cs.at(5).empty());
+    EXPECT(cs.at(-1).empty());
+    fs::remove(p);
+}
+
+static void test_preserves_multibyte_characters() {
+    // yaml-cpp hands back UTF-8 bytes; a CJK glyph is 3 bytes and must
+    // survive intact as one entry.
+    const std::string yml =
+        "PostProcess:\n"
+        "  character_dict:\n"
+        "  - \xe4\xb8\xad\n"   // 中
+        "  - \xe6\x96\x87\n";  // 文
+    const fs::path p = write_temp("naina_charset_utf8.yml", yml);
+
+    Charset cs;
+    EXPECT(load_from_yaml(p, &cs));
+    EXPECT(cs.num_classes() == 4);
+    EXPECT(cs.at(1) == "\xe4\xb8\xad");
+    EXPECT(cs.at(1).size() == 3);
+    EXPECT(cs.at(2) == "\xe6\x96\x87");
+    fs::remove(p);
+}
+
+static void test_rejects_missing_or_malformed_files() {
+    Charset cs;
+    EXPECT(!load_from_yaml("/nonexistent/naina/definitely-not-here.yml", &cs));
+
+    // Valid YAML with no PostProcess.character_dict is a hard failure —
+    // silently returning an empty charset would decode every page to "".
+    const fs::path p = write_temp("naina_charset_bad.yml", "Global:\n  model_name: x\n");
+    EXPECT(!load_from_yaml(p, &cs));
+    fs::remove(p);
+
+    // An empty character_dict is equally useless.
+    const fs::path e = write_temp("naina_charset_empty.yml",
+                                  "PostProcess:\n  character_dict: []\n");
+    EXPECT(!load_from_yaml(e, &cs));
+    fs::remove(e);
+
+    EXPECT(!load_from_yaml(p, nullptr));
+}
+
+static void test_real_registry_charset_if_cached() {
+    // Opportunistic: if the tiny rec inference.yml is already in the model
+    // cache, assert the real class count. Skipped when absent so the test
+    // stays runnable offline with no weights.
+    const char* cache = std::getenv("NAINA_CACHE");
+    if (cache == nullptr) {
+        return;
+    }
+    for (const auto& entry : fs::recursive_directory_iterator(cache)) {
+        if (entry.is_regular_file() && entry.path().filename() == "inference.yml") {
+            Charset cs;
+            if (load_from_yaml(entry.path(), &cs)) {
+                // Only the two known PP-OCRv6 shapes are valid.
+                EXPECT(cs.num_classes() == 6906 || cs.num_classes() == 18710);
+            }
+        }
+    }
+}
+
+int main() {
+    test_parses_character_dict();
+    test_preserves_multibyte_characters();
+    test_rejects_missing_or_malformed_files();
+    test_real_registry_charset_if_cached();
+    if (failures == 0) {
+        std::printf("test_charset: all passed\n");
+    }
+    return failures == 0 ? 0 : 1;
+}
+```
+
+Register in `core/tests/CMakeLists.txt`:
+
+```cmake
+naina_add_test(test_charset)
+target_include_directories(test_charset PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+```bash
+cmake --preset macos-arm64 >/dev/null && \
+cmake --build --preset macos-arm64 --target test_charset 2>&1 | tail -10
+```
+
+Expected: fatal error — `modules/charset.hpp` not found.
+
+- [ ] **Step 3: Write the header**
+
+Create `core/src/modules/charset.hpp`:
+
+```cpp
+// CTC charset: class index -> character.
+//
+// PaddleOCR stores the recognition charset as PostProcess.character_dict in
+// the model's own inference.yml. naina fetches that file as the
+// `charset_yaml` manifest kind and parses it here.
+//
+// Class layout (PaddleOCR CTCLabelDecode):
+//   index 0            CTC blank, no character
+//   index 1..N         character_dict[i - 1]
+//   index N + 1        space (use_space_char)
+// so num_classes == character_dict.size() + 2.
+#ifndef NAINA_INTERNAL_CHARSET_HPP
+#define NAINA_INTERNAL_CHARSET_HPP
+
+#include <cstdint>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+namespace naina::internal::charset {
+
+class Charset {
+public:
+    // Total number of CTC classes, including blank and space.
+    int32_t num_classes() const { return static_cast<int32_t>(entries_.size()); }
+
+    // Character for a class index. Returns an empty string for the blank
+    // class and for any out-of-range index — callers skip empties.
+    const std::string& at(int32_t cls) const;
+
+    // Replace the character list. `chars` excludes blank and space; this
+    // adds both. Exposed for tests and for the yaml loader.
+    void assign(std::vector<std::string> chars);
+
+private:
+    // entries_[0] is the blank; the last entry is the space.
+    std::vector<std::string> entries_;
+};
+
+// Parse PostProcess.character_dict out of a PaddleOCR inference.yml.
+// Returns false if the file cannot be read, has no character_dict, or that
+// list is empty — a silent empty charset would decode every page to "".
+bool load_from_yaml(const std::filesystem::path& yaml_path, Charset* out);
+
+}  // namespace naina::internal::charset
+
+#endif  // NAINA_INTERNAL_CHARSET_HPP
+```
+
+- [ ] **Step 4: Implement it**
+
+Create `core/src/modules/charset.cc`:
+
+```cpp
+#include "charset.hpp"
+
+#include <yaml-cpp/yaml.h>
+
+#include <utility>
+
+namespace naina::internal::charset {
+
+namespace {
+const std::string& empty_string() {
+    static const std::string kEmpty;
+    return kEmpty;
+}
+}  // namespace
+
+const std::string& Charset::at(int32_t cls) const {
+    if (cls < 0 || cls >= num_classes()) {
+        return empty_string();
+    }
+    return entries_[static_cast<size_t>(cls)];
+}
+
+void Charset::assign(std::vector<std::string> chars) {
+    entries_.clear();
+    entries_.reserve(chars.size() + 2);
+    entries_.emplace_back();  // index 0: CTC blank, no character
+    for (auto& c : chars) {
+        entries_.push_back(std::move(c));
+    }
+    entries_.emplace_back(" ");  // final class: space
+}
+
+bool load_from_yaml(const std::filesystem::path& yaml_path, Charset* out) {
+    if (out == nullptr) {
+        return false;
+    }
+    YAML::Node root;
+    try {
+        root = YAML::LoadFile(yaml_path.string());
+    } catch (const std::exception&) {
+        return false;
+    }
+    const YAML::Node pp = root["PostProcess"];
+    if (!pp) {
+        return false;
+    }
+    const YAML::Node dict = pp["character_dict"];
+    if (!dict || !dict.IsSequence() || dict.size() == 0) {
+        return false;
+    }
+    std::vector<std::string> chars;
+    chars.reserve(dict.size());
+    for (const auto& n : dict) {
+        chars.push_back(n.as<std::string>(""));
+    }
+    out->assign(std::move(chars));
+    return true;
+}
+
+}  // namespace naina::internal::charset
+```
+
+Add `src/modules/charset.cc` to `NAINA_SOURCES` in `core/CMakeLists.txt`,
+after `src/modules/db_postprocess.cc`.
+
+- [ ] **Step 5: Run the test to verify it passes**
+
+```bash
+cmake --build --preset macos-arm64 --target test_charset 2>&1 | tail -5 \
+  && ctest --preset macos-arm64 -R test_charset --output-on-failure
+```
+
+Expected: `test_charset: all passed`.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add core/src/modules/charset.hpp core/src/modules/charset.cc \
+        core/tests/test_charset.cc core/CMakeLists.txt core/tests/CMakeLists.txt
+git commit -m "charset: parse CTC character_dict from inference.yml
+
+Class layout matches PaddleOCR's CTCLabelDecode: index 0 is the blank,
+character_dict[i-1] is class i, and the final class is a space. So
+num_classes == character_dict.size() + 2 — 6906 for tiny, 18710 for
+small/medium.
+
+A missing or empty character_dict is a hard failure rather than an empty
+charset, because an empty charset decodes every page to the empty string
+and would look like a model problem instead of a config problem."
+```
+
+---
+
+## Task 13: CTC greedy decode
+
+**Files:**
+- Create: `core/src/modules/ctc_decode.hpp`, `core/src/modules/ctc_decode.cc`
+- Create: `core/tests/test_ctc_decode.cc`
+- Modify: `core/CMakeLists.txt`, `core/tests/CMakeLists.txt`
+
+- [ ] **Step 1: Write the failing test**
+
+Create `core/tests/test_ctc_decode.cc`:
+
+```cpp
+// CTC greedy decode: [T, C] logits -> string + confidence.
+#include "modules/ctc_decode.hpp"
+
+#include "modules/charset.hpp"
+
+#include <cmath>
+#include <cstdio>
+#include <vector>
+
+using naina::internal::charset::Charset;
+using naina::internal::ctc_decode::Decoded;
+using naina::internal::ctc_decode::greedy_decode;
+
+static int failures = 0;
+
+#define EXPECT(cond)                                                             \
+    do {                                                                         \
+        if (!(cond)) {                                                           \
+            std::fprintf(stderr, "FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+            ++failures;                                                          \
+        }                                                                        \
+    } while (0)
+
+// Charset: blank, a, b, c, space  -> 5 classes.
+static Charset abc_charset() {
+    Charset cs;
+    cs.assign({"a", "b", "c"});
+    return cs;
+}
+
+// Build a [T, C] buffer where timestep t puts `hot` probability on class
+// argmax[t] and spreads the rest evenly.
+static std::vector<float> logits(const std::vector<int>& argmax, int C, float hot) {
+    std::vector<float> v(argmax.size() * static_cast<size_t>(C), 0.0F);
+    const float rest = (1.0F - hot) / static_cast<float>(C - 1);
+    for (size_t t = 0; t < argmax.size(); ++t) {
+        for (int c = 0; c < C; ++c) {
+            v[t * static_cast<size_t>(C) + static_cast<size_t>(c)] = rest;
+        }
+        v[t * static_cast<size_t>(C) + static_cast<size_t>(argmax[t])] = hot;
+    }
+    return v;
+}
+
+static void test_collapses_repeats_and_drops_blanks() {
+    const Charset cs = abc_charset();
+    // a a blank a b  ->  "aab" collapses to "a", then blank resets, then "ab"
+    // Expected CTC output: "a" + "a" + "b" = "aab"? No:
+    //   t0=a t1=a  -> repeat, one 'a'
+    //   t2=blank   -> resets the repeat guard
+    //   t3=a       -> new 'a'
+    //   t4=b       -> 'b'
+    // Result: "aab"
+    const auto v = logits({1, 1, 0, 1, 2}, 5, 0.9F);
+    Decoded d;
+    EXPECT(greedy_decode(v.data(), 5, 5, cs, &d));
+    EXPECT(d.text == "aab");
+}
+
+static void test_repeat_without_blank_is_one_character() {
+    const Charset cs = abc_charset();
+    const auto v = logits({1, 1, 1, 1}, 5, 0.9F);
+    Decoded d;
+    EXPECT(greedy_decode(v.data(), 4, 5, cs, &d));
+    EXPECT(d.text == "a");
+}
+
+static void test_all_blank_yields_empty_text() {
+    const Charset cs = abc_charset();
+    const auto v = logits({0, 0, 0}, 5, 0.9F);
+    Decoded d;
+    EXPECT(greedy_decode(v.data(), 3, 5, cs, &d));
+    EXPECT(d.text.empty());
+    // No emitted characters means no confidence to report.
+    EXPECT(d.confidence == 0.0F);
+}
+
+static void test_confidence_is_mean_over_emitted_steps_only() {
+    const Charset cs = abc_charset();
+    // Two emitted characters at 0.8, plus a blank step at 0.99 that must NOT
+    // inflate the average.
+    std::vector<float> v(3 * 5, 0.0F);
+    auto set = [&](int t, int c, float p) { v[static_cast<size_t>(t * 5 + c)] = p; };
+    set(0, 1, 0.8F);
+    set(1, 0, 0.99F);  // blank
+    set(2, 2, 0.8F);
+    Decoded d;
+    EXPECT(greedy_decode(v.data(), 3, 5, cs, &d));
+    EXPECT(d.text == "ab");
+    EXPECT(std::fabs(d.confidence - 0.8F) < 1e-4F);
+}
+
+static void test_space_class_is_emitted() {
+    const Charset cs = abc_charset();  // class 4 is the space
+    const auto v = logits({1, 4, 2}, 5, 0.9F);
+    Decoded d;
+    EXPECT(greedy_decode(v.data(), 3, 5, cs, &d));
+    EXPECT(d.text == "a b");
+}
+
+static void test_multibyte_characters_concatenate() {
+    Charset cs;
+    cs.assign({"\xe4\xb8\xad", "\xe6\x96\x87"});  // 中, 文 -> 4 classes
+    const auto v = logits({1, 2}, 4, 0.9F);
+    Decoded d;
+    EXPECT(greedy_decode(v.data(), 2, 4, cs, &d));
+    EXPECT(d.text == "\xe4\xb8\xad\xe6\x96\x87");
+    EXPECT(d.text.size() == 6);
+}
+
+static void test_rejects_bad_arguments() {
+    const Charset cs = abc_charset();
+    Decoded d;
+    EXPECT(!greedy_decode(nullptr, 3, 5, cs, &d));
+    EXPECT(!greedy_decode(reinterpret_cast<const float*>(&d), 0, 5, cs, &d));
+    const auto v = logits({1}, 5, 0.9F);
+    EXPECT(!greedy_decode(v.data(), 1, 5, cs, nullptr));
+    // A class count that disagrees with the charset is a configuration bug
+    // and must fail loudly rather than silently mis-mapping characters.
+    EXPECT(!greedy_decode(v.data(), 1, 9, cs, &d));
+}
+
+int main() {
+    test_collapses_repeats_and_drops_blanks();
+    test_repeat_without_blank_is_one_character();
+    test_all_blank_yields_empty_text();
+    test_confidence_is_mean_over_emitted_steps_only();
+    test_space_class_is_emitted();
+    test_multibyte_characters_concatenate();
+    test_rejects_bad_arguments();
+    if (failures == 0) {
+        std::printf("test_ctc_decode: all passed\n");
+    }
+    return failures == 0 ? 0 : 1;
+}
+```
+
+Register in `core/tests/CMakeLists.txt`:
+
+```cmake
+naina_add_test(test_ctc_decode)
+target_include_directories(test_ctc_decode PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+```bash
+cmake --preset macos-arm64 >/dev/null && \
+cmake --build --preset macos-arm64 --target test_ctc_decode 2>&1 | tail -10
+```
+
+Expected: fatal error — `modules/ctc_decode.hpp` not found.
+
+- [ ] **Step 3: Write the header**
+
+Create `core/src/modules/ctc_decode.hpp`:
+
+```cpp
+// CTC greedy decode: per-timestep argmax, collapse repeats, drop blanks.
+//
+// This is PaddleOCR's CTCLabelDecode without beam search. Pure function, no
+// model and no session, so the whole decode path is testable from synthetic
+// logits.
+#ifndef NAINA_INTERNAL_CTC_DECODE_HPP
+#define NAINA_INTERNAL_CTC_DECODE_HPP
+
+#include "charset.hpp"
+
+#include <cstdint>
+#include <string>
+
+namespace naina::internal::ctc_decode {
+
+struct Decoded {
+    std::string text;         // UTF-8
+    float confidence = 0.0F;  // mean argmax probability over EMITTED steps
+};
+
+// `logits` is [num_steps, num_classes] row-major, as produced by the rec
+// model. Values are already softmaxed by the graph, so they are treated as
+// probabilities. `num_classes` must equal charset.num_classes().
+//
+// Returns false on a null pointer, a non-positive step count, a null out
+// pointer, or a num_classes / charset mismatch.
+bool greedy_decode(const float* logits,
+                   int32_t num_steps,
+                   int32_t num_classes,
+                   const charset::Charset& cs,
+                   Decoded* out);
+
+}  // namespace naina::internal::ctc_decode
+
+#endif  // NAINA_INTERNAL_CTC_DECODE_HPP
+```
+
+- [ ] **Step 4: Implement it**
+
+Create `core/src/modules/ctc_decode.cc`:
+
+```cpp
+#include "ctc_decode.hpp"
+
+namespace naina::internal::ctc_decode {
+
+bool greedy_decode(const float* logits,
+                   int32_t num_steps,
+                   int32_t num_classes,
+                   const charset::Charset& cs,
+                   Decoded* out) {
+    if (logits == nullptr || out == nullptr || num_steps <= 0 || num_classes <= 1) {
+        return false;
+    }
+    // A mismatch here would silently map class indices to the wrong
+    // characters, which reads as a broken model rather than a config bug.
+    if (num_classes != cs.num_classes()) {
+        return false;
+    }
+
+    out->text.clear();
+    out->confidence = 0.0F;
+
+    double conf_sum = 0.0;
+    int64_t emitted = 0;
+    int32_t prev = -1;  // previous argmax class, for repeat collapsing
+
+    for (int32_t t = 0; t < num_steps; ++t) {
+        const float* row = logits + static_cast<size_t>(t) * static_cast<size_t>(num_classes);
+        int32_t best = 0;
+        float best_p = row[0];
+        for (int32_t c = 1; c < num_classes; ++c) {
+            if (row[c] > best_p) {
+                best_p = row[c];
+                best = c;
+            }
+        }
+
+        // Blank (class 0) emits nothing but resets the repeat guard, which is
+        // what lets a genuine double letter through as two characters.
+        if (best == 0) {
+            prev = -1;
+            continue;
+        }
+        if (best == prev) {
+            continue;
+        }
+        prev = best;
+
+        const std::string& ch = cs.at(best);
+        if (!ch.empty()) {
+            out->text += ch;
+        }
+        conf_sum += static_cast<double>(best_p);
+        ++emitted;
+    }
+
+    // Confidence averages only the steps that produced output. Including
+    // blanks would let a mostly-blank strip report high confidence.
+    if (emitted > 0) {
+        out->confidence = static_cast<float>(conf_sum / static_cast<double>(emitted));
+    }
+    return true;
+}
+
+}  // namespace naina::internal::ctc_decode
+```
+
+Add `src/modules/ctc_decode.cc` to `NAINA_SOURCES` in `core/CMakeLists.txt`,
+after `src/modules/charset.cc`.
+
+- [ ] **Step 5: Run the test to verify it passes**
+
+```bash
+cmake --build --preset macos-arm64 --target test_ctc_decode 2>&1 | tail -5 \
+  && ctest --preset macos-arm64 -R test_ctc_decode --output-on-failure
+```
+
+Expected: `test_ctc_decode: all passed`.
+
+- [ ] **Step 6: Run the whole suite**
+
+```bash
+ctest --preset macos-arm64 --output-on-failure
+```
+
+Expected: every test passes.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add core/src/modules/ctc_decode.hpp core/src/modules/ctc_decode.cc \
+        core/tests/test_ctc_decode.cc core/CMakeLists.txt core/tests/CMakeLists.txt
+git commit -m "ctc_decode: greedy CTC decoding to UTF-8 + confidence
+
+Per-timestep argmax, collapse consecutive repeats, drop blanks. The blank
+class resets the repeat guard rather than being skipped outright — that is
+precisely what lets a real double letter decode as two characters instead
+of one.
+
+Confidence is the mean argmax probability over EMITTED steps only.
+Averaging over all steps would let a mostly-blank strip report high
+confidence on one recognised character.
+
+A num_classes / charset-size mismatch fails loudly. Silently mis-mapping
+class indices would surface as a broken model rather than a config bug, and
+num_classes genuinely differs per tier (6906 vs 18710)."
 ```
