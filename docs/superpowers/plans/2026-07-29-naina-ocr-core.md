@@ -46,6 +46,20 @@ The code blocks in the tasks below were written with these rules in mind, but
 warning, fix the cast — do not add `-Wno-*` and do not change the project's
 warning flags.
 
+**Measured during execution of Tasks 5–7:** the cast fixes were pervasive in
+the *test* code, not just the implementations. Every `std::vector<float> v(
+static_cast<size_t>(3) * plan.out_w * plan.out_h)` needed a cast on each
+`int32_t` operand, and so did every 2D index expression. Expect to add casts
+throughout; it is not a sign you have the wrong design.
+
+**Also learned the hard way:** the assertions in these tasks were hand-computed
+and one of them was wrong (Task 5 originally claimed `plan_det_resize(100, 50,
+…).out_w == 128`, which assumed ceiling rounding; the correct answer is `96`,
+because PaddleOCR rounds to nearest). If a test assertion contradicts the
+implementation the same plan gives you, **do not bend the implementation to
+match the assertion.** Check which one matches upstream PaddleOCR, fix the
+wrong one, and say so in the commit message.
+
 ---
 
 ## Verified reference data
@@ -1135,13 +1149,16 @@ static void test_det_resize_rounds_to_multiple_of_32() {
     EXPECT(std::fabs(a.scale_x - 0.96F) < 1e-5F);
     EXPECT(std::fabs(a.scale_y - 0.96F) < 1e-5F);
 
-    // 100x50 is under the limit, so no downscale — but both dims round UP
-    // to the next multiple of 32: 100 -> 128, 50 -> 64.
+    // 100x50 is under the limit, so no downscale — but both dims round to the
+    // NEAREST multiple of 32, which is what PaddleOCR's DetResizeForTest does:
+    //   resize_w = max(int(round(w / 32) * 32), 32)
+    // So 100 -> round(3.125)=3 -> 96 (down), and 50 -> round(1.5625)=2 -> 64 (up).
+    // Rounding is per-axis, so the two axes can move in opposite directions and
+    // the scale factors genuinely differ.
     const DetResize b = plan_det_resize(100, 50, 960, 32);
-    EXPECT(b.out_w == 128);
+    EXPECT(b.out_w == 96);
     EXPECT(b.out_h == 64);
-    // Scale is per-axis because rounding differs per axis.
-    EXPECT(std::fabs(b.scale_x - 1.28F) < 1e-5F);
+    EXPECT(std::fabs(b.scale_x - 0.96F) < 1e-5F);
     EXPECT(std::fabs(b.scale_y - 1.28F) < 1e-5F);
 
     // Never collapse to zero.
