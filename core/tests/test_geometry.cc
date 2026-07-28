@@ -7,6 +7,7 @@
 
 using naina::internal::convex_hull;
 using naina::internal::min_area_quad;
+using naina::internal::offset_convex_polygon;
 using naina::internal::polygon_area;
 using naina::internal::polygon_perimeter;
 
@@ -105,6 +106,63 @@ static void test_perimeter_and_area() {
     EXPECT(std::fabs(polygon_area(rev) - 16.0F) < 1e-3F);
 }
 
+static void test_offset_grows_a_square_by_distance_on_every_side() {
+    std::vector<naina_point> sq = {{10, 10}, {20, 10}, {20, 20}, {10, 20}};
+    const auto out = offset_convex_polygon(sq, 2.0F);
+    EXPECT(out.size() == 4);
+    // A square offset by d becomes a square with each side 2d longer.
+    EXPECT(std::fabs(polygon_area(out) - 196.0F) < 0.5F);  // 14 * 14
+    float minx = 1e9F, maxx = -1e9F, miny = 1e9F, maxy = -1e9F;
+    for (const auto& p : out) {
+        minx = p.x < minx ? p.x : minx;
+        maxx = p.x > maxx ? p.x : maxx;
+        miny = p.y < miny ? p.y : miny;
+        maxy = p.y > maxy ? p.y : maxy;
+    }
+    EXPECT(std::fabs(minx - 8.0F) < 0.1F);
+    EXPECT(std::fabs(maxx - 22.0F) < 0.1F);
+    EXPECT(std::fabs(miny - 8.0F) < 0.1F);
+    EXPECT(std::fabs(maxy - 22.0F) < 0.1F);
+}
+
+static void test_offset_is_winding_order_independent() {
+    std::vector<naina_point> ccw = {{0, 0}, {10, 0}, {10, 10}, {0, 10}};
+    std::vector<naina_point> cw = {{0, 10}, {10, 10}, {10, 0}, {0, 0}};
+    const float a = polygon_area(offset_convex_polygon(ccw, 3.0F));
+    const float b = polygon_area(offset_convex_polygon(cw, 3.0F));
+    // Both must GROW, not one grow and one shrink.
+    EXPECT(a > 100.0F);
+    EXPECT(b > 100.0F);
+    EXPECT(std::fabs(a - b) < 0.5F);
+}
+
+static void test_offset_zero_distance_is_identity() {
+    std::vector<naina_point> sq = {{1, 1}, {5, 1}, {5, 5}, {1, 5}};
+    const auto out = offset_convex_polygon(sq, 0.0F);
+    EXPECT(std::fabs(polygon_area(out) - 16.0F) < 1e-3F);
+}
+
+static void test_offset_degenerate_input_is_safe() {
+    EXPECT(offset_convex_polygon({}, 5.0F).empty());
+    const auto two = offset_convex_polygon({{0, 0}, {1, 1}}, 5.0F);
+    EXPECT(two.size() == 2);  // returned unchanged, not corrupted
+}
+
+static void test_db_unclip_distance_formula() {
+    // A 10x4 box: area 40, perimeter 28, ratio 1.4
+    //   distance = 40 * 1.4 / 28 = 2.0
+    std::vector<naina_point> box = {{0, 0}, {10, 0}, {10, 4}, {0, 4}};
+    const float area = polygon_area(box);
+    const float per = polygon_perimeter(box);
+    EXPECT(std::fabs(area - 40.0F) < 1e-3F);
+    EXPECT(std::fabs(per - 28.0F) < 1e-3F);
+    const float d = area * 1.4F / per;
+    EXPECT(std::fabs(d - 2.0F) < 1e-3F);
+    const auto grown = offset_convex_polygon(box, d);
+    // 14 x 8 = 112
+    EXPECT(std::fabs(polygon_area(grown) - 112.0F) < 1.0F);
+}
+
 int main() {
     test_hull_of_a_square_with_interior_points();
     test_hull_handles_collinear_and_duplicate_points();
@@ -113,6 +171,11 @@ int main() {
     test_min_area_quad_beats_bounding_box_when_rotated();
     test_min_area_quad_rejects_too_few_points();
     test_perimeter_and_area();
+    test_offset_grows_a_square_by_distance_on_every_side();
+    test_offset_is_winding_order_independent();
+    test_offset_zero_distance_is_identity();
+    test_offset_degenerate_input_is_safe();
+    test_db_unclip_distance_formula();
     if (failures == 0) {
         std::printf("test_geometry: all passed\n");
     }
