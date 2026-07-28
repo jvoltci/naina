@@ -62,6 +62,20 @@ naina_device to_c(Device d) {
     return NAINA_DEVICE_AUTO;
 }
 
+naina_tier to_c(Tier t) {
+    switch (t) {
+        case Tier::Auto:
+            return NAINA_TIER_AUTO;
+        case Tier::Tiny:
+            return NAINA_TIER_TINY;
+        case Tier::Small:
+            return NAINA_TIER_SMALL;
+        case Tier::Medium:
+            return NAINA_TIER_MEDIUM;
+    }
+    return NAINA_TIER_AUTO;
+}
+
 [[noreturn]] void throw_if(naina_status s, const char* where) {
     throw Error(s, where);
 }
@@ -102,13 +116,14 @@ Image& Image::operator=(Image&& other) noexcept {
 
 Engine::Engine(const Config& cfg) {
     naina_config c{};
-    c.version = 1;
+    c.version = 2;
     c.backend = to_c(cfg.backend);
     c.device = to_c(cfg.device);
     const std::string root = cfg.models_root.string();
     c.models_root = root.empty() ? nullptr : root.c_str();
     c.num_threads = cfg.num_threads;
-    c.enable_research_models = cfg.enable_research_models ? 1 : 0;
+    c.enable_research_models = 0;
+    c.tier = to_c(cfg.tier);
     const auto s = naina_init(&c, &ctx_);
     if (s != NAINA_OK) {
         throw_if(s, "Engine::Engine");
@@ -135,108 +150,8 @@ Engine& Engine::operator=(Engine&& other) noexcept {
     }
     return *this;
 }
-
-std::vector<Face> Engine::detect_faces(const Image& img) {
-    naina_face* arr = nullptr;
-    int32_t n = 0;
-    const auto s = naina_face_detect(ctx_, img.handle(), &arr, &n);
-    if (s != NAINA_OK) {
-        throw_if(s, "Engine::detect_faces");
-    }
-    std::vector<Face> out;
-    out.reserve(static_cast<size_t>(n));
-    for (int32_t i = 0; i < n; ++i) {
-        const auto& f = arr[i];
-        Face g{};
-        g.bbox = {f.bbox.x, f.bbox.y, f.bbox.w, f.bbox.h, f.bbox.score};
-        for (size_t k = 0; k < 5; ++k) {
-            g.landmarks[k] = {f.landmarks[k].x, f.landmarks[k].y};
-        }
-        g.quality = f.quality;
-        g.track_id = f.track_id;
-        out.push_back(g);
-    }
-    naina_free_faces(arr, n);
-    return out;
-}
-
-int Engine::face_embed_dim() const noexcept {
-    return naina_face_embed_dim(ctx_);
-}
-
-std::vector<float> Engine::embed_face(const Image& img, const Face& f) {
-    const int dim = face_embed_dim();
-    if (dim <= 0) {
-        throw Error(NAINA_E_NOT_INITIALIZED, "Engine::embed_face");
-    }
-    naina_face cf{};
-    cf.bbox = {f.bbox.x, f.bbox.y, f.bbox.w, f.bbox.h, f.bbox.score};
-    for (size_t k = 0; k < 5; ++k) {
-        cf.landmarks[k] = {f.landmarks[k].x, f.landmarks[k].y};
-    }
-    cf.quality = f.quality;
-    cf.track_id = f.track_id;
-
-    std::vector<float> out(static_cast<size_t>(dim));
-    const auto s = naina_face_embed(ctx_, img.handle(), &cf, out.data());
-    if (s != NAINA_OK) {
-        throw_if(s, "Engine::embed_face");
-    }
-    return out;
-}
-
-float Engine::face_liveness(const Image& img, const Face& f) {
-    naina_face cf{};
-    cf.bbox = {f.bbox.x, f.bbox.y, f.bbox.w, f.bbox.h, f.bbox.score};
-    for (size_t k = 0; k < 5; ++k) {
-        cf.landmarks[k] = {f.landmarks[k].x, f.landmarks[k].y};
-    }
-    cf.quality = f.quality;
-    cf.track_id = f.track_id;
-    float score = 0;
-    const auto s = naina_face_liveness(ctx_, img.handle(), &cf, &score);
-    if (s != NAINA_OK) {
-        throw_if(s, "Engine::face_liveness");
-    }
-    return score;
-}
-
-// Person / tracker — stubs for v1.0. Throw NAINA_E_UNSUPPORTED.
-std::vector<Person> Engine::detect_persons(const Image&) {
-    throw Error(NAINA_E_UNSUPPORTED, "Engine::detect_persons");
-}
-std::vector<float> Engine::embed_person(const Image&, const Person&) {
-    throw Error(NAINA_E_UNSUPPORTED, "Engine::embed_person");
-}
-int Engine::reid_embed_dim() const noexcept {
-    return naina_reid_embed_dim(ctx_);
-}
-Tracker Engine::make_tracker() {
-    throw Error(NAINA_E_UNSUPPORTED, "Engine::make_tracker");
-}
-
-// ── Tracker (stubs) ──────────────────────────────────────────────────
-
-Tracker::~Tracker() {
-    if (h_ != nullptr) {
-        naina_tracker_release(h_);
-    }
-}
-Tracker::Tracker(Tracker&& other) noexcept : h_(other.h_) {
-    other.h_ = nullptr;
-}
-Tracker& Tracker::operator=(Tracker&& other) noexcept {
-    if (this != &other) {
-        if (h_ != nullptr) {
-            naina_tracker_release(h_);
-        }
-        h_ = other.h_;
-        other.h_ = nullptr;
-    }
-    return *this;
-}
-std::vector<Person> Tracker::update(const std::vector<Person>&) {
-    throw Error(NAINA_E_UNSUPPORTED, "Tracker::update");
-}
+// The OCR method wrappers (read / lines / regions / markdown) land alongside
+// the modules that back them. Until then the C ABI is the supported surface;
+// see docs/superpowers/plans/2026-07-29-naina-ocr-core.md.
 
 }  // namespace naina

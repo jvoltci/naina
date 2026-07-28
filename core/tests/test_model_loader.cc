@@ -66,31 +66,65 @@ int main() {
 
     const auto reg = ModelRegistry::load(repo / "models" / "registry.yaml");
 
-    // ── resolve ─────────────────────────────────────────────────────
-    auto fd = reg.resolve("face_detect", Tier::Default);
+    // ── tier names are device-based ─────────────────────────────────
+    EXPECT(naina::tier_from_string("tiny") == Tier::Tiny);
+    EXPECT(naina::tier_from_string("small") == Tier::Small);
+    EXPECT(naina::tier_from_string("medium") == Tier::Medium);
+    // Unknown strings degrade to Small so a registry written for a newer
+    // naina still loads on an older one.
+    EXPECT(naina::tier_from_string("research") == Tier::Small);
+    EXPECT(naina::tier_from_string("") == Tier::Small);
+    EXPECT(std::string(naina::tier_to_string(Tier::Tiny)) == "tiny");
+    EXPECT(std::string(naina::tier_to_string(Tier::Small)) == "small");
+    EXPECT(std::string(naina::tier_to_string(Tier::Medium)) == "medium");
+
+    // ── every tier resolves det + rec ───────────────────────────────
+    for (const auto tier : {Tier::Tiny, Tier::Small, Tier::Medium}) {
+        const auto det = reg.resolve("text_detect", tier);
+        const auto rec = reg.resolve("text_recognize", tier);
+        EXPECT(det.has_value());
+        EXPECT(rec.has_value());
+        if (det.has_value()) {
+            EXPECT(det->tier == tier);
+            EXPECT(det->arch == "pp_ocrv6_det");
+            EXPECT(det->license == "Apache-2.0");
+            EXPECT(det->files.count("onnx") == 1);
+            EXPECT(det->files.at("onnx").sha256.size() == 64);
+            EXPECT(det->files.at("onnx").bytes > 0);
+            // ${hf} must have been substituted.
+            EXPECT(det->files.at("onnx").url.find("huggingface.co") != std::string::npos);
+            EXPECT(det->files.at("onnx").url.find("${hf}") == std::string::npos);
+        }
+        if (rec.has_value()) {
+            EXPECT(rec->arch == "pp_ocrv6_rec");
+            EXPECT(rec->files.at("onnx").sha256.size() == 64);
+        }
+    }
+
+    // Layout is medium-only until PP-DocLayout-S/-M are exported to ONNX.
+    EXPECT(reg.resolve("layout_detect", Tier::Medium).has_value());
+
+    // Spot-check one exact hash so a bad copy-paste is caught.
+    auto fd = reg.resolve("text_detect", Tier::Tiny);
     EXPECT(fd.has_value());
     if (fd.has_value()) {
-        EXPECT(fd->id == "face_detect.default");
-        EXPECT(fd->arch == "yunet");
-        EXPECT(fd->files.count("onnx") == 1);
-        EXPECT(fd->files.at("onnx").url.find("github.com") != std::string::npos);
+        EXPECT(fd->id == "text_detect.tiny");
+        EXPECT(fd->files.at("onnx").sha256 ==
+               "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8");
+        EXPECT(fd->files.at("onnx").bytes == 1780590);
     }
 
-    auto fe_research = reg.resolve("face_embed", Tier::Research);
-    EXPECT(fe_research.has_value());
-    if (fe_research.has_value()) {
-        EXPECT(fe_research->tier == Tier::Research);
-        EXPECT(fe_research->arch.find("transface") != std::string::npos);
-    }
-
-    EXPECT(!reg.resolve("nonexistent_task", Tier::Default).has_value());
+    // No face models may remain.
+    EXPECT(!reg.resolve("face_detect", Tier::Small).has_value());
+    EXPECT(!reg.resolve("face_embed", Tier::Medium).has_value());
+    EXPECT(!reg.resolve("nonexistent_task", Tier::Small).has_value());
 
     // ── cache_path_for stability ────────────────────────────────────
     if (fd.has_value()) {
         const auto p1 = reg.cache_path_for(*fd, "onnx");
         const auto p2 = reg.cache_path_for(*fd, "onnx");
         EXPECT(p1 == p2);
-        EXPECT(p1.string().find("face_detect") != std::string::npos);
+        EXPECT(p1.string().find("text_detect") != std::string::npos);
     }
 
     // ── ensure_local: missing file in offline mode → NAINA_E_MODEL_NOT_FOUND ──
@@ -100,12 +134,11 @@ int main() {
         EXPECT(reg.ensure_local(*fd, "onnx", &actual) == NAINA_E_MODEL_NOT_FOUND);
         EXPECT(actual == expected_path);
 
-        // Pre-place a (fake) file. The manifest now has a real sha256, so the
-        // loader should reject the wrong content with NAINA_E_IO and remove it.
+        // Pre-place a file with the wrong content. The manifest has a real
+        // sha256, so the loader must reject it and remove the bad file.
         write_file(expected_path, "stand-in onnx bytes (wrong content)");
         const auto rc = reg.ensure_local(*fd, "onnx", &actual);
         EXPECT(rc == NAINA_E_IO || rc == NAINA_E_MODEL_NOT_FOUND);
-        // File should have been removed after the failed verify.
         EXPECT(!fs::exists(expected_path));
     }
 
@@ -123,7 +156,7 @@ int main() {
         naina::ModelEntry e;
         e.id = "_test.fake";
         e.task = "_test";
-        e.tier = Tier::Default;
+        e.tier = Tier::Small;
         naina::FileEntry fe;
         fe.url = "https://example.invalid/data.bin";
         fe.sha256 = digest;

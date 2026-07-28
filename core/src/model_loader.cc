@@ -81,15 +81,8 @@ std::string substitute_release_base(const std::string& s, const std::string& rel
     return substitute_placeholder(s, "${release_base}", release_base);
 }
 
-std::string substitute_opencv_zoo(const std::string& s, const std::string& opencv_zoo) {
-    return substitute_placeholder(s, "${opencv_zoo}", opencv_zoo);
-}
-
-Tier parse_tier(const std::string& s) {
-    if (s == "research") {
-        return Tier::Research;
-    }
-    return Tier::Default;
+std::string substitute_hf(const std::string& s, const std::string& hf) {
+    return substitute_placeholder(s, "${hf}", hf);
 }
 
 std::string basename_from_url(const std::string& url) {
@@ -171,6 +164,28 @@ naina_status download_atomic(const std::string& url, const fs::path& dest) {
 
 }  // namespace
 
+Tier tier_from_string(const std::string& s) {
+    if (s == "tiny") {
+        return Tier::Tiny;
+    }
+    if (s == "medium") {
+        return Tier::Medium;
+    }
+    return Tier::Small;
+}
+
+const char* tier_to_string(Tier t) {
+    switch (t) {
+        case Tier::Tiny:
+            return "tiny";
+        case Tier::Medium:
+            return "medium";
+        case Tier::Small:
+            break;
+    }
+    return "small";
+}
+
 ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
     YAML::Node root = YAML::LoadFile(yaml_path.string());
 
@@ -181,7 +196,7 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
     ModelRegistry reg;
     std::string cache_root_raw = "${NAINA_CACHE:-~/.cache/naina/models}";
     reg.release_base_ = "";
-    std::string opencv_zoo;
+    std::string hf;
 
     if (root["defaults"]) {
         const auto& d = root["defaults"];
@@ -191,8 +206,8 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
         if (d["release_base"]) {
             reg.release_base_ = d["release_base"].as<std::string>();
         }
-        if (d["opencv_zoo"]) {
-            opencv_zoo = d["opencv_zoo"].as<std::string>();
+        if (d["hf"]) {
+            hf = d["hf"].as<std::string>();
         }
     }
     reg.cache_root_ = expand_home(substitute_env(cache_root_raw));
@@ -205,7 +220,7 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
         ModelEntry entry;
         entry.id = m["id"].as<std::string>();
         entry.task = m["task"].as<std::string>();
-        entry.tier = parse_tier(m["tier"].as<std::string>());
+        entry.tier = tier_from_string(m["tier"] ? m["tier"].as<std::string>() : "small");
         entry.arch = m["arch"].as<std::string>("");
         entry.license = m["license"].as<std::string>("");
 
@@ -213,10 +228,10 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
             for (const auto& kv : m["files"]) {
                 const auto kind = kv.first.as<std::string>();
                 FileEntry fe;
-                fe.url = substitute_opencv_zoo(
+                fe.url = substitute_hf(
                     substitute_release_base(kv.second["url"].as<std::string>(""),
                                             reg.release_base_),
-                    opencv_zoo);
+                    hf);
                 fe.sha256 = lower(kv.second["sha256"].as<std::string>(""));
                 fe.bytes = kv.second["bytes"].as<int64_t>(0);
                 entry.files.emplace(kind, std::move(fe));
