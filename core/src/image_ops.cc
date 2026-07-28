@@ -281,4 +281,77 @@ DetResize plan_det_resize(int32_t src_w, int32_t src_h, int32_t limit, int32_t m
     return r;
 }
 
+namespace {
+
+// Fetch one channel of one pixel, clamping to the image edge. `ch` is an
+// index into the source's native channel order (BGR8 → 0=B, 1=G, 2=R).
+float sample_u8(const ImageView& src, int32_t x, int32_t y, int32_t ch) {
+    if (x < 0) {
+        x = 0;
+    }
+    if (y < 0) {
+        y = 0;
+    }
+    if (x >= src.width) {
+        x = src.width - 1;
+    }
+    if (y >= src.height) {
+        y = src.height - 1;
+    }
+    const int32_t nch = (src.fmt == NAINA_PIXFMT_GRAY8) ? 1 : 3;
+    const size_t off = static_cast<size_t>(y) * static_cast<size_t>(src.stride) +
+                       static_cast<size_t>(x) * static_cast<size_t>(nch);
+    // GRAY8 replicates its single channel across all three requested planes.
+    const int32_t c = (nch == 1) ? 0 : ch;
+    return static_cast<float>(src.data[off + static_cast<size_t>(c)]);
+}
+
+// Bilinear sample at continuous (fx, fy).
+float bilinear_u8(const ImageView& src, float fx, float fy, int32_t ch) {
+    const int32_t x0 = static_cast<int32_t>(std::floor(fx));
+    const int32_t y0 = static_cast<int32_t>(std::floor(fy));
+    const float ax = fx - static_cast<float>(x0);
+    const float ay = fy - static_cast<float>(y0);
+    const float p00 = sample_u8(src, x0, y0, ch);
+    const float p10 = sample_u8(src, x0 + 1, y0, ch);
+    const float p01 = sample_u8(src, x0, y0 + 1, ch);
+    const float p11 = sample_u8(src, x0 + 1, y0 + 1, ch);
+    const float top = p00 + (p10 - p00) * ax;
+    const float bot = p01 + (p11 - p01) * ax;
+    return top + (bot - top) * ay;
+}
+
+}  // namespace
+
+void resize_det_bgr_planar_f32(const ImageView& src,
+                               const DetResize& plan,
+                               const float scale[3],
+                               const float mean[3],
+                               const float std_[3],
+                               float* dst) {
+    if (src.data == nullptr || dst == nullptr || plan.out_w <= 0 || plan.out_h <= 0) {
+        return;
+    }
+    const size_t plane = static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h);
+    // Map destination pixel centres back into source space.
+    const float inv_x = 1.0F / (plan.scale_x != 0.0F ? plan.scale_x : 1.0F);
+    const float inv_y = 1.0F / (plan.scale_y != 0.0F ? plan.scale_y : 1.0F);
+
+    for (int32_t ch = 0; ch < 3; ++ch) {
+        const float s = scale[ch];
+        const float m = mean[ch];
+        const float d = (std_[ch] != 0.0F) ? std_[ch] : 1.0F;
+        float* out = dst + static_cast<size_t>(ch) * plane;
+        for (int32_t y = 0; y < plan.out_h; ++y) {
+            const float fy = (static_cast<float>(y) + 0.5F) * inv_y - 0.5F;
+            for (int32_t x = 0; x < plan.out_w; ++x) {
+                const float fx = (static_cast<float>(x) + 0.5F) * inv_x - 0.5F;
+                const float raw = bilinear_u8(src, fx, fy, ch);
+                out[static_cast<size_t>(y) * static_cast<size_t>(plan.out_w) + static_cast<size_t>(x)] =
+                    (raw * s - m) / d;
+            }
+        }
+    }
+}
+
 }  // namespace naina::internal
