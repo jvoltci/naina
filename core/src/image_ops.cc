@@ -249,12 +249,12 @@ void crop_face_rgb_planar_f32(const ImageView& src,
 
 namespace {
 
-// Round `v` up to the next multiple of `m`, never below `m`.
+// Round `v` to the nearest multiple of `m`, never below `m`.
 int32_t round_to_multiple(float v, int32_t m) {
     if (m <= 1) {
         return static_cast<int32_t>(v) > 0 ? static_cast<int32_t>(v) : 1;
     }
-    const int32_t n = static_cast<int32_t>(std::ceil(v / static_cast<float>(m)));
+    const int32_t n = static_cast<int32_t>(std::lround(v / static_cast<float>(m)));
     return (n < 1 ? 1 : n) * m;
 }
 
