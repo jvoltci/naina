@@ -21,6 +21,7 @@ set(NAINA_SOURCES
     src/model_loader.cc
     src/image_ops.cc
     src/geometry.cc
+    src/modules/db_postprocess.cc
     src/api.cc
     src/api_cpp.cc
 )
