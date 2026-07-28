@@ -98,6 +98,16 @@ int main() {
         if (rec.has_value()) {
             EXPECT(rec->arch == "pp_ocrv6_rec");
             EXPECT(rec->files.at("onnx").sha256.size() == 64);
+            // The CTC charset ships as the model's own inference.yml, fetched
+            // and hash-verified like any other artifact rather than committed
+            // as a derived copy. Without it, decoding cannot map class
+            // indices to characters at all.
+            EXPECT(rec->files.count("charset_yaml") == 1);
+            if (rec->files.count("charset_yaml") == 1) {
+                EXPECT(rec->files.at("charset_yaml").sha256.size() == 64);
+                EXPECT(rec->files.at("charset_yaml").bytes > 0);
+                EXPECT(rec->files.at("charset_yaml").url.find(".yml") != std::string::npos);
+            }
         }
     }
 

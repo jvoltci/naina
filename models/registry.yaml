@@ -124,10 +124,26 @@ models:
   # ─── Text recognition (PP-OCRv6 rec, CTC head) ──────────────────────
   #
   # Input  "x"            f32 [N, 3, 48, W]  — height FIXED at 48
-  # Output "fetch_name_0" f32 [N, T, 6906]   — T ≈ W/8
+  # Output "fetch_name_0" f32 [N, T, C]      — T ≈ W/8
   #
-  # 6906 = 1 CTC blank at index 0 + 6905 characters, so charset entry i
-  # maps to class i+1. PaddleOCR's CTCLabelDecode uses the same convention.
+  # C is NOT constant across tiers. Verified by loading each ONNX graph:
+  #   tiny          6906 classes =  6904 chars + blank + space
+  #   small/medium 18710 classes = 18708 chars + blank + space
+  #
+  # Class layout follows PaddleOCR's CTCLabelDecode: index 0 is the CTC
+  # blank, charset entry i maps to class i+1, and the last class is a space
+  # (use_space_char). Getting num_classes wrong shifts every character in
+  # the output, so this is per-tier data, not a shared constant.
+  #
+  # The charset lives in each model's own inference.yml under
+  # PostProcess.character_dict. Rather than commit a derived copy, the
+  # manifest fetches that file as the `charset_yaml` kind and verifies it by
+  # sha256 like any other artifact. small and medium share an identical
+  # charset but ship byte-different yml files (the model_name field differs
+  # by one byte), so each carries its own hash.
+  #
+  # tiny's charset is far smaller — mostly CJK and Latin — so the
+  # "50 languages" claim applies to small and medium only.
 
   - id: text_recognize.tiny
     task: text_recognize
@@ -140,6 +156,10 @@ models:
         url:    "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
         sha256: "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
         bytes:  4462639
+      charset_yaml:
+        url:    "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.yml"
+        sha256: "66170210bad538e83fff3c4a3867e547d6bf20b50d64b20347c4b913f3034ea1"
+        bytes:  55571
     input:
       shape:  [-1, 3, 48, -1]
       pixfmt: bgr
@@ -167,6 +187,10 @@ models:
         url:    "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
         sha256: "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
         bytes:  21159378
+      charset_yaml:
+        url:    "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.yml"
+        sha256: "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"
+        bytes:  150579
     input:
       shape:  [-1, 3, 48, -1]
       pixfmt: bgr
@@ -181,7 +205,7 @@ models:
       type: ctc_logits
       postprocess:
         blank_index: 0
-        num_classes: 6906
+        num_classes: 18710
 
   - id: text_recognize.medium
     task: text_recognize
@@ -194,6 +218,10 @@ models:
         url:    "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx"
         sha256: "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
         bytes:  76554979
+      charset_yaml:
+        url:    "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.yml"
+        sha256: "991b700facf5b50a7de193468207d5f4255b538dde0d312ae3b7c7a9b6873129"
+        bytes:  150580
     input:
       shape:  [-1, 3, 48, -1]
       pixfmt: bgr
@@ -208,7 +236,7 @@ models:
       type: ctc_logits
       postprocess:
         blank_index: 0
-        num_classes: 6906
+        num_classes: 18710
 
   # ─── Layout analysis (PP-DocLayoutV3) ───────────────────────────────
   #
