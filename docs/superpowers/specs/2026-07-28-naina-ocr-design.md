@@ -58,6 +58,23 @@ backend probe is already that architecture.
 4. **Agent-native.** `naina.read(path) -> markdown` is the primary API, plus
    an MCP server. Not a 40-function structure-analysis surface.
 
+   Target **MCP spec 2026-07-28**, released the day this design was written.
+   It replaces the bidirectional stateful protocol with a **stateless
+   request/response model**, which suits naina exactly — reading a document
+   carries no session state, so the server deploys to serverless or edge with
+   no session management. Two consequences for the v1.0 MCP plan:
+
+   - Build against the stateless core. Do not carry session state between
+     calls; each `read` is self-contained.
+   - **MCP Apps** (interactive UI rendered in the conversation) is the right
+     surface for showing detected regions and letting a user correct reading
+     order, rather than dumping coordinates as text. Treat this as optional
+     polish, not v1.0 scope.
+
+   Authorization in this spec version aligns with production OAuth 2.0 / OIDC.
+   naina's MCP server reads local files and needs no auth, so this is not
+   relevant unless a hosted variant is ever offered.
+
 ### Scoping pillar 1 honestly
 
 "Byte-identical" is only truthful when scoped. Floating-point operations
