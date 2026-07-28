@@ -1877,15 +1877,18 @@ static void test_min_area_quad_of_axis_aligned_box() {
 }
 
 static void test_min_area_quad_beats_bounding_box_when_rotated() {
-    // A 45-degree diamond. Its axis-aligned bbox has area 200; the true
-    // minimum-area rectangle is the rotated square of area 100.
+    // A 45-degree diamond centred at (10,10). It is already a rotated
+    // square of side sqrt(200), so its own shoelace area is 200. Its
+    // axis-aligned bounding box spans x in [0,20] and y in [0,20], area 400.
+    // The true minimum-area enclosing rectangle is therefore the diamond
+    // itself at 200 — half the naive bbox.
     std::vector<naina_point> pts = {{10, 0}, {20, 10}, {10, 20}, {0, 10}};
     naina_point out[4];
     EXPECT(min_area_quad(pts, out));
     std::vector<naina_point> q(out, out + 4);
     const float area = polygon_area(q);
-    EXPECT(area < 150.0F);  // strictly better than the 200 bbox
-    EXPECT(std::fabs(area - 200.0F) > 1.0F);
+    EXPECT(area < 250.0F);                      // strictly better than the 400 bbox
+    EXPECT(std::fabs(area - 200.0F) < 1.0F);    // and equal to the true minimum
 }
 
 static void test_min_area_quad_rejects_too_few_points() {
@@ -2165,8 +2168,8 @@ rotating calipers live here as pure functions.
 
 Rotating calipers is exact, not approximate: the minimum-area rectangle
 always has a side flush with a hull edge, so testing every edge direction
-finds the true optimum. A rotated diamond yields area 100 rather than the
-200 an axis-aligned bounding box would give."
+finds the true optimum. A rotated diamond yields area 200 rather than the
+400 an axis-aligned bounding box would give."
 ```
 
 ---
