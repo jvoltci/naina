@@ -57,6 +57,29 @@ void resize_det_bgr_planar_f32(const ImageView& src,
                                const float std_[3],
                                float* dst);
 
+// Target geometry for one rectified text strip. The recogniser's input
+// height is fixed (48 for PP-OCRv6 rec); width follows the quad's aspect
+// ratio, clamped so a pathological box cannot allocate an unbounded tensor.
+struct QuadStrip {
+    int32_t width;
+    int32_t height;
+    bool rotate90;  // true when the quad is taller than wide (vertical text)
+};
+
+// Pure geometry. `corners` is clockwise from top-left.
+QuadStrip plan_quad_strip(const naina_point corners[4], int32_t height, int32_t max_width);
+
+// Perspective-warp the quad out of `src` into a `plan.width` x `plan.height`
+// BGR planar float32 buffer with per-channel (x*scale - mean) / std.
+// `dst` must hold 3 * plan.width * plan.height floats.
+void warp_quad_bgr_planar_f32(const ImageView& src,
+                              const naina_point corners[4],
+                              const QuadStrip& plan,
+                              const float scale[3],
+                              const float mean[3],
+                              const float std_[3],
+                              float* dst);
+
 // Same as above but produces an RGB planar float32, with per-channel
 // (x - mean) / std normalisation. Used by face_embed preprocessing.
 // `dst` holds 3*out*out floats.

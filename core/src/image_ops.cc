@@ -354,4 +354,98 @@ void resize_det_bgr_planar_f32(const ImageView& src,
     }
 }
 
+namespace {
+
+float dist(const naina_point& a, const naina_point& b) {
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+}  // namespace
+
+QuadStrip plan_quad_strip(const naina_point corners[4], int32_t height, int32_t max_width) {
+    QuadStrip s{};
+    s.height = height > 0 ? height : 48;
+
+    // PaddleOCR's get_rotate_crop_image: take the longer of each opposing
+    // edge pair, so a slightly skewed quad is not undersized.
+    const float top = dist(corners[0], corners[1]);
+    const float bottom = dist(corners[3], corners[2]);
+    const float left = dist(corners[0], corners[3]);
+    const float right = dist(corners[1], corners[2]);
+    float quad_w = top > bottom ? top : bottom;
+    float quad_h = left > right ? left : right;
+
+    // A quad markedly taller than wide is vertical text: rotate so the
+    // reading direction runs along the strip's width.
+    s.rotate90 = (quad_w > 0.0F) && (quad_h / quad_w >= 1.5F);
+    if (s.rotate90) {
+        const float t = quad_w;
+        quad_w = quad_h;
+        quad_h = t;
+    }
+
+    if (quad_h <= 0.0F || quad_w <= 0.0F) {
+        s.width = 1;
+        return s;
+    }
+    const float aspect = quad_w / quad_h;
+    int32_t w = static_cast<int32_t>(std::lround(static_cast<float>(s.height) * aspect));
+    if (w < 1) {
+        w = 1;
+    }
+    if (max_width > 0 && w > max_width) {
+        w = max_width;
+    }
+    s.width = w;
+    return s;
+}
+
+void warp_quad_bgr_planar_f32(const ImageView& src,
+                              const naina_point corners[4],
+                              const QuadStrip& plan,
+                              const float scale[3],
+                              const float mean[3],
+                              const float std_[3],
+                              float* dst) {
+    if (src.data == nullptr || dst == nullptr || plan.width <= 0 || plan.height <= 0) {
+        return;
+    }
+    // Order the quad so corner 0 maps to the strip's top-left. When the quad
+    // is vertical we start from corner 3, which rotates the sampling frame
+    // by 90 degrees without a second pass over the pixels.
+    naina_point c[4];
+    for (int32_t i = 0; i < 4; ++i) {
+        c[i] = corners[plan.rotate90 ? ((i + 3) % 4) : i];
+    }
+
+    const size_t plane = static_cast<size_t>(plan.width) * static_cast<size_t>(plan.height);
+    const float fw = static_cast<float>(plan.width);
+    const float fh = static_cast<float>(plan.height);
+
+    for (int32_t y = 0; y < plan.height; ++y) {
+        // v, u in [0,1] across the strip; bilinear blend of the four corners
+        // is the exact inverse map for a planar quad.
+        const float v = (static_cast<float>(y) + 0.5F) / fh;
+        for (int32_t x = 0; x < plan.width; ++x) {
+            const float u = (static_cast<float>(x) + 0.5F) / fw;
+            const float top_x = c[0].x + (c[1].x - c[0].x) * u;
+            const float top_y = c[0].y + (c[1].y - c[0].y) * u;
+            const float bot_x = c[3].x + (c[2].x - c[3].x) * u;
+            const float bot_y = c[3].y + (c[2].y - c[3].y) * u;
+            const float sx = top_x + (bot_x - top_x) * v;
+            const float sy = top_y + (bot_y - top_y) * v;
+
+            for (int32_t ch = 0; ch < 3; ++ch) {
+                const float d = (std_[ch] != 0.0F) ? std_[ch] : 1.0F;
+                const float raw = bilinear_u8(src, sx, sy, ch);
+                dst[static_cast<size_t>(ch) * plane +
+                    static_cast<size_t>(y) * static_cast<size_t>(plan.width) + static_cast<size_t>(x)] =
+                    (raw * scale[ch] - mean[ch]) / d;
+            }
+        }
+    }
+}
+
 }  // namespace naina::internal

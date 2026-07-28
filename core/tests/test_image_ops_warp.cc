@@ -9,6 +9,8 @@
 using naina::internal::DetResize;
 using naina::internal::ImageView;
 using naina::internal::plan_det_resize;
+using naina::internal::plan_quad_strip;
+using naina::internal::QuadStrip;
 using naina::internal::resize_det_bgr_planar_f32;
 
 static int failures = 0;
@@ -136,11 +138,107 @@ static void test_resize_det_downscales_dimensions() {
     EXPECT(std::fabs(dst[2 * plane] - 250.0F) < 0.5F);
 }
 
+static void test_quad_strip_sizing_from_edge_lengths() {
+    // An axis-aligned 80x20 quad: 4x wider than tall.
+    naina_point q[4];
+    q[0] = {10.0F, 10.0F};
+    q[1] = {90.0F, 10.0F};
+    q[2] = {90.0F, 30.0F};
+    q[3] = {10.0F, 30.0F};
+
+    const QuadStrip s = plan_quad_strip(q, 48, 1200);
+    EXPECT(s.height == 48);
+    // aspect 80/20 = 4 -> width = 48*4 = 192
+    EXPECT(s.width == 192);
+    EXPECT(!s.rotate90);
+}
+
+static void test_quad_strip_rotates_tall_quads() {
+    // A 20x100 quad: 5x taller than wide, so it is vertical text.
+    naina_point q[4];
+    q[0] = {0.0F, 0.0F};
+    q[1] = {20.0F, 0.0F};
+    q[2] = {20.0F, 100.0F};
+    q[3] = {0.0F, 100.0F};
+
+    const QuadStrip s = plan_quad_strip(q, 48, 1200);
+    EXPECT(s.rotate90);
+    EXPECT(s.height == 48);
+    // After rotation the long side (100) becomes the width: 48*(100/20)=240
+    EXPECT(s.width == 240);
+}
+
+static void test_quad_strip_clamps_max_width() {
+    // An absurdly wide quad must not produce an unbounded tensor.
+    naina_point q[4];
+    q[0] = {0.0F, 0.0F};
+    q[1] = {10000.0F, 0.0F};
+    q[2] = {10000.0F, 10.0F};
+    q[3] = {0.0F, 10.0F};
+
+    const QuadStrip s = plan_quad_strip(q, 48, 1200);
+    EXPECT(s.width == 1200);
+    EXPECT(s.height == 48);
+}
+
+static void test_quad_strip_degenerate_quad_is_safe() {
+    naina_point q[4];
+    for (auto& p : q) {
+        p = {5.0F, 5.0F};
+    }
+    const QuadStrip s = plan_quad_strip(q, 48, 1200);
+    EXPECT(s.width >= 1);
+    EXPECT(s.height == 48);
+}
+
+static void test_warp_quad_extracts_the_right_pixels() {
+    // 100x40 image, left half B=0, right half B=200. Warp the right half
+    // and confirm we sampled the bright side.
+    const int w = 100;
+    const int h = 40;
+    std::vector<uint8_t> px(static_cast<size_t>(w) * static_cast<size_t>(h) * 3, 0);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            const size_t i = (static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 3;
+            const uint8_t v = (x >= w / 2) ? 200 : 0;
+            px[i + 0] = v;
+            px[i + 1] = v;
+            px[i + 2] = v;
+        }
+    }
+    ImageView src{px.data(), w, h, w * 3, NAINA_PIXFMT_BGR8};
+
+    naina_point q[4];
+    q[0] = {50.0F, 5.0F};
+    q[1] = {99.0F, 5.0F};
+    q[2] = {99.0F, 35.0F};
+    q[3] = {50.0F, 35.0F};
+
+    const QuadStrip s = plan_quad_strip(q, 48, 1200);
+    const float scale[3] = {1.0F, 1.0F, 1.0F};
+    const float mean[3] = {0.0F, 0.0F, 0.0F};
+    const float sd[3] = {1.0F, 1.0F, 1.0F};
+    std::vector<float> dst(static_cast<size_t>(3) * static_cast<size_t>(s.width) * static_cast<size_t>(s.height),
+                            -999.0F);
+    naina::internal::warp_quad_bgr_planar_f32(src, q, s, scale, mean, sd, dst.data());
+
+    // Every sample came from the bright half.
+    const size_t plane = static_cast<size_t>(s.width) * static_cast<size_t>(s.height);
+    for (size_t i = 0; i < plane; ++i) {
+        EXPECT(dst[i] > 150.0F);
+    }
+}
+
 int main() {
     test_det_resize_rounds_to_multiple_of_32();
     test_det_resize_is_idempotent_on_aligned_input();
     test_resize_det_normalises_per_channel();
     test_resize_det_downscales_dimensions();
+    test_quad_strip_sizing_from_edge_lengths();
+    test_quad_strip_rotates_tall_quads();
+    test_quad_strip_clamps_max_width();
+    test_quad_strip_degenerate_quad_is_safe();
+    test_warp_quad_extracts_the_right_pixels();
     if (failures == 0) {
         std::printf("test_image_ops_warp: all passed\n");
     }
