@@ -33,6 +33,30 @@ struct Letterbox {
 // Returns the Letterbox parameters needed to invert the mapping.
 Letterbox letterbox_to_bgr_planar_f32(const ImageView& src, int size, float pad_value, float* dst);
 
+// Geometry for the detection resize. PP-OCRv6 det accepts any H/W but
+// PaddleOCR clamps the longest side to `limit` and rounds both dimensions
+// to a multiple of `multiple_of`. Scale is per-axis because the rounding
+// differs per axis.
+struct DetResize {
+    int32_t out_w;
+    int32_t out_h;
+    float scale_x;  // out_w / src_w — divide model coords by this to invert
+    float scale_y;  // out_h / src_h
+};
+
+// Pure geometry; no pixels touched. Exposed for testing.
+DetResize plan_det_resize(int32_t src_w, int32_t src_h, int32_t limit, int32_t multiple_of);
+
+// Resize `src` into a `plan.out_w` x `plan.out_h` BGR planar float32 buffer
+// with per-channel (x*scale - mean) / std normalisation. `dst` must hold
+// 3 * out_w * out_h floats. Bilinear sampling, edge-clamped.
+void resize_det_bgr_planar_f32(const ImageView& src,
+                               const DetResize& plan,
+                               const float scale[3],
+                               const float mean[3],
+                               const float std_[3],
+                               float* dst);
+
 // Same as above but produces an RGB planar float32, with per-channel
 // (x - mean) / std normalisation. Used by face_embed preprocessing.
 // `dst` holds 3*out*out floats.
