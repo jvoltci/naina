@@ -2,12 +2,14 @@
 #include "image_ops.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 
 using naina::internal::DetResize;
 using naina::internal::ImageView;
 using naina::internal::plan_det_resize;
+using naina::internal::resize_det_bgr_planar_f32;
 
 static int failures = 0;
 
@@ -28,13 +30,13 @@ static void test_det_resize_rounds_to_multiple_of_32() {
     EXPECT(std::fabs(a.scale_x - 0.96F) < 1e-5F);
     EXPECT(std::fabs(a.scale_y - 0.96F) < 1e-5F);
 
-    // 100x50 is under the limit, so no downscale — but both dims round UP
-    // to the next multiple of 32: 100 -> 128, 50 -> 64.
+    // 100x50 is under the limit, so no downscale — but both dims round to
+    // the nearest multiple of 32: 100 -> 96, 50 -> 64.
     const DetResize b = plan_det_resize(100, 50, 960, 32);
-    EXPECT(b.out_w == 128);
+    EXPECT(b.out_w == 96);
     EXPECT(b.out_h == 64);
     // Scale is per-axis because rounding differs per axis.
-    EXPECT(std::fabs(b.scale_x - 1.28F) < 1e-5F);
+    EXPECT(std::fabs(b.scale_x - 0.96F) < 1e-5F);
     EXPECT(std::fabs(b.scale_y - 1.28F) < 1e-5F);
 
     // Never collapse to zero.
