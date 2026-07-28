@@ -148,4 +148,64 @@ bool min_area_quad(const std::vector<naina_point>& pts, naina_point out[4]) {
     return true;
 }
 
+std::vector<naina_point> offset_convex_polygon(const std::vector<naina_point>& poly,
+                                               float distance) {
+    if (poly.size() < 3 || distance == 0.0F) {
+        return poly;
+    }
+    const size_t n = poly.size();
+
+    // Signed area tells us the winding, which fixes which normal points out.
+    float signed2 = 0.0F;
+    for (size_t i = 0; i < n; ++i) {
+        const naina_point& p = poly[i];
+        const naina_point& q = poly[(i + 1) % n];
+        signed2 += p.x * q.y - q.x * p.y;
+    }
+    // For counter-clockwise winding (signed2 > 0) the outward normal of edge
+    // p->q is (dy, -dx); for clockwise it is the negation.
+    const float sign = (signed2 > 0.0F) ? 1.0F : -1.0F;
+
+    // Each edge becomes a line offset outward by `distance`, stored as a
+    // point plus direction. Adjacent offset lines are then intersected.
+    struct Line {
+        float px, py, dx, dy;
+    };
+    std::vector<Line> lines(n);
+    for (size_t i = 0; i < n; ++i) {
+        const naina_point& p = poly[i];
+        const naina_point& q = poly[(i + 1) % n];
+        float dx = q.x - p.x;
+        float dy = q.y - p.y;
+        const float len = std::sqrt(dx * dx + dy * dy);
+        if (len < 1e-9F) {
+            // Zero-length edge: keep the vertex, no meaningful normal.
+            lines[i] = Line{p.x, p.y, 1.0F, 0.0F};
+            continue;
+        }
+        dx /= len;
+        dy /= len;
+        const float nx = sign * dy;
+        const float ny = -sign * dx;
+        lines[i] = Line{p.x + nx * distance, p.y + ny * distance, dx, dy};
+    }
+
+    std::vector<naina_point> out;
+    out.reserve(n);
+    for (size_t i = 0; i < n; ++i) {
+        const Line& a = lines[(i + n - 1) % n];
+        const Line& b = lines[i];
+        // Solve a.p + t*a.d == b.p + s*b.d for t.
+        const float denom = a.dx * b.dy - a.dy * b.dx;
+        if (std::fabs(denom) < 1e-9F) {
+            // Parallel adjacent edges (straight line): use the offset vertex.
+            out.push_back(naina_point{b.px, b.py});
+            continue;
+        }
+        const float t = ((b.px - a.px) * b.dy - (b.py - a.py) * b.dx) / denom;
+        out.push_back(naina_point{a.px + a.dx * t, a.py + a.dy * t});
+    }
+    return out;
+}
+
 }  // namespace naina::internal
