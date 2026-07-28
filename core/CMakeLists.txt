@@ -22,6 +22,7 @@ set(NAINA_SOURCES
     src/image_ops.cc
     src/geometry.cc
     src/modules/db_postprocess.cc
+    src/modules/charset.cc
     src/api.cc
     src/api_cpp.cc
 )
