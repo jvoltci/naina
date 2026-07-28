@@ -1,7 +1,7 @@
 // naina — C ABI implementation.
 //
 // Owns the runtime context, lazy-loads inference sessions per task, and glues
-// the face/person modules to the backend abstraction.
+// the OCR modules to the backend abstraction.
 
 #include "naina/backend.hpp"
 #include "naina/model_loader.hpp"
@@ -9,11 +9,9 @@
 #include "naina/tensor.hpp"
 
 #include "image_ops.hpp"
-#include "modules/face_detect.hpp"
-#include "modules/face_embed.hpp"
-#include "modules/face_liveness.hpp"
 
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -32,12 +30,6 @@ struct naina_image {
     int32_t stride;
     naina_pixfmt fmt;
 };
-
-namespace {
-naina::internal::ImageView view_of(const naina_image_t* img) {
-    return naina::internal::ImageView{img->data, img->width, img->height, img->stride, img->fmt};
-}
-}  // namespace
 
 namespace {
 
@@ -77,7 +69,7 @@ const std::vector<std::string>& kind_priority() {
 struct naina_ctx {
     naina::ModelRegistry registry;
     naina_backend preferred_backend = NAINA_BACKEND_AUTO;
-    bool enable_research = false;
+    naina::Tier tier = naina::Tier::Small;
     int num_threads = 0;
 
     std::mutex sess_mu;
@@ -90,8 +82,12 @@ struct naina_ctx {
             *out_status = NAINA_OK;
             return it->second.get();
         }
-        const naina::Tier tier = enable_research ? naina::Tier::Research : naina::Tier::Default;
         auto entry = registry.resolve(task, tier);
+        // Tier fallback: a tier that lacks this task degrades to a larger one
+        // rather than failing. layout_detect is medium-only today.
+        if (!entry && tier != naina::Tier::Medium) {
+            entry = registry.resolve(task, naina::Tier::Medium);
+        }
         if (!entry) {
             *out_status = NAINA_E_MODEL_NOT_FOUND;
             return nullptr;
@@ -188,8 +184,22 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
         return NAINA_E_BACKEND_UNAVAIL;
     }
     ctx->preferred_backend = (cfg != nullptr) ? cfg->backend : NAINA_BACKEND_AUTO;
-    ctx->enable_research = (cfg != nullptr) && cfg->enable_research_models != 0;
     ctx->num_threads = (cfg != nullptr) ? cfg->num_threads : 0;
+    // `tier` only exists in config version >= 2. Older callers get Small.
+    if (cfg != nullptr && cfg->version >= 2) {
+        switch (cfg->tier) {
+            case NAINA_TIER_TINY:
+                ctx->tier = naina::Tier::Tiny;
+                break;
+            case NAINA_TIER_MEDIUM:
+                ctx->tier = naina::Tier::Medium;
+                break;
+            case NAINA_TIER_SMALL:
+            case NAINA_TIER_AUTO:
+                ctx->tier = naina::Tier::Small;
+                break;
+        }
+    }
 
     *out_ctx = ctx.release();
     return NAINA_OK;
@@ -222,145 +232,111 @@ extern "C" void naina_image_release(naina_image_t* image) {
     delete image;
 }
 
-// ── Face stack ────────────────────────────────────────────────────────
+// ── OCR surface ───────────────────────────────────────────────────────
+//
+// naina_read and the page accessors are stubbed NAINA_E_UNSUPPORTED until
+// the modules land (text_detect, text_rectify, text_recognize). The
+// argument-validation contracts are real from day one so bindings can be
+// written and tested against them now.
 
-extern "C" naina_status naina_face_detect(naina_ctx_t* ctx,
-                                          const naina_image_t* image,
-                                          naina_face** out_faces,
-                                          int32_t* out_count) {
-    if (ctx == nullptr || image == nullptr || out_faces == nullptr || out_count == nullptr) {
+extern "C" naina_status naina_read(naina_ctx_t* ctx,
+                                   const naina_image_t* image,
+                                   naina_page_t** out_page) {
+    if (ctx == nullptr || image == nullptr || out_page == nullptr) {
         return NAINA_E_INVALID_ARG;
     }
-    *out_faces = nullptr;
+    *out_page = nullptr;
+    return NAINA_E_UNSUPPORTED;
+}
+
+extern "C" void naina_page_release(naina_page_t*) {}
+
+extern "C" naina_status naina_page_lines(const naina_page_t* page,
+                                         const naina_textline** out_lines,
+                                         int32_t* out_count) {
+    if (page == nullptr || out_lines == nullptr || out_count == nullptr) {
+        return NAINA_E_INVALID_ARG;
+    }
+    *out_lines = nullptr;
     *out_count = 0;
-
-    naina_status s = NAINA_OK;
-    auto* session = ctx->session_for("face_detect", &s);
-    if (session == nullptr) {
-        return s;
-    }
-
-    std::vector<naina_face> faces;
-    s = naina::internal::face_detect::detect(session, view_of(image), {}, &faces);
-    if (s != NAINA_OK) {
-        return s;
-    }
-
-    if (faces.empty()) {
-        return NAINA_OK;
-    }
-    auto* buf = static_cast<naina_face*>(std::malloc(sizeof(naina_face) * faces.size()));
-    if (buf == nullptr) {
-        return NAINA_E_OOM;
-    }
-    std::memcpy(buf, faces.data(), sizeof(naina_face) * faces.size());
-    *out_faces = buf;
-    *out_count = static_cast<int32_t>(faces.size());
-    return NAINA_OK;
+    return NAINA_E_UNSUPPORTED;
 }
 
-extern "C" void naina_free_faces(naina_face* faces, int32_t /*count*/) {
-    std::free(faces);
-}
-
-extern "C" int32_t naina_face_embed_dim(const naina_ctx_t* ctx) {
-    if (ctx == nullptr) {
-        return 0;
-    }
-    // For SFace = 128; for EdgeFace / TransFace = 512. We don't know until
-    // a session is loaded. v0.1 returns 0 ("query after first embed").
-    auto* mctx = const_cast<naina_ctx_t*>(ctx);
-    naina_status s = NAINA_OK;
-    auto* session = mctx->session_for("face_embed", &s);
-    if (session == nullptr) {
-        return 0;
-    }
-    auto outs = session->outputs();
-    if (outs.empty()) {
-        return 0;
-    }
-    int32_t dim = 1;
-    for (auto d : outs[0].shape) {
-        if (d > 0) {
-            dim *= static_cast<int32_t>(d);
-        }
-    }
-    return dim;
-}
-
-extern "C" naina_status naina_face_embed(naina_ctx_t* ctx,
-                                         const naina_image_t* image,
-                                         const naina_face* face,
-                                         float* out_embedding) {
-    if (ctx == nullptr || image == nullptr || face == nullptr || out_embedding == nullptr) {
+extern "C" naina_status naina_page_regions(const naina_page_t* page,
+                                           const naina_region** out_regions,
+                                           int32_t* out_count) {
+    if (page == nullptr || out_regions == nullptr || out_count == nullptr) {
         return NAINA_E_INVALID_ARG;
     }
-    naina_status s = NAINA_OK;
-    auto* session = ctx->session_for("face_embed", &s);
-    if (session == nullptr) {
-        return s;
-    }
-    std::vector<float> emb;
-    s = naina::internal::face_embed::embed(session, view_of(image), *face, {}, &emb);
-    if (s != NAINA_OK) {
-        return s;
-    }
-    std::memcpy(out_embedding, emb.data(), emb.size() * sizeof(float));
-    return NAINA_OK;
+    *out_regions = nullptr;
+    *out_count = 0;
+    return NAINA_E_UNSUPPORTED;
 }
 
-extern "C" naina_status naina_face_liveness(naina_ctx_t* ctx,
+extern "C" const char* naina_page_markdown(const naina_page_t*) {
+    return "";
+}
+
+extern "C" const char* naina_page_json(const naina_page_t*) {
+    return "";
+}
+
+extern "C" naina_status naina_text_detect(naina_ctx_t* ctx,
+                                          const naina_image_t* image,
+                                          naina_textbox** out_boxes,
+                                          int32_t* out_count) {
+    if (ctx == nullptr || image == nullptr || out_boxes == nullptr || out_count == nullptr) {
+        return NAINA_E_INVALID_ARG;
+    }
+    *out_boxes = nullptr;
+    *out_count = 0;
+    return NAINA_E_UNSUPPORTED;
+}
+
+extern "C" void naina_free_textboxes(naina_textbox* boxes, int32_t /*count*/) {
+    std::free(boxes);
+}
+
+extern "C" naina_status naina_layout_detect(naina_ctx_t* ctx,
                                             const naina_image_t* image,
-                                            const naina_face* face,
-                                            float* out_score) {
-    if (ctx == nullptr || image == nullptr || face == nullptr || out_score == nullptr) {
+                                            naina_region** out_regions,
+                                            int32_t* out_count) {
+    if (ctx == nullptr || image == nullptr || out_regions == nullptr || out_count == nullptr) {
         return NAINA_E_INVALID_ARG;
     }
-    naina_status s = NAINA_OK;
-    auto* session = ctx->session_for("face_liveness", &s);
-    if (session == nullptr) {
-        return s;
-    }
-    return naina::internal::face_liveness::liveness(session, view_of(image), *face, {}, out_score);
+    *out_regions = nullptr;
+    *out_count = 0;
+    return NAINA_E_UNSUPPORTED;
 }
 
-extern "C" float naina_embed_similarity(const float* a, const float* b, int32_t dim) {
-    if (a == nullptr || b == nullptr || dim <= 0) {
-        return 0;
-    }
-    // Assumes L2-normalised inputs (dot product == cosine).
-    float d = 0;
-    for (int32_t i = 0; i < dim; ++i) {
-        d += a[i] * b[i];
-    }
-    return d;
+extern "C" void naina_free_regions(naina_region* regions, int32_t /*count*/) {
+    std::free(regions);
 }
 
-// ── Person / tracker stubs (v1.1) ─────────────────────────────────────
-
-extern "C" naina_status naina_person_detect(naina_ctx_t*,
-                                            const naina_image_t*,
-                                            naina_person**,
-                                            int32_t*) {
-    return NAINA_E_UNSUPPORTED;
-}
-extern "C" void naina_free_persons(naina_person* persons, int32_t) {
-    std::free(persons);
-}
-extern "C" int32_t naina_reid_embed_dim(const naina_ctx_t*) {
-    return 0;
-}
-extern "C" naina_status naina_person_reid(naina_ctx_t*,
-                                          const naina_image_t*,
-                                          const naina_person*,
-                                          float*) {
-    return NAINA_E_UNSUPPORTED;
-}
-extern "C" naina_status naina_tracker_create(naina_ctx_t*, naina_tracker_t**) {
-    return NAINA_E_UNSUPPORTED;
-}
-extern "C" void naina_tracker_release(naina_tracker_t*) {}
-extern "C" naina_status naina_tracker_update(
-    naina_tracker_t*, const naina_person*, int32_t, naina_person**, int32_t*) {
-    return NAINA_E_UNSUPPORTED;
+extern "C" const char* naina_region_kind_str(naina_region_kind k) {
+    switch (k) {
+        case NAINA_REGION_TITLE:
+            return "title";
+        case NAINA_REGION_TEXT:
+            return "text";
+        case NAINA_REGION_LIST:
+            return "list";
+        case NAINA_REGION_TABLE:
+            return "table";
+        case NAINA_REGION_FIGURE:
+            return "figure";
+        case NAINA_REGION_CAPTION:
+            return "caption";
+        case NAINA_REGION_FORMULA:
+            return "formula";
+        case NAINA_REGION_HEADER:
+            return "header";
+        case NAINA_REGION_FOOTER:
+            return "footer";
+        case NAINA_REGION_PAGENUM:
+            return "pagenum";
+        case NAINA_REGION_UNKNOWN:
+            break;
+    }
+    return "unknown";
 }

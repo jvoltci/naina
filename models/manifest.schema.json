@@ -14,7 +14,7 @@
       "properties": {
         "cache_root":   { "type": "string" },
         "release_base": { "type": "string", "format": "uri-reference" },
-        "opencv_zoo":   { "type": "string", "format": "uri-reference" }
+        "hf":           { "type": "string", "format": "uri-reference" }
       }
     },
     "models": {
@@ -30,9 +30,8 @@
       "additionalProperties": false,
       "properties": {
         "id":      { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
-        "task":    { "enum": ["face_detect", "face_embed", "face_liveness",
-                              "person_detect", "person_reid"] },
-        "tier":    { "enum": ["default", "research"] },
+        "task":    { "enum": ["text_detect", "text_recognize", "layout_detect"] },
+        "tier":    { "enum": ["tiny", "small", "medium"] },
         "arch":    { "type": "string" },
         "license": { "type": "string" },
         "paper":   { "type": "string" },
@@ -85,32 +84,20 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "mean":   { "type": "array", "items": { "type": "number" }, "minItems": 1 },
-        "scale":  { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "mean":  { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "scale": { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "std":   { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "height":    { "type": "integer", "minimum": 1 },
+        "max_width": { "type": "integer", "minimum": 1 },
         "resize": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "mode":      { "enum": ["letterbox", "stretch", "center_crop"] },
-            "target":    { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
-            "pad_value": { "type": "integer" }
-          }
-        },
-        "align": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "method": { "enum": ["similarity_5pt"] },
-            "target": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }
-          }
-        },
-        "crop": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "method": { "enum": ["face_bbox_expand"] },
-            "scale":  { "type": "number" },
-            "target": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }
+            "mode":        { "enum": ["limit_max_side", "fixed", "letterbox", "stretch"] },
+            "target":      { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+            "limit":       { "type": "integer", "minimum": 1 },
+            "multiple_of": { "type": "integer", "minimum": 1 },
+            "pad_value":   { "type": "integer" }
           }
         }
       }
@@ -119,21 +106,23 @@
     "output": {
       "type": "object",
       "required": ["type"],
+      "additionalProperties": false,
       "properties": {
-        "type":   { "enum": ["face_detections", "person_detections",
-                             "embedding", "liveness_score"] },
-        "decode": {
+        "type": { "enum": ["db_probability_map", "ctc_logits", "layout_regions"] },
+        "postprocess": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "strides":     { "type": "array", "items": { "type": "integer" } },
-            "num_kps":     { "type": "integer", "minimum": 0 },
-            "conf_thresh": { "type": "number", "minimum": 0, "maximum": 1 },
-            "nms_iou":     { "type": "number", "minimum": 0, "maximum": 1 }
+            "thresh":         { "type": "number", "minimum": 0, "maximum": 1 },
+            "box_thresh":     { "type": "number", "minimum": 0, "maximum": 1 },
+            "unclip_ratio":   { "type": "number", "minimum": 0 },
+            "max_candidates": { "type": "integer", "minimum": 1 },
+            "blank_index":    { "type": "integer", "minimum": 0 },
+            "num_classes":    { "type": "integer", "minimum": 2 },
+            "score_thresh":   { "type": "number", "minimum": 0, "maximum": 1 },
+            "nms_iou":        { "type": "number", "minimum": 0, "maximum": 1 }
           }
-        },
-        "dim":              { "type": "integer", "minimum": 1 },
-        "l2norm":           { "type": "boolean" },
-        "live_class_index": { "type": "integer", "minimum": 0 }
+        }
       }
     }
   }

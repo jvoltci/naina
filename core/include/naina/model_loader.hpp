@@ -20,7 +20,19 @@
 
 namespace naina {
 
-enum class Tier { Default, Research };
+// Device tier, not a licence tier. Every OCR model naina ships is
+// Apache-2.0; what differs is size and the hardware it suits.
+//   Tiny   ~11 MB total  — browser, phone, Pi Zero
+//   Small  ~54 MB total  — laptop, Pi 5, mobile app
+//   Medium ~269 MB total — server, desktop
+enum class Tier { Tiny, Small, Medium };
+
+// Parse a manifest tier string. Unknown values map to Small so a registry
+// written for a newer naina still loads on an older one.
+Tier tier_from_string(const std::string& s);
+
+// Inverse of tier_from_string. Returns a static string, never null.
+const char* tier_to_string(Tier t);
 
 struct FileEntry {
     std::string url;
@@ -31,7 +43,7 @@ struct FileEntry {
 struct ModelEntry {
     std::string id;    // e.g. "face_detect.default"
     std::string task;  // "face_detect" | "face_embed" | ...
-    Tier tier = Tier::Default;
+    Tier tier = Tier::Small;
     std::string arch;
     std::string license;
     std::unordered_map<std::string, FileEntry> files;  // key: "onnx", "ncnn_param", ...

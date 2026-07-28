@@ -14,6 +14,40 @@
 
 ---
 
+## Read this before writing any code
+
+This project compiles with **`-Werror`** and a strict warning set, verified
+from the live build command:
+
+```
+-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
+-Wnon-virtual-dtor -Wold-style-cast -Wnull-dereference -Wdouble-promotion
+-Wformat=2 -Werror
+```
+
+Every one of these is an error, not a warning. Consequences for the code in
+this plan:
+
+- **`-Wsign-conversion`** — mixing `size_t` with `int32_t` in index arithmetic
+  fails. Cast *every* operand, not just the first:
+  `bm.px[static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)]`.
+  A partial cast like `static_cast<size_t>(y) * w + x` still errors.
+- **`-Wconversion`** — no implicit narrowing. `int32_t x = some_float;` fails;
+  use `static_cast<int32_t>(std::lround(f))`.
+- **`-Wdouble-promotion`** — a bare literal like `0.5` is a `double` and
+  promotes. Write `0.5F`. `std::sqrt`/`std::fabs`/`std::hypot` on `float`
+  arguments are fine; passing a `double` literal alongside a `float` is not.
+- **`-Wold-style-cast`** — no `(int)x`. Always `static_cast`.
+- **`-Wshadow`** — a local may not shadow a parameter or outer local. Watch
+  loop variables named `x`/`y` inside functions that already take `x`/`y`.
+
+The code blocks in the tasks below were written with these rules in mind, but
+**verify by building, not by reading.** If a build fails on a conversion
+warning, fix the cast — do not add `-Wno-*` and do not change the project's
+warning flags.
+
+---
+
 ## Verified reference data
 
 Everything below was probed from the real artifacts on 2026-07-29. Do not

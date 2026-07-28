@@ -26,25 +26,15 @@ struct Point {
     float x, y;
 };
 
-struct Face {
-    BBox bbox;
-    std::array<Point, 5> landmarks;
-    float quality;
-    int32_t track_id;
-};
-
-struct Person {
-    BBox bbox;
-    int32_t class_id;
-    int32_t track_id;
-};
+// Device tier — model size, not licence. See naina.h for the byte budgets.
+enum class Tier { Auto, Tiny, Small, Medium };
 
 struct Config {
     Backend backend = Backend::Auto;
     Device device = Device::Auto;
     std::filesystem::path models_root;
     int num_threads = 0;
-    bool enable_research_models = false;
+    Tier tier = Tier::Auto;
 };
 
 class Error : public std::runtime_error {
@@ -73,19 +63,6 @@ private:
     naina_image_t* h_ = nullptr;
 };
 
-class Tracker {
-public:
-    std::vector<Person> update(const std::vector<Person>& detections);
-    ~Tracker();
-    Tracker(Tracker&&) noexcept;
-    Tracker& operator=(Tracker&&) noexcept;
-
-private:
-    friend class Engine;
-    explicit Tracker(naina_tracker_t* t) : h_(t) {}
-    naina_tracker_t* h_ = nullptr;
-};
-
 class Engine {
 public:
     explicit Engine(const Config& cfg = {});
@@ -95,24 +72,8 @@ public:
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
 
-    // Face stack
-    std::vector<Face> detect_faces(const Image& img);
-    std::vector<float> embed_face(const Image& img, const Face& f);
-    float face_liveness(const Image& img, const Face& f);
-    int face_embed_dim() const noexcept;
-
-    // Person stack
-    std::vector<Person> detect_persons(const Image& img);
-    std::vector<float> embed_person(const Image& img, const Person& p);
-    int reid_embed_dim() const noexcept;
-
-    // Tracking
-    Tracker make_tracker();
-
-    // Pure
-    static float similarity(const float* a, const float* b, int dim) noexcept {
-        return naina_embed_similarity(a, b, dim);
-    }
+    // OCR surface. The C++ wrappers land alongside the modules that back
+    // them; see docs/superpowers/plans/2026-07-29-naina-ocr-core.md.
 
     naina_ctx_t* raw() noexcept { return ctx_; }
 

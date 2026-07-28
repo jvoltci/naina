@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #define NAINA_VERSION_MAJOR 0
-#define NAINA_VERSION_MINOR 1
+#define NAINA_VERSION_MINOR 2
 #define NAINA_VERSION_PATCH 0
 
 /* Symbol export. CMake defines NAINA_BUILDING_SHARED when compiling the
@@ -81,6 +81,35 @@ typedef enum {
     NAINA_PIXFMT_GRAY8,
 } naina_pixfmt;
 
+/* Device tier. Selects model size, not licence — every model naina ships is
+ * Apache-2.0.
+ *   TINY    ~11 MB  — browser, phone, Pi Zero
+ *   SMALL   ~54 MB  — laptop, Pi 5, mobile app
+ *   MEDIUM  ~269 MB — server, desktop
+ * AUTO resolves to SMALL today; it exists so a future release can choose by
+ * probing available memory without an ABI change. */
+typedef enum {
+    NAINA_TIER_AUTO = 0,
+    NAINA_TIER_TINY,
+    NAINA_TIER_SMALL,
+    NAINA_TIER_MEDIUM,
+} naina_tier;
+
+/* Layout region classes emitted by naina_layout_detect. */
+typedef enum {
+    NAINA_REGION_UNKNOWN = 0,
+    NAINA_REGION_TITLE,
+    NAINA_REGION_TEXT,
+    NAINA_REGION_LIST,
+    NAINA_REGION_TABLE,
+    NAINA_REGION_FIGURE,
+    NAINA_REGION_CAPTION,
+    NAINA_REGION_FORMULA,
+    NAINA_REGION_HEADER,
+    NAINA_REGION_FOOTER,
+    NAINA_REGION_PAGENUM,
+} naina_region_kind;
+
 /* ─── POD types ───────────────────────────────────────────────────── */
 
 typedef struct {
@@ -90,35 +119,47 @@ typedef struct {
     float x, y;
 } naina_point;
 
+/* A detected text quad. Corners are clockwise from top-left, in SOURCE image
+ * coordinates. Quads are not necessarily axis-aligned — skewed and rotated
+ * text produces genuinely rotated quads. */
 typedef struct {
-    naina_bbox bbox;
-    naina_point landmarks[5]; /* L-eye, R-eye, nose, L-mouth, R-mouth */
-    float quality;            /* 0..1, useful for "best frame" picks */
-    int32_t track_id;         /* -1 if not from a tracker */
-} naina_face;
+    naina_point corners[4];
+    float score;
+} naina_textbox;
 
+/* A recognised line of text. `text` is UTF-8, NUL-terminated, and owned by
+ * the naina_page_t that produced it — it dangles after naina_page_release. */
+typedef struct {
+    naina_textbox box;
+    const char* text;
+    float confidence;
+    int32_t region_id; /* index into the page's regions, -1 if unassigned */
+} naina_textline;
+
+/* A layout region. `order` is the reading-order index within the page. */
 typedef struct {
     naina_bbox bbox;
-    int32_t class_id;
-    int32_t track_id; /* -1 if not from a tracker */
-} naina_person;
+    naina_region_kind kind;
+    int32_t order;
+} naina_region;
 
 /* ─── Config ──────────────────────────────────────────────────────── */
 
 typedef struct {
-    int32_t version; /* must be 1 */
+    int32_t version; /* 1 = pre-OCR layout; 2 adds `tier` */
     naina_backend backend;
     naina_device device;
     const char* models_root;        /* NULL → $NAINA_CACHE / default */
     int32_t num_threads;            /* 0 = auto */
-    int32_t enable_research_models; /* 0 = permissive only (default) */
+    int32_t enable_research_models; /* retained for ABI compatibility; ignored */
+    naina_tier tier;                /* honoured when version >= 2 */
 } naina_config;
 
 /* ─── Opaque handles ──────────────────────────────────────────────── */
 
 typedef struct naina_ctx naina_ctx_t;
 typedef struct naina_image naina_image_t;
-typedef struct naina_tracker naina_tracker_t;
+typedef struct naina_page naina_page_t;
 
 /* ─── Lifecycle ───────────────────────────────────────────────────── */
 
@@ -137,56 +178,45 @@ NAINA_API naina_status naina_image_wrap(const uint8_t* data,
                                         naina_image_t** out_image);
 NAINA_API void naina_image_release(naina_image_t* image);
 
-/* ─── Face stack ──────────────────────────────────────────────────── */
+/* ─── Reading a page (the primary API) ────────────────────────────── */
 
-/* Detect: lib allocates output array, caller frees via naina_free_faces. */
-NAINA_API naina_status naina_face_detect(naina_ctx_t* ctx,
+/* Run the full pipeline: detect → rectify → recognise → layout → assemble.
+ * The returned page owns every string it hands out. Release exactly once. */
+NAINA_API naina_status naina_read(naina_ctx_t* ctx,
+                                  const naina_image_t* image,
+                                  naina_page_t** out_page);
+NAINA_API void naina_page_release(naina_page_t* page);
+
+/* Borrowed views into the page. Valid until naina_page_release. */
+NAINA_API naina_status naina_page_lines(const naina_page_t* page,
+                                        const naina_textline** out_lines,
+                                        int32_t* out_count);
+NAINA_API naina_status naina_page_regions(const naina_page_t* page,
+                                          const naina_region** out_regions,
+                                          int32_t* out_count);
+
+/* Serialised views. Borrowed, UTF-8, NUL-terminated. Never null; the empty
+ * string means the page had no text. */
+NAINA_API const char* naina_page_markdown(const naina_page_t* page);
+NAINA_API const char* naina_page_json(const naina_page_t* page);
+
+/* ─── Stage-level access ──────────────────────────────────────────── */
+
+/* Lib allocates; caller frees with the matching free function. */
+NAINA_API naina_status naina_text_detect(naina_ctx_t* ctx,
                                          const naina_image_t* image,
-                                         naina_face** out_faces,
+                                         naina_textbox** out_boxes,
                                          int32_t* out_count);
-NAINA_API void naina_free_faces(naina_face* faces, int32_t count);
+NAINA_API void naina_free_textboxes(naina_textbox* boxes, int32_t count);
 
-/* Embed: caller provides buffer of size naina_face_embed_dim() floats. */
-NAINA_API int32_t naina_face_embed_dim(const naina_ctx_t* ctx);
-NAINA_API naina_status naina_face_embed(naina_ctx_t* ctx,
-                                        const naina_image_t* image,
-                                        const naina_face* face,
-                                        float* out_embedding);
-
-/* Liveness: out in [0,1], higher = more live. Threshold per use case. */
-NAINA_API naina_status naina_face_liveness(naina_ctx_t* ctx,
+NAINA_API naina_status naina_layout_detect(naina_ctx_t* ctx,
                                            const naina_image_t* image,
-                                           const naina_face* face,
-                                           float* out_score);
-
-/* Pure-function similarity (cosine). Exposed for convenience. */
-NAINA_API float naina_embed_similarity(const float* a, const float* b, int32_t dim);
-
-/* ─── Person stack ────────────────────────────────────────────────── */
-
-NAINA_API naina_status naina_person_detect(naina_ctx_t* ctx,
-                                           const naina_image_t* image,
-                                           naina_person** out_persons,
+                                           naina_region** out_regions,
                                            int32_t* out_count);
-NAINA_API void naina_free_persons(naina_person* persons, int32_t count);
+NAINA_API void naina_free_regions(naina_region* regions, int32_t count);
 
-NAINA_API int32_t naina_reid_embed_dim(const naina_ctx_t* ctx);
-NAINA_API naina_status naina_person_reid(naina_ctx_t* ctx,
-                                         const naina_image_t* image,
-                                         const naina_person* person,
-                                         float* out_embedding);
-
-/* ─── Tracking (stateful, per video stream) ───────────────────────── */
-
-NAINA_API naina_status naina_tracker_create(naina_ctx_t* ctx, naina_tracker_t** out);
-NAINA_API void naina_tracker_release(naina_tracker_t* tracker);
-
-/* Feed per-frame detections; receive same boxes annotated with track_ids. */
-NAINA_API naina_status naina_tracker_update(naina_tracker_t* tracker,
-                                            const naina_person* detections,
-                                            int32_t det_count,
-                                            naina_person** out_tracked,
-                                            int32_t* out_count);
+/* Human-readable name for a region class. Static string, never null. */
+NAINA_API const char* naina_region_kind_str(naina_region_kind k);
 
 #ifdef __cplusplus
 } /* extern "C" */

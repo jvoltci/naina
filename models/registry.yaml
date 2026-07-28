@@ -2,13 +2,22 @@
 #
 # Source of truth for every model the runtime can load.
 #
-#   tier = default   → permissively licensed (Apache-2.0 / MIT). Ships in the
-#                      default install. Safe for commercial use.
-#   tier = research  → max-accuracy SOTA, often non-commercial weights.
-#                      Downloaded only when `naina_config.enable_research_models = 1`.
+#   tier = tiny    → ~11 MB total. Browser, phone, Pi Zero.
+#   tier = small   → ~54 MB total. Laptop, Pi 5, mobile app.
+#   tier = medium  → ~269 MB total. Server, desktop.
 #
-# Lookup happens by (task, tier). Multiple model variants per (task, tier) are
-# allowed; the runtime picks based on (device, backend) hints.
+# This is a DEVICE axis, not a licence axis. Every model here is Apache-2.0
+# and safe for commercial use; what varies is size and the hardware it
+# suits. (naina v0.1 used tier for permissive-vs-research weights; OCR has
+# no such split, so the axis was repurposed.)
+#
+# Lookup happens by (task, tier). The runtime falls back to a larger tier
+# when a task is missing at the requested one — layout_detect is
+# medium-only until PP-DocLayout-S/-M are exported to ONNX.
+#
+# Every sha256 below was verified by downloading the artifact and hashing
+# it. A truncated or substituted download fails closed rather than
+# producing silently wrong output.
 #
 # Validated by models/manifest.schema.json. CI fails on schema violations.
 
@@ -17,162 +26,220 @@ schema_version: 1
 defaults:
   cache_root: "${NAINA_CACHE:-~/.cache/naina/models}"
   release_base: "https://github.com/jvoltci/naina/releases/download/models-v1"
-  # OpenCV Zoo hosts permissively-licensed, stable model artifacts that we
-  # use for the v0.1 default tier until our own GitHub Releases are
-  # populated. The `${opencv_zoo}` placeholder resolves to this base URL.
-  opencv_zoo: "https://github.com/opencv/opencv_zoo/raw/main/models"
+  # PaddleOCR publishes permissively-licensed ONNX exports on the Hugging
+  # Face Hub. The `${hf}` placeholder resolves to this base URL.
+  hf: "https://huggingface.co/PaddlePaddle"
 
 models:
 
-  # ─── Face Detection ────────────────────────────────────────────────────
+  # ─── Text detection (PP-OCRv6 det, DBNet head) ──────────────────────
+  #
+  # Input  "x"            f32 [N, 3, H, W]  — N/H/W all dynamic
+  # Output "fetch_name_0" f32 [N, 1, H, W]  — single-channel probability map
 
-  - id: face_detect.default
-    task: face_detect
-    tier: default
-    arch: yunet
-    license: MIT
-    paper: "Wu et al. 2023, 'YuNet'"
-    files:
-      onnx:
-        url:    "${opencv_zoo}/face_detection_yunet/face_detection_yunet_2023mar.onnx"
-        sha256: "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
-        bytes:  232589
-    input:
-      shape:     [1, 3, -1, -1]      # dynamic H/W
-      pixfmt:    rgb
-      dtype:     f32
-      preprocess:
-        mean:    [0.0, 0.0, 0.0]
-        scale:   [1.0, 1.0, 1.0]
-        # YuNet wants raw uint8 -> float32 with no normalization; resize to 640x640
-        resize:  {mode: letterbox, target: [640, 640], pad_value: 0}
-    output:
-      type: face_detections
-      decode:
-        # YuNet anchor-free; 3 strides, each emits (cls, bbox, kps)
-        strides:     [8, 16, 32]
-        num_kps:     5
-        conf_thresh: 0.6
-        nms_iou:     0.3
-    benchmark_placeholders:
-      widerface_easy:   0.0
-      widerface_medium: 0.0
-      widerface_hard:   0.0
-      latency_ms_pi5_ncnn_int8: 0.0
-      latency_ms_mac_m3_coreml: 0.0
-      latency_ms_x86_ort_cpu:   0.0
-
-  - id: face_detect.research
-    task: face_detect
-    tier: research
-    arch: scrfd_10g
-    license: non-commercial
-    paper: "Guo et al. 2021, 'Sample and Computation Redistribution for Efficient Face Detection'"
-    files:
-      onnx:
-        url:    "${release_base}/scrfd_10g_bnkps.onnx"
-        sha256: "TBD"
-        bytes:  16000000
-    input:
-      shape:  [1, 3, 640, 640]
-      pixfmt: rgb
-      dtype:  f32
-      preprocess:
-        mean:  [127.5, 127.5, 127.5]
-        scale: [128.0, 128.0, 128.0]
-        resize: {mode: letterbox, target: [640, 640], pad_value: 0}
-    output:
-      type: face_detections
-      decode:
-        strides:     [8, 16, 32]
-        num_kps:     5
-        conf_thresh: 0.5
-        nms_iou:     0.4
-    benchmark_placeholders:
-      widerface_easy:   0.0
-      widerface_medium: 0.0
-      widerface_hard:   0.0
-
-  # ─── Face Embedding ────────────────────────────────────────────────────
-
-  - id: face_embed.default
-    task: face_embed
-    tier: default
-    arch: sface
+  - id: text_detect.tiny
+    task: text_detect
+    tier: tiny
+    arch: pp_ocrv6_det
     license: Apache-2.0
-    paper: "Boutros et al. 2022, 'SFace: Sigmoid-Constrained Hypersphere Loss for Robust Face Recognition'"
+    paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${opencv_zoo}/face_recognition_sface/face_recognition_sface_2021dec.onnx"
-        sha256: "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79"
-        bytes:  38696353
+        url:    "${hf}/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx"
+        sha256: "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8"
+        bytes:  1780590
     input:
-      shape:  [1, 3, 112, 112]
+      shape:  [1, 3, -1, -1]
       pixfmt: bgr
       dtype:  f32
       preprocess:
-        mean:  [127.5, 127.5, 127.5]
-        scale: [127.5, 127.5, 127.5]
-        align: {method: similarity_5pt, target: [112, 112]}
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
     output:
-      type:    embedding
-      dim:     128
-      l2norm:  true
-    benchmark_placeholders:
-      ijbc_tar_at_far_1e_4: 0.0
-      lfw_accuracy:         0.0
-      latency_ms_pi5_ncnn_int8: 0.0
+      type: db_probability_map
+      postprocess:
+        thresh:         0.2
+        box_thresh:     0.4
+        unclip_ratio:   1.4
+        max_candidates: 3000
 
-  - id: face_embed.research
-    task: face_embed
-    tier: research
-    arch: transface_l
-    license: non-commercial
-    paper: "Dan et al. 2023, 'TransFace: Calibrating Transformer Training for Face Recognition'"
-    files:
-      onnx:
-        url:    "${release_base}/transface_l_glint360k.onnx"
-        sha256: "TBD"
-        bytes:  340000000
-    input:
-      shape:  [1, 3, 112, 112]
-      pixfmt: rgb
-      dtype:  f32
-      preprocess:
-        mean:  [0.5, 0.5, 0.5]
-        scale: [0.5, 0.5, 0.5]
-        align: {method: similarity_5pt, target: [112, 112]}
-    output:
-      type:    embedding
-      dim:     512
-      l2norm:  true
-    benchmark_placeholders:
-      ijbc_tar_at_far_1e_4: 0.0
-      lfw_accuracy:         0.0
-
-  # ─── Face Liveness / Anti-spoofing ─────────────────────────────────────
-
-  - id: face_liveness.default
-    task: face_liveness
-    tier: default
-    arch: minifasnet_v2
+  - id: text_detect.small
+    task: text_detect
+    tier: small
+    arch: pp_ocrv6_det
     license: Apache-2.0
-    paper: "Yu et al. 2021, 'MiniFASNet'"
+    paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${release_base}/minifasnet_v2.onnx"
-        sha256: "TBD"
-        bytes:  1900000
+        url:    "${hf}/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx"
+        sha256: "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
+        bytes:  9880512
     input:
-      shape:  [1, 3, 80, 80]
+      shape:  [1, 3, -1, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+    output:
+      type: db_probability_map
+      postprocess:
+        thresh:         0.2
+        box_thresh:     0.4
+        unclip_ratio:   1.4
+        max_candidates: 3000
+
+  - id: text_detect.medium
+    task: text_detect
+    tier: medium
+    arch: pp_ocrv6_det
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:    "${hf}/PP-OCRv6_medium_det_onnx/resolve/main/inference.onnx"
+        sha256: "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+        bytes:  62032837
+    input:
+      shape:  [1, 3, -1, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+    output:
+      type: db_probability_map
+      postprocess:
+        thresh:         0.2
+        box_thresh:     0.4
+        unclip_ratio:   1.4
+        max_candidates: 3000
+
+  # ─── Text recognition (PP-OCRv6 rec, CTC head) ──────────────────────
+  #
+  # Input  "x"            f32 [N, 3, 48, W]  — height FIXED at 48
+  # Output "fetch_name_0" f32 [N, T, 6906]   — T ≈ W/8
+  #
+  # 6906 = 1 CTC blank at index 0 + 6905 characters, so charset entry i
+  # maps to class i+1. PaddleOCR's CTCLabelDecode uses the same convention.
+
+  - id: text_recognize.tiny
+    task: text_recognize
+    tier: tiny
+    arch: pp_ocrv6_rec
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:    "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
+        sha256: "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
+        bytes:  4462639
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 6906
+
+  - id: text_recognize.small
+    task: text_recognize
+    tier: small
+    arch: pp_ocrv6_rec
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:    "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
+        sha256: "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
+        bytes:  21159378
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 6906
+
+  - id: text_recognize.medium
+    task: text_recognize
+    tier: medium
+    arch: pp_ocrv6_rec
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:    "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx"
+        sha256: "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+        bytes:  76554979
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 6906
+
+  # ─── Layout analysis (PP-DocLayoutV3) ───────────────────────────────
+  #
+  # Medium only. The 4.8 MB -S and 23.4 MB -M variants ship in Paddle
+  # format (inference.json graph + inference.pdiparams weights) with no
+  # official ONNX export, so tiny/small cannot claim layout support until
+  # tools/paddle2onnx_layout.py lands and its output is verified
+  # numerically equivalent. Until then the runtime's tier fallback sends
+  # tiny/small layout requests here.
+
+  - id: layout_detect.medium
+    task: layout_detect
+    tier: medium
+    arch: pp_doclayout_v3
+    license: Apache-2.0
+    files:
+      onnx:
+        url:    "${hf}/PP-DocLayoutV3_onnx/resolve/main/inference.onnx"
+        sha256: "45bf71750b00739a41fc209f132eb104a4d6b5bb29483c9078164d8b87cf28ba"
+        bytes:  130502049
+    input:
+      shape:  [1, 3, 800, 800]
       pixfmt: rgb
       dtype:  f32
       preprocess:
-        mean:  [0.0, 0.0, 0.0]
-        scale: [255.0, 255.0, 255.0]
-        crop:  {method: face_bbox_expand, scale: 2.7, target: [80, 80]}
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: fixed, target: [800, 800]}
     output:
-      type: liveness_score
-      live_class_index: 1
-    benchmark_placeholders:
-      casia_surf_acer: 0.0
+      type: layout_regions
+      postprocess:
+        score_thresh: 0.5
+        nms_iou:      0.5
