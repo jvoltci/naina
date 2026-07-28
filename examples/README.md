@@ -1,63 +1,23 @@
 # naina examples
 
-Working end-to-end examples for each binding. Each one loads two
-images, detects the best face in each, embeds them, and prints a
-cosine-similarity score plus a same-person verdict.
+Working end-to-end examples for each binding.
 
-## Python
+**Status:** the face-verification examples that lived here moved to the
+`face-stack` branch along with the face modules. OCR examples land with
+v0.2 (text spotting) — see
+`docs/superpowers/plans/2026-07-29-naina-ocr-core.md`.
 
-```bash
-pip install naina opencv-python-headless
+## Model cache
 
-python examples/python/face_verify.py path/to/alice_1.jpg path/to/alice_2.jpg
-python examples/python/face_verify.py --threshold 0.30 alice.jpg bob.jpg
-```
+Both of these are implemented in `core/src/model_loader.cc` and apply to
+every binding:
 
-The threshold defaults to `0.36` (SFace's recommended cutoff). Raise it
-for stricter matching, lower it for more permissive matching.
+- `NAINA_CACHE=/some/dir` relocates the weight cache. Default is
+  `~/.cache/naina/models/`.
+- `NAINA_OFFLINE=1` disables network fetches entirely. A missing weight
+  then returns `NAINA_E_MODEL_NOT_FOUND` instead of downloading. Useful
+  for tests and air-gapped runs.
 
-## Node / TypeScript
-
-```bash
-npm install @jvoltci/naina sharp
-
-node examples/node/face_verify.mjs path/to/alice_1.jpg path/to/alice_2.jpg
-```
-
-`sharp` handles image decoding so naina stays small and decoder-free.
-Any decoder that produces a raw pixel buffer will work — `naina` only
-cares about `{ data, width, height, channels }`.
-
-## C++
-
-```bash
-# Build naina-core, install it, then:
-c++ -std=c++20 examples/cpp/face_verify.cc -lnaina -o face_verify
-./face_verify alice.jpg bob.jpg
-```
-
-(C++ example pending.)
-
-## What "similarity" means
-
-We L2-normalise every embedding, so `naina.similarity(a, b)` is just the
-dot product of two unit vectors — equivalently the cosine of the angle
-between them. For the default SFace 128-d embeddings, scores typically
-land in:
-
-| Pair | Typical similarity |
-|---|---|
-| Same person, similar pose / lighting | 0.55 – 0.85 |
-| Same person, different pose / age    | 0.40 – 0.60 |
-| Different people                     | 0.10 – 0.35 |
-
-The right threshold depends on your false-accept / false-reject budget;
-0.36 is a sensible starting point.
-
-## Notes
-
-- The first run downloads YuNet (~230 KB) + SFace (~37 MB) into
-  `~/.cache/naina/models/`. Subsequent runs hit the cache.
-- Set `NAINA_OFFLINE=1` to disable network access once you've cached
-  the models you need.
-- Set `NAINA_CACHE=/some/dir` to relocate the cache.
+Every download is verified against the sha256 recorded in
+`models/registry.yaml`, so a truncated or substituted file fails closed
+rather than producing silently wrong output.

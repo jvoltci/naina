@@ -22,9 +22,6 @@ set(NAINA_SOURCES
     src/image_ops.cc
     src/api.cc
     src/api_cpp.cc
-    src/modules/face_detect.cc
-    src/modules/face_embed.cc
-    src/modules/face_liveness.cc
 )
 
 # yaml-cpp parses models/registry.yaml; libcurl fetches model weights.
