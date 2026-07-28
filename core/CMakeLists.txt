@@ -20,6 +20,7 @@ set(NAINA_SOURCES
     src/sha256.cc
     src/model_loader.cc
     src/image_ops.cc
+    src/geometry.cc
     src/api.cc
     src/api_cpp.cc
 )
