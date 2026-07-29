@@ -66,14 +66,35 @@ Turn a bag of lines into a document.
 - [x] `doc_assemble` — line-to-region assignment, column-aware reading order,
       structured markdown. Pure logic, 16 tests from hand-built inputs.
 - [x] MCP server (see v1.0 list)
+- [x] Medium tier verified end to end on an A4 academic page: 14 of 14 regions
+      detected **and correctly labelled**, reading order correct, 33 of 33 lines
+      recognised at 0.99–1.00, markdown with the right heading hierarchy and the
+      running head omitted as furniture.
 - [ ] Golden corpus: committed images with expected markdown
 - [ ] Recognition batching by padded width
 - [ ] Fix `FindNCNN.cmake`
-- [ ] Improve small-tier layout recall. Measured on a synthetic report page,
-      PP-DocLayout-S at 480x480 found 4 of 7 regions, all scoring barely over
-      the 0.5 threshold upstream itself defaults to; section titles and captions
-      were missed and fell through to the unstructured tail. The larger tiers
-      should be compared before tuning the threshold.
+- [ ] **Cross-class NMS.** PaddleDetection runs NMS per class, so one box comes
+      back under several labels and naina keeps every row over threshold
+      independently. Measured: a running head returned `text` at 0.677 *and*
+      `header` at 0.481 for the identical box. Whenever two labels for one box
+      both clear the threshold, that box yields two regions — and the
+      higher-scoring label is not always the right one. Needs a dedup pass
+      keeping the best-scoring class per box group.
+- [ ] Improve layout recall on out-of-distribution pages. PP-DocLayout is
+      trained on papers and reports and is excellent there (see above), but
+      degrades sharply outside that shape. On a synthetic wide-spaced report page
+      it labelled a body paragraph `doc_title` and both section headings `text`,
+      producing structurally wrong markdown; small tier at 480x480 found only 4
+      of 7 regions on the same page. The correct label was usually present in the
+      raw rows at a lower score, which suggests cross-class NMS above may recover
+      some of this on its own — do that first, then reassess the threshold.
+- [ ] **Signal unsupported scripts instead of returning confident nonsense.**
+      PP-OCRv6's charset covers no Devanagari, but a Devanagari page returns
+      lines like `3rarearanlus Tarafaaa: f:` at 0.758 confidence. Nothing in the
+      output tells the caller the script is unreadable, and CTC confidence does
+      not distinguish "read this correctly" from "matched noise to the nearest
+      in-charset glyph". This is a correctness-of-contract problem, not a model
+      gap: naina should say it cannot read a script rather than guess.
 
 ## v0.4 — Browser
 
