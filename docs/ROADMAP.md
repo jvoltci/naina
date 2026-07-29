@@ -88,13 +88,24 @@ Turn a bag of lines into a document.
       of 7 regions on the same page. The correct label was usually present in the
       raw rows at a lower score, which suggests cross-class NMS above may recover
       some of this on its own — do that first, then reassess the threshold.
-- [ ] **Signal unsupported scripts instead of returning confident nonsense.**
-      PP-OCRv6's charset covers no Devanagari, but a Devanagari page returns
-      lines like `3rarearanlus Tarafaaa: f:` at 0.758 confidence. Nothing in the
-      output tells the caller the script is unreadable, and CTC confidence does
-      not distinguish "read this correctly" from "matched noise to the nearest
-      in-charset glyph". This is a correctness-of-contract problem, not a model
-      gap: naina should say it cannot read a script rather than guess.
+- [ ] **Devanagari support, and stop guessing at unknown scripts.**
+      **This is the highest open priority.** A Hindi page returns lines like
+      `3rarearanlus Tarafaaa: f:` at 0.758 confidence, with nothing in the output
+      saying the script is unreadable — CTC confidence measures certainty within
+      the model's own alphabet and cannot express "not in my alphabet".
+
+      Detection is script-agnostic and already correct: measured on a Devanagari
+      page, DBNet found 82 lines and located them properly. Only recognition is
+      wrong, which makes this a model-plus-registry change rather than new
+      engine work.
+
+      `PaddlePaddle/devanagari_PP-OCRv5_mobile_rec_onnx` is verified compatible —
+      Apache-2.0, already ONNX (no paddle2onnx step), 7.9 MB, `[N,3,48,W]` input
+      matching naina's existing 48px rec path, `CTCLabelDecode`, 568-char dict →
+      570 classes. The same family covers ~20 more scripts.
+
+      Design, ABI plan and step list:
+      [devanagari-support](https://github.com/jvoltci/naina/blob/master/docs/superpowers/specs/2026-07-29-devanagari-support.md).
 
 ## v0.4 — Browser  *(binding shipped)*
 
