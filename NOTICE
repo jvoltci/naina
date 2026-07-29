@@ -48,11 +48,26 @@ configurations, mirrored unmodified. naina reads only the
 `PostProcess.character_dict` list from them.
 
 --------------------------------------------------------------------------------
-Layout analysis — PP-DocLayoutV3
+Layout analysis — PP-DocLayout
 --------------------------------------------------------------------------------
-Source: https://huggingface.co/PaddlePaddle/PP-DocLayoutV3_onnx
+Source: https://huggingface.co/PaddlePaddle
 
-    ppdoclayoutv3.onnx               <- PP-DocLayoutV3_onnx/inference.onnx
+    ppdoclayoutv3.onnx    <- PP-DocLayoutV3_onnx/inference.onnx   (mirrored as-is)
+
+PaddleOCR publishes no ONNX build of the smaller PP-DocLayout-S and -M, so
+naina converts them itself from the upstream Paddle weights using
+tools/paddle2onnx_layout.py. These are DERIVED artifacts, not verbatim copies:
+
+    ppdoclayout_s.onnx    <- PP-DocLayout-S/inference.{json,pdiparams}
+    ppdoclayout_m.onnx    <- PP-DocLayout-M/inference.{json,pdiparams}
+
+The conversion changes only the serialisation format; no weights are retrained
+or altered. It is byte-deterministic, so anyone can re-run the tool and confirm
+the published sha256, and it is verified per-column against the Paddle original
+(class ids exact, scores to 5e-7, box coordinates to 3e-4 of a pixel).
+
+Without these conversions, layout analysis would exist only at naina's 269 MB
+tier, and the 11 MB tier could not describe document structure at all.
 
 ================================================================================
 Third-party build and runtime dependencies

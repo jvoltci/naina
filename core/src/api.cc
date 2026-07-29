@@ -129,7 +129,8 @@ struct naina_ctx {
         }
         auto entry = registry.resolve(task, tier);
         // Tier fallback: a tier that lacks this task degrades to a larger one
-        // rather than failing. layout_detect is medium-only today.
+        // rather than failing. Every task currently exists at every tier, so
+        // this is a safety net for future partial registries.
         if (!entry && tier != naina::Tier::Medium) {
             entry = registry.resolve(task, naina::Tier::Medium);
         }

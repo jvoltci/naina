@@ -11,9 +11,9 @@
 # suits. (naina v0.1 used tier for permissive-vs-research weights; OCR has
 # no such split, so the axis was repurposed.)
 #
-# Lookup happens by (task, tier). The runtime falls back to a larger tier
-# when a task is missing at the requested one — layout_detect is
-# medium-only until PP-DocLayout-S/-M are exported to ONNX.
+# Lookup happens by (task, tier). The runtime still falls back to a larger
+# tier when a task is missing at the requested one, though as of v0.3 every
+# task exists at every tier.
 #
 # Every sha256 below was verified by downloading the artifact and hashing
 # it. A truncated or substituted download fails closed rather than
@@ -247,14 +247,77 @@ models:
         blank_index: 0
         num_classes: 18710
 
-  # ─── Layout analysis (PP-DocLayoutV3) ───────────────────────────────
+  # ─── Layout analysis (PP-DocLayout) ─────────────────────────────────
   #
-  # Medium only. The 4.8 MB -S and 23.4 MB -M variants ship in Paddle
-  # format (inference.json graph + inference.pdiparams weights) with no
-  # official ONNX export, so tiny/small cannot claim layout support until
-  # tools/paddle2onnx_layout.py lands and its output is verified
-  # numerically equivalent. Until then the runtime's tier fallback sends
-  # tiny/small layout requests here.
+  # Output format is IDENTICAL across all variants: [N, 6] rows of
+  # [class_id, score, x1, y1, x2, y2] plus an [N] or [1] detection count.
+  # So post-processing is uniform.
+  #
+  # INPUTS ARE NOT uniform, so the module must feed by name from
+  # session->inputs() rather than positionally:
+  #
+  #   S   image[1,3,480,480], scale_factor[1,2]
+  #   M   image[1,3,640,640], scale_factor[1,2]
+  #   L   im_shape[1,2], image[1,3,640,640], scale_factor[1,2]
+  #   V3  im_shape, image[1,3,800,800], scale_factor  (+ an unused mask output)
+  #
+  # S and M carry NMS inside the graph, which caps them at batch_size == 1.
+  # Irrelevant here — layout runs one page at a time.
+  #
+  # S and M have no upstream ONNX build; naina exports them with
+  # tools/paddle2onnx_layout.py. That export is byte-deterministic and verified
+  # per-column against the Paddle original (classes exact, scores to 5e-7,
+  # coordinates to 3e-4 px), so the artifact can be independently reproduced.
+
+  - id: layout_detect.tiny
+    task: layout_detect
+    tier: tiny
+    arch: pp_doclayout_s
+    license: Apache-2.0
+    files:
+      onnx:
+        url:        "${release_base}/ppdoclayout_s.onnx"
+        source_url: "${hf}/PP-DocLayout-S/resolve/main/inference.pdiparams"
+        sha256:     "f905a530dd36fe4ab6613457a52e75bca2bb8c3e3d53eb4cb902e21a2d4c2548"
+        bytes:      4904714
+    input:
+      shape:  [1, 3, 480, 480]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: fixed, target: [480, 480]}
+    output:
+      type: layout_regions
+      postprocess:
+        score_thresh: 0.5
+
+  - id: layout_detect.small
+    task: layout_detect
+    tier: small
+    arch: pp_doclayout_m
+    license: Apache-2.0
+    files:
+      onnx:
+        url:        "${release_base}/ppdoclayout_m.onnx"
+        source_url: "${hf}/PP-DocLayout-M/resolve/main/inference.pdiparams"
+        sha256:     "7ae030241e5780af8736c077d3c5ce700ca83589c251fd962ee2234de2343947"
+        bytes:      23484258
+    input:
+      shape:  [1, 3, 640, 640]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: fixed, target: [640, 640]}
+    output:
+      type: layout_regions
+      postprocess:
+        score_thresh: 0.5
 
   - id: layout_detect.medium
     task: layout_detect
@@ -280,4 +343,3 @@ models:
       type: layout_regions
       postprocess:
         score_thresh: 0.5
-        nms_iou:      0.5

@@ -109,6 +109,23 @@ ARTIFACTS: tuple[tuple[str, str, str, int], ...] = (
     ),
 )
 
+# Layout models that PaddleOCR does NOT publish in ONNX form. naina exports
+# these itself with tools/paddle2onnx_layout.py, so `fetch` cannot download
+# them — run that tool first, then `upload`. They are still listed here so
+# `verify` covers the whole release.
+DERIVED: tuple[tuple[str, str, int], ...] = (
+    (
+        "ppdoclayout_s.onnx",
+        "f905a530dd36fe4ab6613457a52e75bca2bb8c3e3d53eb4cb902e21a2d4c2548",
+        4904714,
+    ),
+    (
+        "ppdoclayout_m.onnx",
+        "7ae030241e5780af8736c077d3c5ce700ca83589c251fd962ee2234de2343947",
+        23484258,
+    ),
+)
+
 
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
@@ -200,7 +217,8 @@ def verify() -> int:
     tmpdir = STAGING / "verify"
     tmpdir.mkdir(parents=True, exist_ok=True)
     failures = 0
-    for name, _, want_sha, want_bytes in ARTIFACTS:
+    checks = [(n, sha, b) for n, _, sha, b in ARTIFACTS] + list(DERIVED)
+    for name, want_sha, want_bytes in checks:
         dest = tmpdir / name
         try:
             urllib.request.urlretrieve(f"{base}/{name}", dest)  # noqa: S310

@@ -61,7 +61,7 @@ on inference math.
 
 **No OpenCV. No pyclipper. No PaddlePaddle.** The convex hull, minimum-area
 rectangle, polygon offset and contour tracing are ~450 lines of tested C++,
-because a 300 MB dependency tree would defeat the point of a 6 MB tier.
+because a 300 MB dependency tree would defeat the point of an 11 MB tier.
 
 ## What you get
 
@@ -70,12 +70,15 @@ is Apache-2.0 and safe for commercial use.
 
 | Tier | det | rec | layout | Total | Target | Charset |
 | --- | --- | --- | --- | --- | --- | --- |
-| `tiny` | 1.8 MB | 4.5 MB | — | **≈ 6 MB** | Browser, phone, Pi Zero | 6,904 (CJK + Latin) |
-| `small` | 9.9 MB | 21.2 MB | — | **≈ 31 MB** | Laptop, Pi 5, mobile app | 18,708 (50 languages) |
+| `tiny` | 1.8 MB | 4.5 MB | 4.9 MB | **≈ 11 MB** | Browser, phone, Pi Zero | 6,904 (CJK + Latin) |
+| `small` | 9.9 MB | 21.2 MB | 23.5 MB | **≈ 55 MB** | Laptop, Pi 5, mobile app | 18,708 (50 languages) |
 | `medium` | 62.0 MB | 76.6 MB | 130.5 MB | **≈ 269 MB** | Server, desktop | 18,708 (50 languages) |
 
-Layout weights only exist at `medium` today, so `tiny` and `small` are
-text-spotting tiers. See [Status](#status).
+PaddleOCR ships no ONNX build of the small layout models, so naina converts them
+itself — byte-deterministically, and verified per-column against the Paddle
+original. Without that, layout would exist only at the 269 MB tier and an 11 MB
+browser build could not describe document structure. See
+[`tools/paddle2onnx_layout.py`](tools/paddle2onnx_layout.py).
 
 **Every binding over one C ABI**, so behaviour cannot drift between languages:
 

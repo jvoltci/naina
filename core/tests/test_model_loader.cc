@@ -117,10 +117,19 @@ int main() {
                 EXPECT(rec->files.at("charset_yaml").url.find(".yml") != std::string::npos);
             }
         }
-    }
 
-    // Layout is medium-only until PP-DocLayout-S/-M are exported to ONNX.
-    EXPECT(reg.resolve("layout_detect", Tier::Medium).has_value());
+        // Layout now exists at every tier too: PP-DocLayout-S/-M have no
+        // upstream ONNX build, so naina exports them itself with
+        // tools/paddle2onnx_layout.py. Without that, the 11 MB tier could not
+        // claim document structure at all.
+        const auto lay = reg.resolve("layout_detect", tier);
+        EXPECT(lay.has_value());
+        if (lay.has_value()) {
+            EXPECT(lay->tier == tier);
+            EXPECT(lay->files.at("onnx").sha256.size() == 64);
+            EXPECT(lay->files.at("onnx").bytes > 0);
+        }
+    }
 
     // Spot-check one exact hash so a bad copy-paste is caught.
     auto fd = reg.resolve("text_detect", Tier::Tiny);
