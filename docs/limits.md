@@ -3,10 +3,26 @@
 Read this before you deploy naina anywhere that matters. Everything here is
 measured, and several of these were found the hard way.
 
-## You must choose the script; it will not detect it
+## Script detection is automatic in the browser, manual elsewhere
 
-naina reads **Latin + CJK** by default and **Devanagari** (Hindi, Marathi,
-Nepali, Sanskrit) when asked:
+The [web app](https://jvoltci.github.io/naina/) detects the script for you. It
+reads with the default alphabet first, and if mean confidence falls below 0.95 it
+re-reads a downscaled copy with each other alphabet and keeps the best — provided
+it beats the default by a clear margin.
+
+That comparison is *relative*, on the same image, which is the only thing that
+works. Measured: Cyrillic read with the wrong Devanagari model still scored
+0.918, above any absolute cutoff that would catch Hindi-read-as-Latin at 0.511.
+And on Latin input every alphabet ties near 0.98 because they all contain Latin,
+so the default has to be displaced by a margin rather than merely beaten.
+
+**The libraries do not auto-detect.** Python, Node, Rust and Flutter take an
+explicit `language`, because auto-detection means having every alphabet's weights
+present — around 70 MB — which defeats the point of an 11 MB tier. The browser can
+afford it because the app serves all of them from its own origin.
+
+So in a library, naina reads **Latin + CJK** by default and any other alphabet
+when asked:
 
 ```python
 page = naina.read("hindi.png", language="devanagari")

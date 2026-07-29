@@ -49,7 +49,7 @@ namespace {
 // ─── JS bridge ─────────────────────────────────────────────────────────
 //
 // The JS side lives in bindings/wasm/src/runtime.mjs and installs itself as
-// globalThis.__naina_ort before any naina call. Every function here is a thin
+// Module.__naina_ort before any naina call. Every function here is a thin
 // marshaller; none of them make decisions.
 //
 // The whole region is fenced from clang-format. These macro bodies are
@@ -64,9 +64,9 @@ namespace {
 // Create a session from a model already staged in the virtual filesystem.
 // Returns a positive handle, or 0 on failure.
 EM_ASYNC_JS(int, js_session_create, (const char* path, int device), {
-    const rt = globalThis.__naina_ort;
+    const rt = Module.__naina_ort;
     if (!rt) {
-        console.error('naina: globalThis.__naina_ort is not installed');
+        console.error('naina: Module.__naina_ort is not installed');
         return 0;
     }
     try {
@@ -77,7 +77,7 @@ EM_ASYNC_JS(int, js_session_create, (const char* path, int device), {
     }
 });
 
-EM_JS(void, js_session_release, (int handle), { globalThis.__naina_ort ?.releaseSession(handle); });
+EM_JS(void, js_session_release, (int handle), { Module.__naina_ort ?.releaseSession(handle); });
 
 // Whether the host page has installed the bridge.
 //
@@ -85,7 +85,7 @@ EM_JS(void, js_session_release, (int handle), { globalThis.__naina_ort ?.release
 // which a page served with a strict Content-Security-Policy will refuse. EM_JS
 // compiles to a direct import with no dynamic execution.
 EM_JS(int, js_bridge_ready, (), {
-    return (typeof globalThis.__naina_ort === 'object' && globalThis.__naina_ort !== null) ? 1
+    return (typeof Module.__naina_ort === 'object' && Module.__naina_ort !== null) ? 1
                                                                                              : 0;
 });
 
@@ -93,7 +93,7 @@ EM_JS(int, js_bridge_ready, (), {
 // because each EM_JS crossing is comparatively expensive and this happens once
 // per session. Caller owns the returned buffer and frees it with free().
 EM_JS(char*, js_session_io_json, (int handle, int want_outputs), {
-    const rt = globalThis.__naina_ort;
+    const rt = Module.__naina_ort;
     const json = rt ? rt.describeIo(handle, want_outputs !== 0) : '[]';
     const len = lengthBytesUTF8(json) + 1;
     const buf = _malloc(len);
@@ -126,7 +126,7 @@ EM_ASYNC_JS(int,
              const int32_t* out_bytes,
              const int32_t* out_dtypes),
             {
-                const rt = globalThis.__naina_ort;
+                const rt = Module.__naina_ort;
                 if (!rt) {
                     return 1;
                 }

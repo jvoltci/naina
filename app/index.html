@@ -76,7 +76,8 @@
         <label class="field">
           <span>Script</span>
           <select id="language">
-            <option value="" selected>Latin, Chinese, Japanese</option>
+            <option value="auto" selected>Auto — detect the script</option>
+            <option value="">Latin, Chinese, Japanese</option>
             <option value="arabic">Arabic, Persian, Urdu</option>
             <option value="cyrillic">Russian, Bulgarian, Serbian</option>
             <option value="devanagari">Hindi, Marathi, Nepali, Sanskrit</option>
@@ -98,9 +99,10 @@
            Hindi gets fabricated text at high confidence, and finding that out
            afterwards is too late. -->
       <p class="caveat">
-        Pick the <strong>script</strong> that matches your document. Choosing wrong
-        returns <strong>plausible-looking wrong text, not an error</strong> — the
-        model reads confidently in whichever alphabet you gave it. Handwriting is
+        Script detection is <strong>automatic</strong> — leave it on Auto unless you
+        know better. Set it explicitly and choosing wrong returns
+        <strong>plausible-looking wrong text, not an error</strong>, because the
+        model reads confidently in whichever alphabet you give it. Handwriting is
         unreliable. <a href="./doc/limits/">Full limitations</a>.
       </p>
 

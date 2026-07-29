@@ -117,6 +117,31 @@ export async function toPages(
   return [{ number: 1, of: 1, label, bitmap }];
 }
 
+/** Long side of the copy used only for script probing.
+ *
+ * Script detection compares alphabets on the same input, so it needs enough
+ * detail to recognise glyphs but nowhere near full resolution. Probing at full
+ * size cost 130s on a 1585x2353 page — nine alphabets, one full read each. At
+ * 900px it is a few seconds, and the winning alphabet then does the real read at
+ * full resolution, so quality is unaffected.
+ */
+const PROBE_SIDE = 900;
+
+/**
+ * A downscaled copy for script probing, or null when the page is already small
+ * enough that probing it directly is cheap.
+ */
+export async function toProbeBitmap(bitmap: ImageBitmap): Promise<ImageBitmap | null> {
+  const longest = Math.max(bitmap.width, bitmap.height);
+  if (longest <= PROBE_SIDE) return null;
+  const scale = PROBE_SIDE / longest;
+  return createImageBitmap(bitmap, {
+    resizeWidth: Math.round(bitmap.width * scale),
+    resizeHeight: Math.round(bitmap.height * scale),
+    resizeQuality: 'medium',
+  });
+}
+
 /**
  * Packed RGB8 bytes for naina.
  *

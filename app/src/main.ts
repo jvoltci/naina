@@ -6,7 +6,7 @@
 // this tool and naina's Python/Node packages producing the same answers.
 
 import type { NainaPage, TierName } from '@jvoltci/naina-wasm';
-import { toPages, toRgb, type SourcePage } from './pages';
+import { toPages, toProbeBitmap, toRgb, type SourcePage } from './pages';
 import type { WorkerRequest, WorkerResponse } from './ocr.worker';
 import './styles.css';
 
@@ -15,6 +15,10 @@ interface Result {
   markdown: string;
   json: NainaPage | null;
   ms: number;
+  /** The alphabet that produced this. */
+  language?: string;
+  /** True when it was detected rather than chosen. */
+  detected?: boolean;
   error?: string;
 }
 
@@ -223,10 +227,15 @@ function render() {
   const lines = r.json?.lines.length ?? 0;
   const regions = r.json?.regions.length ?? 0;
   const mean = lines && r.json ? r.json.lines.reduce((a, l) => a + l.confidence, 0) / lines : 0;
+  const scriptNote = r.detected
+    ? ` · script detected: ${r.language}`
+    : r.language
+      ? ` · script: ${r.language}`
+      : '';
   metaEl.textContent =
     `${r.page.label} · ${r.page.bitmap.width}×${r.page.bitmap.height} · ` +
     `${lines} lines · ${regions} regions · mean confidence ${mean.toFixed(2)} · ` +
-    `${(r.ms / 1000).toFixed(1)}s`;
+    `${(r.ms / 1000).toFixed(1)}s${scriptNote}`;
 
   downloadAllEl.hidden = results.length < 2;
   renderPager();
@@ -249,6 +258,8 @@ async function readPages(
       setStatus(`${verb} page ${i + 1} of ${pages.length}…`, i / pages.length);
     }
     try {
+      // Only auto-detection needs the small copy; making one otherwise is waste.
+      const probeBitmap = language === 'auto' ? await toProbeBitmap(page.bitmap) : null;
       const res = await ask({
         kind: 'read',
         tier,
@@ -256,9 +267,24 @@ async function readPages(
         rgb: toRgb(page.bitmap),
         width: page.bitmap.width,
         height: page.bitmap.height,
+        probe: probeBitmap
+          ? {
+              rgb: toRgb(probeBitmap),
+              width: probeBitmap.width,
+              height: probeBitmap.height,
+            }
+          : undefined,
       });
+      probeBitmap?.close();
       if (res.kind !== 'result') throw new Error('unexpected reply from the OCR worker');
-      results.push({ page, markdown: res.markdown, json: res.page, ms: res.ms });
+      results.push({
+        page,
+        markdown: res.markdown,
+        json: res.page,
+        ms: res.ms,
+        language: res.language,
+        detected: res.detected,
+      });
     } catch (e) {
       results.push({
         page,
