@@ -79,6 +79,16 @@
         </label>
       </div>
 
+      <!-- Stated up front, not in the notes at the bottom. A user who feeds it
+           Hindi gets fabricated text at high confidence, and finding that out
+           afterwards is too late. -->
+      <p class="caveat">
+        Reads <strong>Latin and Chinese/Japanese/Korean</strong> print. It cannot
+        read Devanagari (Hindi, Marathi, Nepali), Arabic, Tamil or Thai — and on
+        those it returns <strong>incorrect text rather than an error</strong>.
+        Handwriting is unreliable. <a href="./doc/limits/">Full limitations</a>.
+      </p>
+
       <!-- Status line: model download first, then the read itself. -->
       <section id="status" class="status" hidden>
         <div class="bar"><div id="bar-fill" class="bar-fill"></div></div>

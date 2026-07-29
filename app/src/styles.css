@@ -11,6 +11,7 @@
   --fg-dim: #9aa7b4;
   --fg-faint: #6b7785;
   --accent: #4ea1ff;
+  --warn: #f0b429;
   --err: #ff6b6b;
   --radius: 12px;
   --maxw: 1240px;
@@ -486,3 +487,18 @@ footer p {
   border-color: var(--err);
   color: var(--bg);
 }
+
+/* Up-front caveat about supported scripts. Deliberately prominent: a user who
+   discovers the limit after trusting the output has already been misled. */
+.caveat {
+  margin: 1.25rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #4a3a1a;
+  border-left: 3px solid var(--warn, #f0b429);
+  border-radius: 8px;
+  background: #1a1610;
+  font-size: 0.88rem;
+  color: #d9c9a3;
+}
+.caveat strong { color: #f0d69a; font-weight: 600; }
+.caveat a { color: var(--accent); }
