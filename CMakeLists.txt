@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(naina
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "Embeddable computer-vision runtime for face & person understanding"
     LANGUAGES CXX C
 )
@@ -33,6 +33,16 @@ option(NAINA_BUILD_TESTS         "Build naina unit tests"          ON)
 option(NAINA_BUILD_SHARED        "Build naina as a shared library" ON)
 option(NAINA_BUILD_PYTHON        "Build the Python binding (naina-py)" OFF)
 option(NAINA_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors" ON)
+
+# Vendor yaml-cpp statically instead of linking a system copy. Redistributable
+# artifacts (wheels, npm addons) need this: a system yaml-cpp leaves the binary
+# pointing at an absolute Homebrew/distro path that will not exist on the
+# user's machine. Off by default so local dev builds stay fast.
+option(NAINA_VENDOR_YAMLCPP      "Build yaml-cpp from source, statically" OFF)
+
+# Report a bare version from naina_version_string() instead of appending
+# "-dev". Set by the packaging config for distributable artifacts.
+option(NAINA_RELEASE             "This is a release build (no -dev suffix)" OFF)
 
 option(NAINA_WITH_ONNXRUNTIME    "Enable ONNX Runtime backend" OFF)
 option(NAINA_WITH_NCNN           "Enable NCNN backend"         OFF)

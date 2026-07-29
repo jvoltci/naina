@@ -3,9 +3,21 @@
 #define NAINA_STR_(x) #x
 #define NAINA_STR(x) NAINA_STR_(x)
 
+// Release builds report a bare semantic version; anything else carries "-dev".
+//
+// Conditional rather than hardcoded because a distributable artifact must not
+// disagree with its own metadata: a wheel whose METADATA says 0.2.0 while
+// naina.__version__ says "0.2.0-dev" makes every bug report ambiguous about
+// whether the reporter is on a release or a local build. NAINA_RELEASE is set
+// by the packaging config (see pyproject.toml) and stays off for local builds.
 extern "C" const char* naina_version_string(void) {
+#if defined(NAINA_RELEASE)
+    return NAINA_STR(NAINA_VERSION_MAJOR) "." NAINA_STR(NAINA_VERSION_MINOR) "." NAINA_STR(
+        NAINA_VERSION_PATCH);
+#else
     return NAINA_STR(NAINA_VERSION_MAJOR) "." NAINA_STR(NAINA_VERSION_MINOR) "." NAINA_STR(
         NAINA_VERSION_PATCH) "-dev";
+#endif
 }
 
 extern "C" const char* naina_status_str(naina_status s) {
