@@ -26,8 +26,20 @@ const TIERS = { tiny: 1, small: 2, medium: 3 };
 const wanted = process.argv.slice(2).length ? process.argv.slice(2) : ['tiny', 'small'];
 
 // Every alphabet the app offers. Recognition differs per script; detection and
-// layout are shared, and the dedupe below collapses those duplicates.
-const LANGS = ['', 'devanagari'];
+// layout are shared across all of them, and the dedupe below collapses those
+// duplicates so they are fetched once rather than once per language.
+const LANGS = [
+  '',           // Latin, Chinese, Japanese
+  'arabic',
+  'cyrillic',
+  'devanagari',
+  'el',
+  'eslav',
+  'korean',
+  'ta',
+  'te',
+  'th',
+];
 for (const t of wanted) {
   if (!(t in TIERS)) {
     console.error(`unknown tier '${t}' (expected: ${Object.keys(TIERS).join(', ')})`);

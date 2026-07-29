@@ -27,11 +27,12 @@ An unknown language value is an error rather than a silent fallback:
 naina.read("x.png", language="klingon")   # raises; does not read as Latin
 ```
 
-!!! warning "Other scripts are still unsupported"
-    Arabic, Tamil, Telugu, Thai, Korean and Cyrillic are not wired up yet, and on
-    those naina behaves as it did for Hindi before: wrong text, no error. Upstream
-    ships models for them in the same shape, so adding them is registry work —
-    tracked in the [roadmap](ROADMAP.md).
+Ten alphabets ship: the default (Latin, Chinese, Japanese) plus `arabic`, `cyrillic`, `devanagari`, `el`, `eslav`, `korean`, `ta`, `te`, `th`.
+
+!!! warning "Scripts outside that list behave as Hindi used to"
+    Hebrew, Japanese kana-only, Vietnamese and others are not wired up. On those
+    naina returns wrong text rather than an error. Upstream ships some of them in
+    the same shape, so adding one is registry work.
 
 ## Handwriting is weak
 

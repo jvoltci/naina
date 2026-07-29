@@ -10,6 +10,19 @@ export declare const TIER: {
 
 export type TierName = 'auto' | 'tiny' | 'small' | 'medium';
 
+/** Recognition alphabets naina ships. `''` is the default (Latin + CJK). */
+export type NainaLanguage =
+  | ''
+  | 'arabic'   // Arabic, Persian, Urdu
+  | 'cyrillic'   // Russian, Bulgarian, Serbian, Mongolian
+  | 'devanagari'   // Hindi, Marathi, Nepali, Sanskrit
+  | 'el'   // Greek
+  | 'eslav'   // Ukrainian, Belarusian, Russian
+  | 'korean'   // Korean
+  | 'ta'   // Tamil
+  | 'te'   // Telugu
+  | 'th'   // Thai;
+
 /** One recognised line. `quad` is x0,y0,x1,y1,x2,y2,x3,y3 in source pixels,
  *  clockwise from top-left. */
 export interface NainaLine {
@@ -57,15 +70,15 @@ export interface CreateReaderOptions {
   /** Set false to skip staging and call stageTier yourself later. */
   stage?: boolean;
   /**
-   * Recognition alphabet. `''` (default) is Latin + CJK; `'devanagari'` reads
-   * Hindi, Marathi, Nepali and Sanskrit.
+   * Recognition alphabet. `''` (default) is Latin + CJK. Also available:
+   * `arabic`, `cyrillic`, `devanagari`, `el`, `eslav`, `korean`, `ta`, `te`, `th`.
    *
    * Detection and layout are script-agnostic and shared; only recognition
    * changes. An unknown value throws rather than reading with the wrong
    * alphabet — reading Devanagari with a Latin model returns plausible wrong
    * text at high confidence, which is the failure this exists to prevent.
    */
-  language?: string;
+  language?: NainaLanguage | string;
   /**
    * Serve weights from this origin instead of the registry's GitHub release URLs.
    *
@@ -123,7 +136,7 @@ export declare function stageTier(
     /** Serve weights from here instead of the registry host. */
     baseUrl?: string;
     /** Recognition alphabet ('' = Latin + CJK). */
-    language?: string;
+    language?: NainaLanguage | string;
   },
 ): Promise<void>;
 

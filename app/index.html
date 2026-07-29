@@ -76,8 +76,16 @@
         <label class="field">
           <span>Script</span>
           <select id="language">
-            <option value="" selected>Latin + Chinese/Japanese/Korean</option>
-            <option value="devanagari">Devanagari — Hindi, Marathi, Nepali, Sanskrit</option>
+            <option value="" selected>Latin, Chinese, Japanese</option>
+            <option value="arabic">Arabic, Persian, Urdu</option>
+            <option value="cyrillic">Russian, Bulgarian, Serbian</option>
+            <option value="devanagari">Hindi, Marathi, Nepali, Sanskrit</option>
+            <option value="el">Greek</option>
+            <option value="eslav">Ukrainian, Belarusian, Russian</option>
+            <option value="korean">Korean</option>
+            <option value="ta">Tamil</option>
+            <option value="te">Telugu</option>
+            <option value="th">Thai</option>
           </select>
         </label>
         <label class="field checkbox">
@@ -90,11 +98,10 @@
            Hindi gets fabricated text at high confidence, and finding that out
            afterwards is too late. -->
       <p class="caveat">
-        Pick the <strong>script</strong> that matches your document. Reading Hindi
-        with the Latin model returns <strong>plausible-looking wrong text, not an
-        error</strong>. Arabic, Tamil and Thai are not supported yet, and
-        handwriting is unreliable.
-        <a href="./doc/limits/">Full limitations</a>.
+        Pick the <strong>script</strong> that matches your document. Choosing wrong
+        returns <strong>plausible-looking wrong text, not an error</strong> — the
+        model reads confidently in whichever alphabet you gave it. Handwriting is
+        unreliable. <a href="./doc/limits/">Full limitations</a>.
       </p>
 
       <!-- Status line: model download first, then the read itself. -->

@@ -31,14 +31,23 @@ const readInputShape = {
                 'that first call can take up to a minute on a slow connection; later calls are fast.',
         ),
     language: z
-        .enum(['latin', 'devanagari'])
+        .enum(['latin', 'arabic', 'cyrillic', 'devanagari', 'el', 'eslav', 'korean', 'ta', 'te', 'th'])
         .optional()
         .describe(
-            'Script of the document. "latin" (default) also covers Chinese, Japanese and Korean. ' +
-                '"devanagari" reads Hindi, Marathi, Nepali and Sanskrit. ' +
+            'Script of the document. Default "latin", which also covers Chinese and Japanese. ' +
+                '  arabic      Arabic, Persian, Urdu. ' +
+                '  cyrillic    Russian, Bulgarian, Serbian, Mongolian. ' +
+                '  devanagari  Hindi, Marathi, Nepali, Sanskrit. ' +
+                '  el          Greek. ' +
+                '  eslav       Ukrainian, Belarusian, Russian. ' +
+                '  korean      Korean. ' +
+                '  ta          Tamil. ' +
+                '  te          Telugu. ' +
+                '  th          Thai. ' +
                 'IMPORTANT: choosing wrong does not produce an error -- reading a Hindi page as ' +
                 '"latin" returns plausible-looking but entirely wrong Latin text at high ' +
-                'confidence. Set this from the document, and do not trust confidence to warn you.',
+                'confidence, because confidence measures certainty within the model\'s own ' +
+                'alphabet. Set this from the document; do not trust confidence to warn you.',
         ),
 };
 
@@ -46,7 +55,7 @@ type ReadArgs = {
     path?: string;
     imageBase64?: string;
     tier?: 'auto' | 'tiny' | 'small' | 'medium';
-    language?: 'latin' | 'devanagari';
+    language?: 'latin' | 'arabic' | 'cyrillic' | 'devanagari' | 'el' | 'eslav' | 'korean' | 'ta' | 'te' | 'th';
 };
 
 function toolError(err: unknown): CallToolResult {
@@ -71,7 +80,7 @@ export function registerTools(server: McpServer, engines: EnginePool): void {
                 const image = await decodeImage({ path: args.path, imageBase64: args.imageBase64 });
                 const engine = engines.get(
                     args.tier ?? 'auto',
-                    args.language === 'devanagari' ? 'devanagari' : '',
+                    args.language && args.language !== 'latin' ? args.language : '',
                 );
                 const page = await engine.read(image);
                 return { content: [{ type: 'text', text: page.markdown }] };
@@ -98,7 +107,7 @@ export function registerTools(server: McpServer, engines: EnginePool): void {
                 const image = await decodeImage({ path: args.path, imageBase64: args.imageBase64 });
                 const engine = engines.get(
                     args.tier ?? 'auto',
-                    args.language === 'devanagari' ? 'devanagari' : '',
+                    args.language && args.language !== 'latin' ? args.language : '',
                 );
                 const page = await engine.read(image);
                 const detailed = {
