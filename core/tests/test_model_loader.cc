@@ -91,9 +91,17 @@ int main() {
             EXPECT(det->files.count("onnx") == 1);
             EXPECT(det->files.at("onnx").sha256.size() == 64);
             EXPECT(det->files.at("onnx").bytes > 0);
-            // ${hf} must have been substituted.
-            EXPECT(det->files.at("onnx").url.find("huggingface.co") != std::string::npos);
-            EXPECT(det->files.at("onnx").url.find("${hf}") == std::string::npos);
+            // Weights resolve to naina's OWN release, not upstream hosting, so
+            // an upstream re-tag or deletion cannot break installs. ${release_base}
+            // must have been substituted.
+            const std::string& url = det->files.at("onnx").url;
+            EXPECT(url.find("github.com/jvoltci/naina/releases") != std::string::npos);
+            EXPECT(url.find("${release_base}") == std::string::npos);
+            EXPECT(url.find("${hf}") == std::string::npos);
+            // Upstream provenance is retained for auditability, and is never
+            // what gets fetched.
+            EXPECT(!det->files.at("onnx").source_url.empty());
+            EXPECT(det->files.at("onnx").source_url.find("huggingface.co") != std::string::npos);
         }
         if (rec.has_value()) {
             EXPECT(rec->arch == "pp_ocrv6_rec");

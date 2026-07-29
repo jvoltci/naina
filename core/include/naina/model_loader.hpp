@@ -38,6 +38,12 @@ struct FileEntry {
     std::string url;
     std::string sha256;  // hex, lowercase. The literal "TBD..." means unverified.
     int64_t bytes = 0;
+
+    // Provenance only — NEVER fetched. Records the upstream artifact these
+    // mirrored bytes came from, so the chain of custody stays auditable.
+    // naina serves weights from its own release so an upstream re-tag or
+    // deletion cannot break installs; see NOTICE.
+    std::string source_url;
 };
 
 struct ModelEntry {

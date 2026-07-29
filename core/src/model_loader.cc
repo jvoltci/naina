@@ -231,6 +231,8 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
                 fe.url = substitute_hf(substitute_release_base(kv.second["url"].as<std::string>(""),
                                                                reg.release_base_),
                                        hf);
+                // Provenance is stored but never fetched; see FileEntry.
+                fe.source_url = substitute_hf(kv.second["source_url"].as<std::string>(""), hf);
                 fe.sha256 = lower(kv.second["sha256"].as<std::string>(""));
                 fe.bytes = kv.second["bytes"].as<int64_t>(0);
                 entry.files.emplace(kind, std::move(fe));
