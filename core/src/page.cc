@@ -109,9 +109,16 @@ const char* Page::markdown() const {
     return markdown_->c_str();
 }
 
+void Page::set_language(std::string lang) {
+    language_ = std::move(lang);
+    json_.reset();
+}
+
 const char* Page::json() const {
     if (!json_.has_value()) {
-        std::string out = "{\"lines\":[";
+        std::string out = "{\"language\":\"";
+        append_json_escaped(language_, &out);
+        out += "\",\"lines\":[";
         for (size_t i = 0; i < lines_.size(); ++i) {
             const naina_textline& l = lines_[i];
             if (i != 0) {

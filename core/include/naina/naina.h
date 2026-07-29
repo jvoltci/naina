@@ -155,7 +155,13 @@ typedef struct {
     naina_tier tier;                /* honoured when version >= 2 */
 
     /* Recognition alphabet, e.g. "devanagari". NULL or "" selects the default
-     * (Latin + CJK). Honoured when version >= 3.
+     * (Latin + CJK). "auto" picks one per image by recognising a sample of
+     * detected boxes with each alphabet the registry describes and keeping the
+     * best, provided it beats the default by a margin. Honoured when version >= 3.
+     *
+     * "auto" only considers alphabets whose weights are already cached: naina
+     * will not download every model to answer the question. Where that matters,
+     * pre-fetch the candidates or name the language outright.
      *
      * A string rather than an enum on purpose: the set of scripts belongs to
      * upstream and grows, and an enum would force an ABI change per language.

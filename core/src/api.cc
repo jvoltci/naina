@@ -16,6 +16,7 @@
 #include "modules/text_recognize.hpp"
 #include "page.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -88,25 +89,36 @@ struct naina_ctx {
     int num_threads = 0;
 
     std::mutex sess_mu;
+
+    // Keyed by "<task>@<language>", not by task alone. Recognition models differ
+    // per alphabet, so one entry per task would hand back the wrong model the
+    // moment two alphabets are used in one context -- which is exactly what
+    // automatic script selection does. Detection and layout are script-agnostic
+    // and always key with an empty language, so they are loaded once and shared.
     std::unordered_map<std::string, std::unique_ptr<naina::backend::ISession>> sessions;
 
-    // The recognition charset, loaded once from the manifest's charset_yaml
-    // artifact. Guarded by the same mutex as the session cache.
-    naina::internal::charset::Charset rec_charset;
-    bool rec_charset_loaded = false;
+    // Charsets, one per alphabet, parsed from each recognition model's own
+    // charset_yaml artifact. Also keyed by language for the same reason.
+    std::unordered_map<std::string, naina::internal::charset::Charset> charsets;
+
+    static std::string cache_key(const std::string& task, const std::string& lang) {
+        return task + "@" + lang;
+    }
 
     // Resolve and parse the charset that belongs to the recognition model for
     // the active tier. Returns nullptr with a status on failure — without a
     // charset, decoding cannot map class indices to characters at all.
-    const naina::internal::charset::Charset* charset_for_recognize(naina_status* out_status) {
+    const naina::internal::charset::Charset* charset_for_recognize(naina_status* out_status,
+                                                                   const std::string& lang) {
         std::lock_guard<std::mutex> lk(sess_mu);
-        if (rec_charset_loaded) {
+        const std::string key = cache_key("text_recognize", lang);
+        if (const auto it = charsets.find(key); it != charsets.end()) {
             *out_status = NAINA_OK;
-            return &rec_charset;
+            return &it->second;
         }
-        auto entry = registry.resolve("text_recognize", tier, language);
+        auto entry = registry.resolve("text_recognize", tier, lang);
         if (!entry && tier != naina::Tier::Medium) {
-            entry = registry.resolve("text_recognize", naina::Tier::Medium, language);
+            entry = registry.resolve("text_recognize", naina::Tier::Medium, lang);
         }
         if (!entry || entry->files.find("charset_yaml") == entry->files.end()) {
             *out_status = NAINA_E_MODEL_NOT_FOUND;
@@ -118,13 +130,14 @@ struct naina_ctx {
             *out_status = ls;
             return nullptr;
         }
-        if (!naina::internal::charset::load_from_yaml(path, &rec_charset)) {
+        naina::internal::charset::Charset parsed;
+        if (!naina::internal::charset::load_from_yaml(path, &parsed)) {
             *out_status = NAINA_E_IO;
             return nullptr;
         }
-        rec_charset_loaded = true;
+        const auto [it, _] = charsets.emplace(key, std::move(parsed));
         *out_status = NAINA_OK;
-        return &rec_charset;
+        return &it->second;
     }
 
     // The layout model's input is a fixed square whose side differs per
@@ -145,17 +158,135 @@ struct naina_ctx {
         return 800;
     }
 
-    naina::backend::ISession* session_for(const std::string& task, naina_status* out_status) {
+    // `lang_override` lets a caller ask for a specific alphabet without mutating
+    // the context, which is what script probing needs: it compares several
+    // alphabets on one image and must not leave the context pointing at the last
+    // one it tried.
+
+    // ── automatic alphabet selection ──────────────────────────────────
+    //
+    // Recognise a SAMPLE of the detected boxes with each candidate alphabet and
+    // keep the one whose mean confidence is highest, provided it beats the
+    // default alphabet by a margin.
+    //
+    // Both constants come from measurement across four scripts. Best-alphabet
+    // mean against the default's, on the same image:
+    //
+    //   Hindi     devanagari  0.937 vs 0.511   +0.426
+    //   Cyrillic  cyrillic    0.998 vs 0.894   +0.104
+    //   Greek     el          0.979 vs 0.913   +0.066
+    //   Latin     arabic      0.989 vs 0.983   +0.006
+    //
+    // Two consequences.
+    //
+    // Comparing alphabets on the SAME input works where an absolute threshold
+    // cannot: Cyrillic read with the wrong Devanagari model still scored 0.918,
+    // above any cutoff that would catch Hindi-read-as-Latin at 0.511.
+    //
+    // Every alphabet contains Latin, so on Latin input they all tie near 0.98 and
+    // a plain argmax picks `arabic` for an English page. The default therefore has
+    // to be DISPLACED by a margin rather than merely beaten. 0.03 leaves 2x
+    // headroom under the tightest true positive and 5x over the Latin tie.
+    //
+    // Candidates are whatever the registry describes at this tier, so this grows
+    // with the registry and needs no list here. An alphabet whose weights are not
+    // cached simply fails to load and is skipped -- naina does not download nine
+    // models to answer this question.
+    static constexpr float kAutoMargin = 0.03F;
+    static constexpr float kAutoDecisive = 0.25F;
+    static constexpr size_t kAutoSampleBoxes = 8;
+
+    std::string detect_language(const naina::internal::ImageView& view,
+                                const std::vector<naina_textbox>& boxes,
+                                naina_status* out_status) {
+        *out_status = NAINA_OK;
+        if (boxes.empty()) {
+            return {};
+        }
+
+        // A sample is enough: this is a vote on which alphabet fits, not the read
+        // that gets returned. Highest-scoring boxes first, since a marginal
+        // detection is a poor witness.
+        std::vector<naina_textbox> sample = boxes;
+        std::sort(sample.begin(), sample.end(), [](const naina_textbox& a, const naina_textbox& b) {
+            return a.score > b.score;
+        });
+        if (sample.size() > kAutoSampleBoxes) {
+            sample.resize(kAutoSampleBoxes);
+        }
+
+        const auto score_for = [&](const std::string& cand) -> float {
+            naina_status st = NAINA_OK;
+            auto* sess = session_for("text_recognize", &st, &cand);
+            if (sess == nullptr || st != NAINA_OK) {
+                return -1.0F;
+            }
+            const auto* cs = charset_for_recognize(&st, cand);
+            if (cs == nullptr || st != NAINA_OK) {
+                return -1.0F;
+            }
+            std::vector<naina::internal::text_recognize::Line> out;
+            if (naina::internal::text_recognize::recognize(sess, view, sample, *cs, {}, &out) !=
+                NAINA_OK) {
+                return -1.0F;
+            }
+            double sum = 0.0;
+            int64_t n = 0;
+            for (const auto& l : out) {
+                if (!l.text.empty()) {
+                    sum += static_cast<double>(l.confidence);
+                    ++n;
+                }
+            }
+            return n == 0 ? -1.0F : static_cast<float>(sum / static_cast<double>(n));
+        };
+
+        const float baseline = score_for(std::string());
+        if (baseline < 0.0F) {
+            // The default alphabet could not even be loaded; nothing to compare
+            // against, so let the caller fail on the real read rather than here.
+            return {};
+        }
+
+        std::string best;
+        float best_score = baseline;
+        for (const auto& m : registry.all()) {
+            if (m.task != "text_recognize" || m.lang.empty()) {
+                continue;
+            }
+            const float sc = score_for(m.lang);
+            if (sc > best_score) {
+                best_score = sc;
+                best = m.lang;
+            }
+            // A margin this large is not a close call; stop paying for the rest.
+            if (sc >= baseline + kAutoDecisive) {
+                break;
+            }
+        }
+
+        return (!best.empty() && best_score >= baseline + kAutoMargin) ? best : std::string();
+    }
+
+    naina::backend::ISession* session_for(const std::string& task,
+                                          naina_status* out_status,
+                                          const std::string* lang_override = nullptr) {
         std::lock_guard<std::mutex> lk(sess_mu);
-        auto it = sessions.find(task);
+
+        // Language applies to recognition only. Detection and layout are
+        // script-agnostic — measured on a Devanagari page, DBNet located all 82
+        // lines correctly — so they resolve with no language and are shared
+        // across alphabets rather than loaded once per script.
+        const std::string task_lang = (task == "text_recognize")
+                                          ? (lang_override != nullptr ? *lang_override : language)
+                                          : std::string();
+
+        const std::string key = cache_key(task, task_lang);
+        auto it = sessions.find(key);
         if (it != sessions.end()) {
             *out_status = NAINA_OK;
             return it->second.get();
         }
-        // Language applies to recognition only. Detection and layout are
-        // script-agnostic — measured on a Devanagari page, DBNet located all 82
-        // lines correctly — so they resolve with no language and are shared.
-        const std::string task_lang = (task == "text_recognize") ? language : std::string();
 
         auto entry = registry.resolve(task, tier, task_lang);
         // Tier fallback: a tier that lacks this task degrades to a larger one
@@ -210,7 +341,7 @@ struct naina_ctx {
                 return nullptr;
             }
             auto* raw = sess.get();
-            sessions.emplace(task, std::move(sess));
+            sessions.emplace(key, std::move(sess));
             *out_status = NAINA_OK;
             return raw;
         }
@@ -291,13 +422,16 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
         cfg->language[0] != '\0') {
         ctx->language = cfg->language;
 
-        // Reject an unknown language HERE, at init, rather than letting it
-        // surface later as a missing model or -- far worse -- as a silent fall
-        // back to the Latin alphabet. Recognising Devanagari with a Latin
-        // alphabet is what returned "3rarearanlus Tarafaaa:" at 0.758
-        // confidence, and refusing up front is the whole point of this field.
-        if (!ctx->registry.resolve("text_recognize", ctx->tier, ctx->language)) {
-            return NAINA_E_UNSUPPORTED;
+        // "auto" is resolved per read, not here: it depends on the image.
+        if (ctx->language != "auto") {
+            // Reject an unknown language HERE, at init, rather than letting it
+            // surface later as a missing model or -- far worse -- as a silent
+            // fall back to the Latin alphabet. Recognising Devanagari with a
+            // Latin alphabet is what returned "3rarearanlus Tarafaaa:" at 0.758
+            // confidence, and refusing up front is the whole point of this field.
+            if (!ctx->registry.resolve("text_recognize", ctx->tier, ctx->language)) {
+                return NAINA_E_UNSUPPORTED;
+            }
         }
     }
 
@@ -356,20 +490,32 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
     if (det == nullptr) {
         return s;
     }
-    auto* rec = ctx->session_for("text_recognize", &s);
-    if (rec == nullptr) {
-        return s;
-    }
-    const auto* cs = ctx->charset_for_recognize(&s);
-    if (cs == nullptr) {
-        return s;
-    }
-
     const auto view = view_of(image);
 
+    // Detection runs before recognition regardless, and it is script-agnostic, so
+    // automatic alphabet selection reuses these boxes rather than detecting per
+    // candidate. Measured on a Devanagari page: DBNet located all 82 lines
+    // correctly even while the wrong recogniser produced garbage.
     std::vector<naina_textbox> boxes;
     s = naina::internal::text_detect::detect(det, view, {}, &boxes);
     if (s != NAINA_OK) {
+        return s;
+    }
+
+    std::string lang = ctx->language;
+    if (lang == "auto") {
+        lang = ctx->detect_language(view, boxes, &s);
+        if (s != NAINA_OK) {
+            return s;
+        }
+    }
+
+    auto* rec = ctx->session_for("text_recognize", &s, &lang);
+    if (rec == nullptr) {
+        return s;
+    }
+    const auto* cs = ctx->charset_for_recognize(&s, lang);
+    if (cs == nullptr) {
         return s;
     }
 
@@ -418,6 +564,9 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
         page->add_region(r.bbox, r.kind, r.order);
     }
     page->set_markdown(std::move(markdown));
+    // Report the alphabet actually used. With "auto" the caller cannot otherwise
+    // know what was chosen, and an unreported choice is a silent guess.
+    page->set_language(lang);
     *out_page = page.release();
     return NAINA_OK;
 }
@@ -625,7 +774,14 @@ extern "C" naina_status naina_staging_plan(const char* registry_path,
         }
         // Recognition is language-specific; detection and layout are shared
         // across alphabets and must not be filtered out by a language request.
-        const bool lang_ok = (m.task == "text_recognize") ? (m.lang == lang) : m.lang.empty();
+        //
+        // "auto" needs EVERY alphabet staged, because it decides by recognising a
+        // sample with each one and a build with no network (browser, Android)
+        // cannot fetch a candidate mid-decision. That is the honest cost of auto,
+        // and a caller who wants to pay it incrementally should stage the default
+        // first and ask for the full set only when a read comes back weak.
+        const bool lang_ok =
+            (m.task == "text_recognize") ? (lang == "auto" || m.lang == lang) : m.lang.empty();
         if (!lang_ok) {
             continue;
         }

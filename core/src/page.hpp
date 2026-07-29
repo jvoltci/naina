@@ -42,6 +42,13 @@ public:
     // model ran.
     void set_markdown(std::string md);
 
+    /// Record which recognition alphabet produced this page.
+    ///
+    /// Matters when the caller asked for "auto": a detected alphabet that is
+    /// never reported back is a silent guess, and silent guesses are what this
+    /// whole feature exists to remove.
+    void set_language(std::string lang);
+
     // Assign a line's region after layout analysis.
     void set_line_region(size_t line_index, int32_t region_id);
 
@@ -52,6 +59,8 @@ private:
     std::vector<naina_region> regions_;
 
     mutable std::optional<std::string> markdown_;
+    /// Recognition alphabet used; empty means the default (Latin + CJK).
+    std::string language_;
     mutable std::optional<std::string> json_;
 };
 

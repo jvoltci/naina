@@ -50,6 +50,14 @@ abstract final class NainaLanguage {
   /// Latin, Chinese and Japanese. The default.
   static const latin = '';
 
+  /// Pick the alphabet per image.
+  ///
+  /// Recognises a sample of the detected boxes with each alphabet the registry
+  /// describes and keeps the best, provided it beats [latin] by a margin. Only
+  /// considers alphabets whose weights are already staged — it will not download
+  /// every model to answer the question.
+  static const auto = 'auto';
+
   /// Arabic, Persian, Urdu
   static const arabic = 'arabic';
   /// Russian, Bulgarian, Serbian
@@ -71,6 +79,7 @@ abstract final class NainaLanguage {
 
   /// Every alphabet available, for building a picker.
   static const all = <String>[
+    auto,
     latin,
     arabic,
     cyrillic,

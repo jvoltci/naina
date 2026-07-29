@@ -294,6 +294,12 @@ impl ReaderBuilder {
 
     /// Recognition alphabet, e.g. `"devanagari"`. Unset means Latin + CJK.
     ///
+    /// `"auto"` picks one per image: it recognises a sample of the detected boxes
+    /// with each alphabet the registry describes and keeps the best, provided it
+    /// beats the default by a margin. It only considers alphabets already cached,
+    /// so pre-fetch the candidates or name the language when that matters. The
+    /// chosen alphabet is reported in the page JSON.
+    ///
     /// An unrecognised value makes [`build`](Self::build) fail with
     /// [`Error::Unsupported`] rather than quietly reading with the wrong
     /// alphabet.

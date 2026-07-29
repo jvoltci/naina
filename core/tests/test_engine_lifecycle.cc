@@ -63,7 +63,57 @@ static void check_region_kind_names() {
     }
 }
 
+// ── language selection ────────────────────────────────────────────────
+
+static void test_auto_language_is_accepted_at_init() {
+    // "auto" cannot be validated at init the way a named alphabet is, because it
+    // depends on the image. It must not be rejected as unknown.
+    naina_config cfg{};
+    cfg.version = 3;
+    cfg.tier = NAINA_TIER_TINY;
+    cfg.language = "auto";
+    naina_ctx_t* ctx = nullptr;
+    const naina_status rc = naina_init(&cfg, &ctx);
+    EXPECT(rc != NAINA_E_UNSUPPORTED);
+    if (rc == NAINA_OK) {
+        naina_release(ctx);
+    }
+}
+
+static void test_unknown_language_is_still_refused() {
+    // The whole point of the field. A silent fall back to Latin is what returned
+    // "3rarearanlus Tarafaaa:" at 0.758 confidence on a Hindi page.
+    naina_config cfg{};
+    cfg.version = 3;
+    cfg.tier = NAINA_TIER_TINY;
+    cfg.language = "klingon";
+    naina_ctx_t* ctx = nullptr;
+    const naina_status rc = naina_init(&cfg, &ctx);
+    EXPECT(rc == NAINA_E_UNSUPPORTED || rc == NAINA_E_MODEL_NOT_FOUND);
+    if (rc == NAINA_OK) {
+        naina_release(ctx);
+    }
+}
+
+static void test_version_2_config_ignores_language() {
+    // Additive-only ABI: a v2 config predates `language`, so whatever happens to
+    // sit in that slot must not be read.
+    naina_config cfg{};
+    cfg.version = 2;
+    cfg.tier = NAINA_TIER_TINY;
+    cfg.language = "klingon";  // must be ignored at version 2
+    naina_ctx_t* ctx = nullptr;
+    const naina_status rc = naina_init(&cfg, &ctx);
+    EXPECT(rc != NAINA_E_UNSUPPORTED);
+    if (rc == NAINA_OK) {
+        naina_release(ctx);
+    }
+}
+
 int main() {
+    test_auto_language_is_accepted_at_init();
+    test_unknown_language_is_still_refused();
+    test_version_2_config_ignores_language();
     // Tell the loader where to find registry.yaml; offline disables download.
     const std::filesystem::path repo = std::filesystem::current_path();
     setenv("NAINA_REGISTRY", (repo / "models" / "registry.yaml").c_str(), 1);

@@ -132,75 +132,33 @@ std::string status_text(int s) {
     return naina_status_str(static_cast<naina_status>(s));
 }
 
-// Escape the few characters that can appear in a URL or path and would break
-// JSON. Model ids and release URLs are ASCII by construction, so this does not
-// need to handle the full escape table.
-void json_escape_into(const std::string& in, std::string* out) {
-    for (const char c : in) {
-        if (c == '"' || c == '\\') {
-            *out += '\\';
-        }
-        *out += c;
-    }
-}
-
-// The list of weight files a tier needs, as
+// The list of weight files a configuration needs, as
 // [{"path":"...","url":"...","bytes":N}, ...].
 //
-// Computed by the C++ core rather than by JS on purpose. The cache layout
-// (<root>/<task>/<id>/<sha256[:16]>__<basename>) and the ${release_base}
-// substitution live in model_loader; a JS reimplementation would be a second
-// source of truth that drifts the first time either changes.
+// Delegates to naina_staging_plan in the C ABI rather than reimplementing it.
+// This function used to have its own copy of the filtering, and the copies
+// diverged the moment "auto" was added: the C version returned all 22 files while
+// this one returned 2, so the browser staged no recognition model and every read
+// failed with "model not found". One implementation, in the core.
 std::string staging_plan(int tier_int, const std::string& lang) {
     configure_paths_once();
     const char* reg_path = std::getenv("NAINA_REGISTRY");
+    const char* root = std::getenv("NAINA_CACHE");
     if (reg_path == nullptr) {
         return "[]";
     }
 
-    naina::Tier want = naina::Tier::Small;
-    if (tier_int == static_cast<int>(NAINA_TIER_TINY)) {
-        want = naina::Tier::Tiny;
-    } else if (tier_int == static_cast<int>(NAINA_TIER_MEDIUM)) {
-        want = naina::Tier::Medium;
-    }
-
-    naina::ModelRegistry reg;
-    try {
-        reg = naina::ModelRegistry::load(reg_path);
-    } catch (const std::exception&) {
+    char* json = nullptr;
+    const naina_status rc = naina_staging_plan(reg_path,
+                                              root,
+                                              static_cast<naina_tier>(tier_int),
+                                              lang.empty() ? nullptr : lang.c_str(),
+                                              &json);
+    if (rc != NAINA_OK || json == nullptr) {
         return "[]";
     }
-
-    std::string out = "[";
-    bool first = true;
-    for (const naina::ModelEntry& m : reg.all()) {
-        // Recognition is language-specific; detection and layout are shared.
-        // Selecting by lang here is what makes the browser fetch the Devanagari
-        // recogniser instead of the Latin one.
-        const bool lang_ok =
-            (m.task == "text_recognize") ? (m.lang == lang) : m.lang.empty();
-        if (m.tier != want || !lang_ok) {
-            continue;
-        }
-        for (const auto& [kind, file] : m.files) {
-            if (file.url.empty()) {
-                continue;
-            }
-            if (!first) {
-                out += ',';
-            }
-            first = false;
-            out += "{\"path\":\"";
-            json_escape_into(reg.cache_path_for(m, kind).string(), &out);
-            out += "\",\"url\":\"";
-            json_escape_into(file.url, &out);
-            out += "\",\"bytes\":";
-            out += std::to_string(file.bytes);
-            out += '}';
-        }
-    }
-    out += ']';
+    std::string out(json);
+    naina_free_string(json);
     return out;
 }
 

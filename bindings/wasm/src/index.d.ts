@@ -13,6 +13,7 @@ export type TierName = 'auto' | 'tiny' | 'small' | 'medium';
 /** Recognition alphabets naina ships. `''` is the default (Latin + CJK). */
 export type NainaLanguage =
   | ''
+  | 'auto'   // pick per image; the page reports what was chosen
   | 'arabic'   // Arabic, Persian, Urdu
   | 'cyrillic'   // Russian, Bulgarian, Serbian, Mongolian
   | 'devanagari'   // Hindi, Marathi, Nepali, Sanskrit
@@ -54,6 +55,15 @@ export interface NainaRegion {
 }
 
 export interface NainaPage {
+  /**
+   * The recognition alphabet that produced this page; `''` is the default
+   * (Latin + CJK).
+   *
+   * Meaningful when `language: 'auto'` was requested — the core resolves it per
+   * image and reports the result here, so a detected alphabet is never a silent
+   * choice.
+   */
+  language: string;
   lines: NainaLine[];
   regions: NainaRegion[];
 }

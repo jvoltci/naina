@@ -31,10 +31,11 @@ const readInputShape = {
                 'that first call can take up to a minute on a slow connection; later calls are fast.',
         ),
     language: z
-        .enum(['latin', 'arabic', 'cyrillic', 'devanagari', 'el', 'eslav', 'korean', 'ta', 'te', 'th'])
+        .enum(['auto', 'latin', 'arabic', 'cyrillic', 'devanagari', 'el', 'eslav', 'korean', 'ta', 'te', 'th'])
         .optional()
         .describe(
-            'Script of the document. Default "latin", which also covers Chinese and Japanese. ' +
+            'Script of the document. "auto" detects it and is the best default when unsure; ' +
+                '"latin" also covers Chinese and Japanese. ' +
                 '  arabic      Arabic, Persian, Urdu. ' +
                 '  cyrillic    Russian, Bulgarian, Serbian, Mongolian. ' +
                 '  devanagari  Hindi, Marathi, Nepali, Sanskrit. ' +
@@ -55,7 +56,7 @@ type ReadArgs = {
     path?: string;
     imageBase64?: string;
     tier?: 'auto' | 'tiny' | 'small' | 'medium';
-    language?: 'latin' | 'arabic' | 'cyrillic' | 'devanagari' | 'el' | 'eslav' | 'korean' | 'ta' | 'te' | 'th';
+    language?: 'auto' | 'latin' | 'arabic' | 'cyrillic' | 'devanagari' | 'el' | 'eslav' | 'korean' | 'ta' | 'te' | 'th';
 };
 
 function toolError(err: unknown): CallToolResult {
