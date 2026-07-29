@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/docs/assets/hero.png" alt="naina — reads any document, one C++ core, every language" width="100%">
+  <img src="https://jvoltci.github.io/naina/doc/assets/hero.svg" alt="naina — reads any document, one C++ core, every language" width="100%">
 </p>
 
 <p align="center">
@@ -146,11 +146,13 @@ browser build could not describe document structure. See
 
 | Binding | Status | Install |
 | --- | --- | --- |
-| C / C++ | ✅ works | `naina.h` — the contract every other binding targets |
-| Python | ✅ works, unpublished | build from source; `pip install naina` once released |
-| Node / TypeScript | ✅ works, unpublished | build from source; needs a local toolchain |
-| Rust | ❌ v0.5 | — |
-| WASM / browser | ❌ v0.4 | — |
+| C / C++ | ✅ | `naina.h` — the contract every other binding targets |
+| Python | ✅ published | `pip install naina` |
+| Rust | ✅ published | `cargo add naina` |
+| Flutter | ✅ published | `flutter pub add naina` — Android verified on device, iOS unproven |
+| WASM / browser | ✅ built | [use it online](https://jvoltci.github.io/naina/); npm publish pending |
+| Node / TypeScript | ✅ built | npm publish pending — needs a local toolchain to install |
+| MCP (for LLM tools) | ✅ | [`mcp/`](mcp/) — two tools, ten scripts, verified over stdio |
 
 **Weights are mirrored, not borrowed.** naina fetches from
 [its own release](https://github.com/jvoltci/naina/releases/tag/models-v1), not
@@ -172,6 +174,22 @@ Real measurements, not vendor claims.
 
 Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 
+**Full pages, measured during development** — same core, four platforms:
+
+| Where | Page | Result |
+| --- | --- | --- |
+| Native, macOS arm64, `medium` | A4 academic, 1240×1754 | 33 lines @ 0.99, **14/14 regions correctly labelled** |
+| Browser (WASM + ort-web), `tiny` | the same page | 33 lines @ 0.99, correct `#`/`##` structure |
+| Browser, `devanagari` | Sanskrit/Hindi page, 1585×2353 | 87 lines @ 0.93, 2731 Devanagari codepoints |
+| Android arm64 emulator, `tiny` | the A4 page | 33 lines @ 0.992 |
+| Browser, `el` / `cyrillic` | rendered text | `Ελληνικά κείμενο 2026`, `Русский текст 2026` — exact |
+
+**Browser is close to native, not bit-identical**, and that boundary is measured:
+on the A4 page at `tiny`, native produced 35 lines and WASM 33, with 33
+character-identical. One marginal blob landed on the other side of DBNet's 0.3
+threshold because arm64 NEON and WASM SIMD kernels differ in the last float bits.
+Details in [what it cannot do](https://jvoltci.github.io/naina/doc/limits/).
+
 > **On the accuracy numbers everyone quotes.** Vendors self-report 96.33% on
 > OmniDocBench v1.6 while independent evaluation of the same benchmark tops out
 > around 90.1%. naina will publish per-device numbers with the harness in-repo
@@ -180,29 +198,34 @@ Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 
 ## Status
 
-**v0.2 — text spotting works end to end.** The honest state:
+**v0.2.1.** The honest state:
 
 | Component | Status |
 | --- | --- |
-| C ABI (`naina_read`, page accessors, stage-level access) | ✅ |
-| Model registry — manifest-driven, sha256-verified, tier fallback | ✅ |
+| C ABI — `naina_read`, page accessors, staging plan, stage-level access | ✅ |
+| Model registry — manifest-driven, sha256-verified, tier + language fallback | ✅ |
 | Detection — PP-OCRv6 det, DBNet decode | ✅ |
-| Recognition — PP-OCRv6 rec, CTC greedy decode | ✅ |
+| Recognition — PP-OCRv6/v5 rec, CTC greedy decode, **ten alphabets** | ✅ |
+| Layout → structured markdown, column-aware reading order | ✅ |
 | Geometry — convex hull, min-area rect, polygon offset, no OpenCV | ✅ |
-| Page storage — pointer-stable, markdown + JSON | ✅ |
-| Python binding | ✅ |
-| Node binding | ✅ |
+| Browser — WASM core + onnxruntime-web, PDF, offline | ✅ |
+| Web app + docs live at [jvoltci.github.io/naina](https://jvoltci.github.io/naina/) | ✅ |
 | ONNX Runtime backend | ✅ |
+| Android on-device (Flutter) | ✅ 33 lines at 0.992 on a real page |
+| iOS | ⚠️ podspec written, never built or run |
+| WebGPU | ⚠️ off by default — it silently drops layout, see [limits](https://jvoltci.github.io/naina/doc/limits/) |
 | NCNN backend | ⚠️ compiles, but `FindNCNN.cmake` does not locate a brew install |
 | Recognition batching (one strip per call today) | ⚠️ correct but unoptimised |
-| Layout analysis → structured markdown | ❌ v0.3 |
-| WASM + browser app | ❌ v0.4 |
-| Rust binding | ❌ v0.5 |
+| Detecting a script mismatch rather than trusting the caller | ❌ |
 | Cross-binding parity enforced in CI | ❌ v1.0 |
-| MCP server (`mcp/`, 2 tools, verified over stdio) | ✅ |
 
-13 C++ tests, 6 Python tests, 6 Node tests. CI builds on Linux (gcc + clang) and
-macOS arm64.
+**15 C++ tests, 13 Rust, 11 Flutter FFI, 3 Android on-device, 6 Python, 6 Node,
+plus a real-browser end-to-end suite.** CI builds on Linux (gcc + clang) and
+macOS arm64, and the release matrix covers Linux x64/arm64 and macOS
+arm64/x86_64.
+
+**Platform floors**, inherited from ONNX Runtime and `std::aligned_alloc` rather
+than chosen: macOS **13.3+**, glibc **2.28+**, Android **API 28+**.
 
 **Not supported, deliberately:** handwriting (PP-OCRv6 is weak at it and claiming
 otherwise would be dishonest), autoregressive VLM parsing, training, and
