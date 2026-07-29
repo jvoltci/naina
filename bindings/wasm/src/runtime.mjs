@@ -50,7 +50,7 @@ const DTYPE_INDEX = Object.fromEntries(
 );
 
 /**
- * Installs the bridge the C++ backend looks for on globalThis.
+ * Installs the bridge the C++ backend looks for on the module.
  *
  * @param {object} Module the instantiated Emscripten module
  * @param {object} [opts]
@@ -216,7 +216,10 @@ export function installBridge(Module, opts = {}) {
     },
   };
 
-  globalThis.__naina_ort = bridge;
+  // On the module, not globalThis: one bridge per WASM instance. A global here
+  // means a second Reader silently steals the first one's bridge and reads its
+  // tensor descriptors from the wrong heap.
+  Module.__naina_ort = bridge;
   return bridge;
 }
 

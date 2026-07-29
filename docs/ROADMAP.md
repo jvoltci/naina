@@ -111,13 +111,28 @@ Turn a bag of lines into a document.
       Verified in a real browser: Greek returned `Ελληνικά κείμενο 2026` and
       Cyrillic `Русский текст 2026`, both exact.
 
-- [ ] **Detect a script mismatch rather than relying on the caller.** Even with a
-      language option, someone will read Hindi with the Latin model and get
-      fluent nonsense. Confidence cannot express "wrong alphabet": measured 0.99
-      mean in-alphabet against ~0.62 for Devanagari-as-Latin, which looks
-      separable but is two samples. Collect a corpus across scripts before
-      setting any threshold; exposing a page-level aggregate is the safe half and
-      can land first.
+- [x] **Script auto-detection in the web app.** Reads with the default, and if
+      mean confidence is under 0.95 re-reads a 900px copy with each other
+      alphabet, keeping the best if it clears the default by 0.03. Verified on
+      four scripts: Latin correctly not switched (and free — the gate never
+      trips, 3.6s), Hindi → devanagari, Greek → el, Cyrillic → cyrillic.
+
+      The thresholds come from measurement, not guesswork. Best-alphabet margins
+      over the default: Hindi +0.426, Cyrillic +0.104, Greek +0.066, Latin +0.006
+      (where `arabic` scored highest, since every alphabet contains Latin — which
+      is why a plain argmax is wrong and a margin is required). 0.03 has 2x
+      headroom under the tightest true positive and 5x over the Latin tie. An
+      early exit at +0.25 cut the Hindi case from 130s to 28s.
+
+      Found and fixed a real WASM binding bug in the process: the JS bridge was
+      installed on `globalThis`, so a second Reader overwrote the first one's and
+      an older Reader read tensor descriptors from the wrong WASM heap. It is now
+      per-module.
+
+- [ ] **Auto-detection in the libraries.** Needs every alphabet's weights present
+      (~70 MB), which defeats an 11 MB tier, and needs the context's session and
+      charset caches re-keyed by language. Probably belongs as an opt-in taking an
+      explicit candidate list rather than as a default.
 
 ## v0.4 — Browser  *(binding shipped)*
 
