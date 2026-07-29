@@ -1,165 +1,197 @@
-<div align="center">
+<p align="center">
+  <img src="docs/assets/hero.svg" alt="naina hero banner" width="100%">
+</p>
 
-![naina](https://github.com/jvoltci/naina/blob/master/images/naina.jpg)
+<p align="center">
+  <a href="https://pypi.org/project/naina/"><img src="https://img.shields.io/pypi/v/naina.svg" alt="PyPI version"></a>
+  <a href="https://www.npmjs.com/package/@jvoltci/naina"><img src="https://img.shields.io/npm/v/@jvoltci/naina.svg" alt="npm version"></a>
+  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
+  <a href="https://github.com/jvoltci/naina/actions/workflows/ci.yml"><img src="https://github.com/jvoltci/naina/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jvoltci/naina/stargazers"><img src="https://img.shields.io/github/stars/jvoltci/naina.svg?style=social" alt="GitHub stars"></a>
+</p>
 
-# naina
+<h3 align="center">An embeddable document-reading runtime. One C++ core, every language, from a browser tab to a GPU server.</h3>
 
-**An embeddable computer-vision runtime for face & person understanding.**
-*C++ core, plug-and-play bindings, runs everywhere — Pi to phone to GPU server.*
-
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![C++](https://img.shields.io/badge/C%2B%2B-20-blue.svg)]()
-[![PyPI](https://img.shields.io/badge/pip-naina-blue.svg)]()
-[![npm](https://img.shields.io/badge/npm-naina-cb3837.svg)]()
-
-[**Live demo**](https://jvoltci.github.io/naina/) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
-
-</div>
-
----
-
-## What is naina?
-
-A single C++ runtime that does **face detection, alignment, recognition,
-liveness, person detection, tracking, and re-identification** — exposed
-through one stable C ABI with first-class **Python and Node bindings**.
-
-Built so you can:
-
-```bash
-pip install naina       # Python
-npm  install @jvoltci/naina      # Node / TypeScript
-```
-
-…and ship the same model to a Raspberry Pi, a phone, an Apple Silicon
-laptop, or a CUDA server with no code change. Backends auto-select at
-runtime (ONNX Runtime · NCNN · OpenVINO · CoreML · TensorRT · ExecuTorch).
-
-## Why another CV library?
-
-| | OpenCV | InsightFace | face-api.js | **naina** |
-|---|---|---|---|---|
-| Drop-in for **Python + Node + C++** | partial | py only | js only | **yes** |
-| Edge-first (Pi5, Jetson, phones) | yes | partial | partial | **yes** |
-| SOTA face recognition models | no | yes | dated | **yes** |
-| Permissive license | Apache-2.0 | non-comm | MIT | **MIT/Apache-2.0** |
-| Live in-browser demo | — | — | yes | **yes** |
-| Single API across all targets | no | py only | js only | **yes** |
-
-## 60-second quickstart
-
-### Python
+<p align="center">
+  <a href="https://jvoltci.github.io/naina/"><b>🔎 Try in browser</b></a> ·
+  <a href="https://jvoltci.github.io/naina/doc/"><b>📚 Documentation</b></a> ·
+  <a href="https://pypi.org/project/naina/"><b>📦 PyPI</b></a> ·
+  <a href="https://www.npmjs.com/package/@jvoltci/naina"><b>📦 npm</b></a> ·
+  <a href="https://github.com/jvoltci/naina/discussions"><b>💬 Discussions</b></a>
+</p>
 
 ```python
 import naina
-import cv2
+import numpy as np
+from PIL import Image
 
-engine  = naina.Engine()                  # auto-selects best backend
-img_a   = cv2.imread("alice_1.jpg")[:, :, ::-1]   # BGR -> RGB
-img_b   = cv2.imread("alice_2.jpg")[:, :, ::-1]
+img = np.asarray(Image.open("invoice.png").convert("RGB"))
 
-faces_a = engine.detect_faces(img_a)
-faces_b = engine.detect_faces(img_b)
-emb_a   = engine.embed_face(img_a, faces_a[0])
-emb_b   = engine.embed_face(img_b, faces_b[0])
+# One-liner: image -> markdown
+print(naina.read(img))
 
-print("similarity:", naina.similarity(emb_a, emb_b))   # 0..1, higher = same
+# Or keep an Engine around
+engine = naina.Engine(tier=naina.Tier.SMALL)
+page = engine.read(img)
+for line in page.lines:
+    print(f"{line.confidence:.3f}  {line.text}")
 ```
 
-### Node / TypeScript
+## Why
 
-```ts
-import { Engine, similarity, loadImage } from '@jvoltci/naina';
+OCR accuracy is a solved commodity. PP-OCRv6's weights are Apache-2.0, so naina
+runs the same models PaddleOCR runs and gets the same accuracy. Competing there
+is unwinnable and pointless.
 
-const engine = new Engine();
-const a = await loadImage('alice_1.jpg');
-const b = await loadImage('alice_2.jpg');
+The gap is **distribution**. Every existing tool is locked into one lane:
 
-const facesA = await engine.detectFaces(a);
-const facesB = await engine.detectFaces(b);
-const embA   = await engine.embedFace(a, facesA[0]);
-const embB   = await engine.embedFace(b, facesB[0]);
+| Tool | Lane | Cannot do |
+| --- | --- | --- |
+| PaddleOCR | Python, server | No Node/Rust/browser/C ABI. Training framework first, huge surface |
+| RapidOCR | Multi-language, as *separate ports* | Behaviour drifts between the Python, C++, Java and .NET versions |
+| oar-ocr | Rust only | No Python/Node bindings, no shipped WASM |
+| retto | Rust only, det+rec only | No bindings, no layout |
+| client-ocr | Browser only | No server, no native |
+| ML Kit (Google Lens) | Mobile only, closed weights | Cannot self-host; 5 scripts only |
+| MinerU / marker / docling | Python, GPU-leaning | Licence traps, heavy installs |
 
-console.log('similarity:', similarity(embA, embB));
-```
+Nobody ships one engine that runs identically everywhere. This is llama.cpp's
+playbook applied to OCR: llama.cpp won on portability and zero dependencies, not
+on inference math.
 
-**More examples:** [examples/](examples/) — `face_verify` in Python and Node, plus notes on threshold selection.
+**No OpenCV. No pyclipper. No PaddlePaddle.** The convex hull, minimum-area
+rectangle, polygon offset and contour tracing are ~450 lines of tested C++,
+because a 300 MB dependency tree would defeat the point of a 6 MB tier.
 
-### Browser (live demo)
+## What you get
 
-[**jvoltci.github.io/naina**](https://jvoltci.github.io/naina/) — open it in any
-modern browser and run live face recognition on your webcam, no install.
-Detects **N faces simultaneously**, lets you enrol any of them, then
-recognises them across frames. Same models as the native lib.
+**Three device tiers.** A size axis, not a licence axis — every model naina ships
+is Apache-2.0 and safe for commercial use.
 
-## Capabilities
+| Tier | det | rec | layout | Total | Target | Charset |
+| --- | --- | --- | --- | --- | --- | --- |
+| `tiny` | 1.8 MB | 4.5 MB | — | **≈ 6 MB** | Browser, phone, Pi Zero | 6,904 (CJK + Latin) |
+| `small` | 9.9 MB | 21.2 MB | — | **≈ 31 MB** | Laptop, Pi 5, mobile app | 18,708 (50 languages) |
+| `medium` | 62.0 MB | 76.6 MB | 130.5 MB | **≈ 269 MB** | Server, desktop | 18,708 (50 languages) |
 
-**v1.0 — face stack**
-- Face detection (multi-scale, multi-face)
-- Face alignment (5-point similarity transform)
-- Face embedding & verification (512-d L2-normalized)
-- Liveness / anti-spoofing
+Layout weights only exist at `medium` today, so `tiny` and `small` are
+text-spotting tiers. See [Status](#status).
 
-**v1.1+ — person stack**
-- Person detection
-- Multi-object tracking
-- Person re-identification
+**Every binding over one C ABI**, so behaviour cannot drift between languages:
+
+| Binding | Status | Install |
+| --- | --- | --- |
+| C / C++ | ✅ | `naina.h` — the contract every other binding targets |
+| Python | ✅ | `pip install naina` |
+| Node / TypeScript | ✅ | `npm install @jvoltci/naina` |
+| Rust | planned v0.5 | `cargo add naina` |
+| WASM / browser | planned v0.4 | `npm install naina-wasm` |
+
+**Weights are mirrored, not borrowed.** naina fetches from
+[its own release](https://github.com/jvoltci/naina/releases/tag/models-v1), not
+from upstream hosting, so an upstream re-tag or deletion cannot break installs.
+Every file is pinned by sha256, so a corrupted or substituted download fails
+closed rather than producing silently wrong output. Provenance for each artifact
+is recorded in [`NOTICE`](NOTICE) and as a `source_url` in the manifest.
 
 ## Benchmarks
 
-Generated by [`benchmarks/runner.py`](benchmarks/) — see
-[benchmarks/README.md](benchmarks/README.md) to contribute numbers from
-your own hardware.
+Real measurements, not vendor claims.
 
-### Latency (detect per frame, embed per face)
+**End-to-end, `tiny` tier, Apple M3 Pro** — rendered text fixture, 480×140:
 
-<!-- BENCH:LATENCY -->
+| Line | Recognised | Recognition conf | Detection score |
+| --- | --- | --- | --- |
+| 1 | `HELLO WORLD` | 0.967 | 0.899 |
+| 2 | `naina 2026` | 1.000 | 0.925 |
 
-| Target | Tier | Host | Detect p50 | Detect p95 | Embed p50 | Embed p95 |
-|---|---|---|---|---|---|---|
-| m3-pro | default | Darwin arm64 | 3.8 ms | 3.9 ms | 16.5 ms | 18.4 ms |
+Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 
-<!-- /BENCH:LATENCY -->
+> **On the accuracy numbers everyone quotes.** Vendors self-report 96.33% on
+> OmniDocBench v1.6 while independent evaluation of the same benchmark tops out
+> around 90.1%. naina will publish per-device numbers with the harness in-repo
+> and the command to reproduce them, or publish nothing. A full benchmark matrix
+> lands with v1.0.
 
-### Face recognition accuracy *(planned for v0.2)*
+## Status
 
-Accuracy on WIDERFACE / IJB-C / LFW requires dataset downloads that
-aren't yet automated. See [benchmarks/README.md](benchmarks/README.md).
+**v0.2 — text spotting works end to end.** The honest state:
 
-## How it works
+| Component | Status |
+| --- | --- |
+| C ABI (`naina_read`, page accessors, stage-level access) | ✅ |
+| Model registry — manifest-driven, sha256-verified, tier fallback | ✅ |
+| Detection — PP-OCRv6 det, DBNet decode | ✅ |
+| Recognition — PP-OCRv6 rec, CTC greedy decode | ✅ |
+| Geometry — convex hull, min-area rect, polygon offset, no OpenCV | ✅ |
+| Page storage — pointer-stable, markdown + JSON | ✅ |
+| Python binding | ✅ |
+| Node binding | ✅ |
+| ONNX Runtime backend | ✅ |
+| NCNN backend | ⚠️ compiles, but `FindNCNN.cmake` does not locate a brew install |
+| Recognition batching (one strip per call today) | ⚠️ correct but unoptimised |
+| Layout analysis → structured markdown | ❌ v0.3 |
+| WASM + browser app | ❌ v0.4 |
+| Rust binding | ❌ v0.5 |
+| Cross-binding parity enforced in CI | ❌ v1.0 |
+| MCP server (targets the stateless MCP 2026-07-28 spec) | ❌ v1.0 |
 
+13 C++ tests, 6 Python tests, 6 Node tests. CI builds on Linux (gcc + clang) and
+macOS arm64.
+
+**Not supported, deliberately:** handwriting (PP-OCRv6 is weak at it and claiming
+otherwise would be dishonest), autoregressive VLM parsing, training, and
+chart/formula semantic extraction.
+
+## Install
+
+```bash
+pip install naina                    # Python
+npm install @jvoltci/naina           # Node / TypeScript
 ```
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ Python (pip) │  │ Node (npm)   │  │ Web (CDN)    │
-└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-       │                 │                 │
-       └────────  C ABI  ┴─────────────────┘
-                         │              (WASM build)
-                  ┌──────▼───────┐
-                  │  naina-core  │   C++20, no exceptions across ABI
-                  │   modules    │   face/person/track/reid/liveness
-                  │   backends   │   ONNXRT · NCNN · OpenVINO · CoreML · TRT
-                  │   HAL/SIMD   │   NEON · AVX2 · AVX-512
-                  └──────────────┘
+
+From source:
+
+```bash
+cmake --preset macos-arm64           # or linux-x86_64, linux-arm64, windows-x86_64
+cmake --build --preset macos-arm64
+ctest --preset macos-arm64
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full layered
-design, locked decisions, and deployment matrix.
+Requires CMake ≥ 3.24, a C++20 compiler, `yaml-cpp`, `libcurl`, and ONNX Runtime.
 
-## Project status
+naina ships **no image decoder** on purpose — it takes raw pixels. Use Pillow,
+OpenCV, `sharp`, or anything else that hands you a buffer.
 
-**Pre-alpha.** Architecture spike committed; v1.0 face stack in progress.
-The web demo runs the same model artifacts the native lib will load —
-it's a preview, not the final implementation. See
-[docs/ROADMAP.md](docs/ROADMAP.md) for what ships when.
+## Environment
+
+| Variable | Effect |
+| --- | --- |
+| `NAINA_CACHE` | Where weights are cached. Default `~/.cache/naina/models` |
+| `NAINA_OFFLINE=1` | Disable network; use only what is already cached |
+| `NAINA_REGISTRY` | Path to `registry.yaml`. Both bindings set this automatically |
+
+## Documentation
+
+- [**Architecture**](docs/ARCHITECTURE.md) — the C ABI, backends, model registry
+- [**Roadmap**](docs/ROADMAP.md) — what ships when
+- [**Design spec**](docs/superpowers/specs/2026-07-28-naina-ocr-design.md) — why naina is shaped this way
+- [**Contributing**](CONTRIBUTING.md)
+
+## The name
+
+*naina* (नैना) means **eyes** in Hindi. The library reads.
+
+It began as a face-recognition runtime under the same name. That work is
+preserved on the [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack)
+branch, and the engine it produced — C ABI, backend abstraction, manifest-driven
+model loader — is what made this pivot cheap.
 
 ## Contributing
 
-Issues and PRs welcome once v0.1 lands. Until then, file design feedback
-on the architecture doc.
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Open a Discussion for
+anything beyond a small fix.
 
 ## License
 
-Apache-2.0. Default model weights are permissive-licensed and ship
-with the library. Research-tier weights are opt-in and may carry
-non-commercial restrictions; see `models/registry.yaml` per-model.
+Apache-2.0. Redistributed model weights are also Apache-2.0 — see [`NOTICE`](NOTICE).

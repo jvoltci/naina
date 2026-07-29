@@ -1,0 +1,70 @@
+naina
+Copyright 2026 the naina authors
+
+This product includes software developed as part of the naina project,
+licensed under the Apache License, Version 2.0. See LICENSE for the full
+text.
+
+================================================================================
+Redistributed model weights
+================================================================================
+
+naina does not train models. It mirrors pre-trained weights published by the
+PaddleOCR project and redistributes them unmodified through its own GitHub
+Release, so that an upstream re-tag, move, or deletion cannot break installs.
+
+All redistributed weights are licensed under the Apache License, Version 2.0.
+
+Upstream project:
+    PaddleOCR — https://github.com/PaddlePaddle/PaddleOCR
+    Copyright PaddlePaddle Authors
+    Licensed under the Apache License, Version 2.0
+
+The weights are NOT stored in this repository. They are published as release
+assets and fetched on first use, each pinned by sha256 in
+models/registry.yaml. Every manifest entry also records a `source_url` naming
+the exact upstream artifact the bytes came from, so provenance remains
+auditable.
+
+--------------------------------------------------------------------------------
+Text detection and recognition — PP-OCRv6
+--------------------------------------------------------------------------------
+Paper:  "PP-OCRv6: From 1.5M to 34.5M Parameters, Surpassing Billion-Scale
+        VLMs on OCR Tasks", arXiv:2606.13108
+Source: https://huggingface.co/PaddlePaddle
+
+    ppocrv6_tiny_det.onnx            <- PP-OCRv6_tiny_det_onnx/inference.onnx
+    ppocrv6_tiny_rec.onnx            <- PP-OCRv6_tiny_rec_onnx/inference.onnx
+    ppocrv6_tiny_rec_charset.yml     <- PP-OCRv6_tiny_rec_onnx/inference.yml
+    ppocrv6_small_det.onnx           <- PP-OCRv6_small_det_onnx/inference.onnx
+    ppocrv6_small_rec.onnx           <- PP-OCRv6_small_rec_onnx/inference.onnx
+    ppocrv6_small_rec_charset.yml    <- PP-OCRv6_small_rec_onnx/inference.yml
+    ppocrv6_medium_det.onnx          <- PP-OCRv6_medium_det_onnx/inference.onnx
+    ppocrv6_medium_rec.onnx          <- PP-OCRv6_medium_rec_onnx/inference.onnx
+    ppocrv6_medium_rec_charset.yml   <- PP-OCRv6_medium_rec_onnx/inference.yml
+
+The `*_charset.yml` files are the upstream `inference.yml` model
+configurations, mirrored unmodified. naina reads only the
+`PostProcess.character_dict` list from them.
+
+--------------------------------------------------------------------------------
+Layout analysis — PP-DocLayoutV3
+--------------------------------------------------------------------------------
+Source: https://huggingface.co/PaddlePaddle/PP-DocLayoutV3_onnx
+
+    ppdoclayoutv3.onnx               <- PP-DocLayoutV3_onnx/inference.onnx
+
+================================================================================
+Third-party build and runtime dependencies
+================================================================================
+
+These are not redistributed by naina; they are located at build time.
+
+    ONNX Runtime  — MIT License      — https://github.com/microsoft/onnxruntime
+    NCNN          — BSD 3-Clause     — https://github.com/Tencent/ncnn
+    yaml-cpp      — MIT License      — https://github.com/jbeder/yaml-cpp
+    libcurl       — curl License     — https://curl.se/docs/copyright.html
+    pybind11      — BSD 3-Clause     — https://github.com/pybind/pybind11
+                                       (Python binding only)
+    node-addon-api — MIT License     — https://github.com/nodejs/node-addon-api
+                                       (Node binding only)

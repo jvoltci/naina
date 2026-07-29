@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 380" width="100%" height="100%" role="img" aria-label="naina — reads any document, anywhere">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap');
+
+      text {
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .mono { font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; }
+
+      /* The scan sweep: a soft band travelling down the page, as if being read. */
+      .scan {
+        animation: sweep 4.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+      }
+      @keyframes sweep {
+        0%        { transform: translateY(0px);   opacity: 0; }
+        8%        { opacity: 0.95; }
+        70%       { transform: translateY(132px); opacity: 0.95; }
+        88%, 100% { transform: translateY(132px); opacity: 0; }
+      }
+
+      /* Source glyph rows fade as the scan passes; recognised rows resolve. */
+      .src { opacity: 0.30; animation: dim 4.5s ease-in-out infinite; }
+      .src-1 { animation-delay: 0.30s; }
+      .src-2 { animation-delay: 0.85s; }
+      .src-3 { animation-delay: 1.40s; }
+      .src-4 { animation-delay: 1.95s; }
+      @keyframes dim {
+        0%, 100% { opacity: 0.30; }
+        22%, 62% { opacity: 0.72; }
+      }
+
+      .out { opacity: 0; animation: resolve 4.5s ease-out infinite; }
+      .out-1 { animation-delay: 0.55s; }
+      .out-2 { animation-delay: 1.10s; }
+      .out-3 { animation-delay: 1.65s; }
+      .out-4 { animation-delay: 2.20s; }
+      @keyframes resolve {
+        0%       { opacity: 0; transform: translateX(-5px); }
+        14%      { opacity: 1; transform: translateX(0); }
+        80%      { opacity: 1; transform: translateX(0); }
+        94%,100% { opacity: 0; transform: translateX(0); }
+      }
+
+      /* The iris ring — naina means "eyes". */
+      .iris { transform-origin: center; animation: breathe 4.5s ease-in-out infinite; }
+      @keyframes breathe {
+        0%, 100% { transform: scale(1);    opacity: 0.55; }
+        50%      { transform: scale(1.06); opacity: 0.9; }
+      }
+      .pupil { transform-origin: center; animation: contract 4.5s ease-in-out infinite; }
+      @keyframes contract {
+        0%, 100% { transform: scale(1); }
+        50%      { transform: scale(0.82); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .scan, .src, .out, .iris, .pupil { animation: none; }
+        .out { opacity: 1; }
+      }
+    </style>
+
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#7dd3fc"/>
+      <stop offset="52%"  stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#fb923c"/>
+    </linearGradient>
+
+    <linearGradient id="sweepBand" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#7dd3fc" stop-opacity="0"/>
+      <stop offset="18%"  stop-color="#7dd3fc" stop-opacity="0.85"/>
+      <stop offset="50%"  stop-color="#c084fc" stop-opacity="1"/>
+      <stop offset="82%"  stop-color="#fb923c" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+    </linearGradient>
+
+    <clipPath id="pageClip">
+      <rect x="72" y="150" width="252" height="156" rx="6"/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Wordmark ─────────────────────────────────────────────────── -->
+  <g transform="translate(72, 78)">
+    <!-- iris mark -->
+    <g transform="translate(14, -6)">
+      <circle class="iris" cx="0" cy="0" r="17" fill="none" stroke="url(#ink)" stroke-width="2.4"/>
+      <circle class="pupil" cx="0" cy="0" r="7" fill="url(#ink)"/>
+    </g>
+    <text x="46" y="6" font-size="47" font-weight="600" fill="#e8eaf0" letter-spacing="-1.2">naina</text>
+    <text x="187" y="6" class="mono" font-size="14" font-weight="500" fill="#8b93a7">v0.2</text>
+  </g>
+
+  <text x="72" y="122" font-size="20" font-weight="400" fill="#a8b0c4">Reads any document. One core, every language, everywhere.</text>
+
+  <!-- ── Left panel: the source page ──────────────────────────────── -->
+  <g>
+    <rect x="72" y="150" width="252" height="156" rx="6" fill="#12141c" stroke="#262a38" stroke-width="1.2"/>
+
+    <!-- glyph rows, standing in for scanned text -->
+    <g clip-path="url(#pageClip)">
+      <g class="src src-1">
+        <rect x="90" y="170" width="118" height="9"  rx="2.5" fill="#5b6478"/>
+        <rect x="90" y="185" width="176" height="6"  rx="2"   fill="#3d4456"/>
+      </g>
+      <g class="src src-2">
+        <rect x="90" y="205" width="196" height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="90" y="217" width="152" height="6"  rx="2"   fill="#3d4456"/>
+      </g>
+      <g class="src src-3">
+        <rect x="90" y="239" width="72"  height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="176" y="239" width="46" height="6"  rx="2"   fill="#4a5266"/>
+        <rect x="90" y="251" width="132" height="6"  rx="2"   fill="#3d4456"/>
+      </g>
+      <g class="src src-4">
+        <rect x="90" y="273" width="86"  height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="90" y="285" width="164" height="6"  rx="2"   fill="#3d4456"/>
+      </g>
+
+      <!-- the reading sweep -->
+      <g class="scan">
+        <rect x="76" y="164" width="244" height="2.4" fill="url(#sweepBand)"/>
+        <rect x="76" y="167" width="244" height="16" fill="url(#sweepBand)" opacity="0.10"/>
+      </g>
+    </g>
+
+    <text x="72" y="326" class="mono" font-size="11.5" fill="#6b7488">image · pdf · photo</text>
+  </g>
+
+  <!-- ── Arrow ────────────────────────────────────────────────────── -->
+  <g transform="translate(342, 228)">
+    <path d="M0 0 H44" stroke="#3d4456" stroke-width="1.6"/>
+    <path d="M38 -5 L46 0 L38 5 Z" fill="#3d4456"/>
+    <text x="4" y="-12" class="mono" font-size="10.5" fill="#6b7488">read()</text>
+  </g>
+
+  <!-- ── Right panel: recognised markdown ─────────────────────────── -->
+  <g>
+    <rect x="404" y="150" width="374" height="156" rx="6" fill="#12141c" stroke="#262a38" stroke-width="1.2"/>
+
+    <g class="mono" font-size="12.5">
+      <text class="out out-1" x="424" y="180" fill="#7dd3fc"># Invoice 4417</text>
+      <text class="out out-2" x="424" y="206" fill="#d6dae6">Issued 2026-07-29</text>
+      <text class="out out-3" x="424" y="232" fill="#d6dae6">| Item   | Qty | Price |</text>
+      <text class="out out-3" x="424" y="250" fill="#5b6478">|--------|-----|-------|</text>
+      <text class="out out-4" x="424" y="268" fill="#d6dae6">| Widget |  2  | 40.00 |</text>
+      <text class="out out-4" x="424" y="292" fill="#fb923c">Total 80.00 USD</text>
+    </g>
+
+    <text x="404" y="326" class="mono" font-size="11.5" fill="#6b7488">markdown · json · boxes</text>
+  </g>
+
+  <!-- ── Footer chips ─────────────────────────────────────────────── -->
+  <g class="mono" font-size="11.5" fill="#8b93a7">
+    <text x="72"  y="356">Apache-2.0</text>
+    <text x="176" y="356" fill="#4a5266">·</text>
+    <text x="192" y="356">11 MB tier</text>
+    <text x="286" y="356" fill="#4a5266">·</text>
+    <text x="302" y="356">C++ core</text>
+    <text x="386" y="356" fill="#4a5266">·</text>
+    <text x="402" y="356">Python · Node · Rust · WASM</text>
+    <text x="622" y="356" fill="#4a5266">·</text>
+    <text x="638" y="356">CPU · GPU · NPU</text>
+  </g>
+</svg>
