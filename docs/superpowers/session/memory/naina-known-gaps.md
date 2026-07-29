@@ -15,12 +15,13 @@ verified on a device.
 
 **Open, in priority order:**
 
-1. **naina cannot tell it was given the wrong script.** Ten alphabets ship, but
-   read Hindi with the Latin model and it returns fluent nonsense at ~0.75
-   confidence, not an error. CTC confidence measures certainty *within* the
-   model's own alphabet. Measured gap between in-alphabet (0.99 mean) and
-   wrong-alphabet (~0.62) looks separable but is two samples — collect a corpus
-   before setting any threshold.
+1. ~~naina cannot tell it was given the wrong script.~~ **Solved.**
+   `language="auto"` in the core recognises a sample of detected boxes with each
+   alphabet and keeps the best if it beats the default by 0.03. Measured margins:
+   Hindi +0.426, Cyrillic +0.104, Greek +0.066, Latin +0.006 (where every
+   alphabet ties near 0.98 because they all contain Latin — which is why a plain
+   argmax is wrong). Costs 88 MB staged against 11 MB named, so the web app reads
+   with the default first and only fetches the rest when a result comes back weak.
 2. **iOS is unverified.** The podspec has never been built or run. Android is
    fine.
 3. **npm tokens expire in 90 days**, so the release pipeline breaks on a timer.
