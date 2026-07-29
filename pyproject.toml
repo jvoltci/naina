@@ -142,6 +142,18 @@ select = "*-macosx_arm64"
 environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "13.3", DYLD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
 
 [tool.cibuildwheel.linux]
+# manylinux_2_28 (glibc 2.28, RHEL 8 era) rather than the default manylinux2014
+# (glibc 2.17), because ONNX Runtime 1.20's Linux build references symbols newer
+# than 2.17 and auditwheel refuses the repair:
+#
+#   cannot repair ... to "manylinux2014_x86_64" ABI because of the presence of
+#   too-recent versioned symbols
+#
+# It is right to refuse. The floor is ORT's, not naina's -- the same way macOS
+# arm64 has to declare 13.3 above. glibc 2.28 covers Ubuntu 20.04+, Debian 10+
+# and RHEL 8+. Revisit when the pinned ORT version moves.
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
 before-all = "bash {project}/tools/ci/install_build_deps.sh"
 # LD_LIBRARY_PATH is the Linux counterpart of DYLD_LIBRARY_PATH above: auditwheel
 # has to find libonnxruntime.so.1 in order to vendor it into the wheel, and
