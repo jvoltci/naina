@@ -23,6 +23,10 @@ export const TIER = { auto: 0, tiny: 1, small: 2, medium: 3 };
  * @param {string[]} [opts.executionProviders] ort EP order, default webgpu→wasm
  * @param {(done:number,total:number,path:string)=>void} [opts.onProgress]
  * @param {boolean} [opts.stage=true] set false to stage yourself later
+ * @param {string} [opts.modelBaseUrl] serve weights from this origin instead of
+ *   the registry's GitHub release URLs. A browser almost always needs this:
+ *   release assets send no Access-Control-Allow-Origin, so cross-origin fetch of
+ *   them is blocked. See stageTier in runtime.mjs.
  */
 export async function createReader(opts = {}) {
   const tierName = opts.tier ?? 'tiny';
@@ -35,7 +39,10 @@ export async function createReader(opts = {}) {
   installBridge(Module, { executionProviders: opts.executionProviders });
 
   if (opts.stage !== false) {
-    await stageTier(Module, tier, opts.onProgress);
+    await stageTier(Module, tier, {
+      onProgress: opts.onProgress,
+      baseUrl: opts.modelBaseUrl,
+    });
   }
 
   // NAINA_BACKEND_AUTO: the registry picks onnxruntime-web because it is the

@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 // naina.wasm has to sit next to the emitted naina.mjs at runtime, and Vite will
 // not trace a .wasm referenced from inside a dependency's generated glue. Copy
 // it explicitly instead of relying on bundler heuristics.
-const WASM_SRC = resolve(__dirname, '../../bindings/wasm/dist/naina.wasm');
+const WASM_SRC = resolve(__dirname, '../bindings/wasm/dist/naina.wasm');
 
 export default defineConfig({
   // Served from https://jvoltci.github.io/naina/ in production, / in dev.

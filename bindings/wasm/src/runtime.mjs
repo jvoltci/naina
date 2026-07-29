@@ -60,9 +60,19 @@ export function installBridge(Module, opts = {}) {
   const sessions = new Map();
   let nextHandle = 1;
 
-  // WebGPU first where the browser has it: on a 269 MB tier it is several times
-  // faster than wasm. ort silently falls back, so listing both is safe.
-  const executionProviders = opts.executionProviders ?? ['webgpu', 'wasm'];
+  // WASM only by default, and that is a measured decision rather than caution.
+  //
+  // With ['webgpu','wasm'], Chrome 141 on an M3 initialises the JSEP (WebGPU)
+  // provider, then fails a kernel outright:
+  //
+  //   [E:onnxruntime] Non-zero status code returned while running MatMul node.
+  //   Name:'MatMul.3' Status Message: Failed to run JSEP kernel
+  //
+  // ORT recovers node-by-node so the output is still correct, but a default that
+  // logs errors on every page and silently runs a half-GPU path is not something
+  // to ship. WebGPU should win on the larger tiers and is worth revisiting with
+  // real numbers; until then callers opt in explicitly.
+  const executionProviders = opts.executionProviders ?? ['wasm'];
 
   const bridge = {
     async createSession(path, _device) {
@@ -224,16 +234,41 @@ export function installBridge(Module, opts = {}) {
  * hashes each file, which is what makes a corrupted cache entry an error rather
  * than silent garbage.
  *
+ * ## Why a browser normally has to pass baseUrl
+ *
+ * The registry points at GitHub release assets, which is correct for Python,
+ * Node and native builds: those make ordinary server-side HTTP requests. A
+ * browser cannot use them. A release download 302s to
+ * release-assets.githubusercontent.com and neither hop sends an
+ * `Access-Control-Allow-Origin` header, so fetch is blocked by CORS. Measured
+ * against the live release, not assumed.
+ *
+ * A page must therefore serve the weights from an origin it controls and pass
+ * `baseUrl`.
+ *
  * @param {object} Module instantiated Emscripten module
  * @param {number} tier naina tier enum (1=tiny, 2=small, 3=medium)
- * @param {(done: number, total: number, path: string) => void} [onProgress]
+ * @param {object} [opts]
+ * @param {(done: number, total: number, path: string) => void} [opts.onProgress]
+ * @param {string} [opts.baseUrl] serve weights from here instead of the registry host
  */
-export async function stageTier(Module, tier, onProgress) {
+export async function stageTier(Module, tier, opts = {}) {
   const files = JSON.parse(Module.stagingPlan(tier));
   if (files.length === 0) {
     throw new Error(`naina: no models in registry for tier ${tier}`);
   }
-  return stageModels(Module, files, onProgress);
+
+  // Replace only the host+directory; the filename still comes from the
+  // registry, so the cache path — and the sha256 the core verifies — is
+  // unchanged. See the note above on why a browser needs this.
+  const rebased = opts.baseUrl
+    ? files.map((f) => ({
+        ...f,
+        url: `${opts.baseUrl.replace(/\/$/, '')}/${f.url.slice(f.url.lastIndexOf('/') + 1)}`,
+      }))
+    : files;
+
+  return stageModels(Module, rebased, opts.onProgress);
 }
 
 /**
