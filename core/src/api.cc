@@ -10,6 +10,8 @@
 
 #include "image_ops.hpp"
 #include "modules/charset.hpp"
+#include "modules/doc_assemble.hpp"
+#include "modules/layout_detect.hpp"
 #include "modules/text_detect.hpp"
 #include "modules/text_recognize.hpp"
 #include "page.hpp"
@@ -118,6 +120,24 @@ struct naina_ctx {
         rec_charset_loaded = true;
         *out_status = NAINA_OK;
         return &rec_charset;
+    }
+
+    // The layout model's input is a fixed square whose side differs per
+    // variant: 480 for PP-DocLayout-S, 640 for -M, 800 for V3. Read it from the
+    // loaded session rather than hardcoding, so a registry change cannot
+    // silently feed the wrong resolution.
+    int32_t layout_input_side() {
+        naina_status s = NAINA_OK;
+        auto* sess = session_for("layout_detect", &s);
+        if (sess == nullptr) {
+            return 800;
+        }
+        for (const auto& d : sess->inputs()) {
+            if (d.name == "image" && d.shape.size() == 4 && d.shape[2] > 0) {
+                return static_cast<int32_t>(d.shape[2]);
+            }
+        }
+        return 800;
     }
 
     naina::backend::ISession* session_for(const std::string& task, naina_status* out_status) {
@@ -325,10 +345,45 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
         return s;
     }
 
-    auto page = std::make_unique<naina_page>();
-    for (auto& line : lines) {
-        page->add_line(line.box, line.text, line.confidence);
+    // Layout analysis is best-effort. If its weights are unavailable the page
+    // still returns recognised text, just without structure — degrading to
+    // text-only beats failing the whole read.
+    std::vector<naina_region> regions;
+    naina_status ls = NAINA_OK;
+    if (auto* lay = ctx->session_for("layout_detect", &ls); lay != nullptr) {
+        naina::internal::layout_detect::Config lcfg;
+        lcfg.input_side = ctx->layout_input_side();
+        if (naina::internal::layout_detect::detect(lay, view, lcfg, &regions) != NAINA_OK) {
+            regions.clear();
+        }
     }
+
+    // doc_assemble owns reading order and markdown. Its Line type mirrors the
+    // recogniser's, so convert rather than leaking one module's type into the
+    // other's interface.
+    std::vector<naina::internal::doc_assemble::Line> dlines;
+    dlines.reserve(lines.size());
+    for (const auto& l : lines) {
+        naina::internal::doc_assemble::Line d;
+        d.box = l.box;
+        d.text = l.text;
+        d.confidence = l.confidence;
+        dlines.push_back(std::move(d));
+    }
+    const naina::internal::doc_assemble::Config dcfg;
+    naina::internal::doc_assemble::assign_lines_to_regions(regions, dcfg, &dlines);
+    naina::internal::doc_assemble::order_regions(dcfg, &regions);
+    std::string markdown = naina::internal::doc_assemble::to_markdown(regions, dlines);
+
+    auto page = std::make_unique<naina_page>();
+    for (size_t i = 0; i < lines.size(); ++i) {
+        page->add_line(lines[i].box, lines[i].text, lines[i].confidence);
+        page->set_line_region(i, dlines[i].region_id);
+    }
+    for (const auto& r : regions) {
+        page->add_region(r.bbox, r.kind, r.order);
+    }
+    page->set_markdown(std::move(markdown));
     *out_page = page.release();
     return NAINA_OK;
 }
@@ -417,7 +472,31 @@ extern "C" naina_status naina_layout_detect(naina_ctx_t* ctx,
     }
     *out_regions = nullptr;
     *out_count = 0;
-    return NAINA_E_UNSUPPORTED;
+
+    naina_status s = NAINA_OK;
+    auto* session = ctx->session_for("layout_detect", &s);
+    if (session == nullptr) {
+        return s;
+    }
+    naina::internal::layout_detect::Config cfg;
+    cfg.input_side = ctx->layout_input_side();
+    std::vector<naina_region> regions;
+    s = naina::internal::layout_detect::detect(session, view_of(image), cfg, &regions);
+    if (s != NAINA_OK) {
+        return s;
+    }
+    naina::internal::doc_assemble::order_regions({}, &regions);
+    if (regions.empty()) {
+        return NAINA_OK;
+    }
+    auto* buf = static_cast<naina_region*>(std::malloc(sizeof(naina_region) * regions.size()));
+    if (buf == nullptr) {
+        return NAINA_E_OOM;
+    }
+    std::memcpy(buf, regions.data(), sizeof(naina_region) * regions.size());
+    *out_regions = buf;
+    *out_count = static_cast<int32_t>(regions.size());
+    return NAINA_OK;
 }
 
 extern "C" void naina_free_regions(naina_region* regions, int32_t /*count*/) {

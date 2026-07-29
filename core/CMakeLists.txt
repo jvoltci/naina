@@ -26,6 +26,8 @@ set(NAINA_SOURCES
     src/modules/ctc_decode.cc
     src/modules/text_detect.cc
     src/modules/text_recognize.cc
+    src/modules/layout_detect.cc
+    src/modules/doc_assemble.cc
     src/page.cc
     src/api.cc
     src/api_cpp.cc
