@@ -12,6 +12,7 @@
 //   * naina_image_t is a VIEW over caller pixels. The bytes must outlive it.
 
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
@@ -144,6 +145,27 @@ typedef NainaVersionDart = Pointer<Utf8> Function();
 typedef NainaStatusStrNative = Pointer<Utf8> Function(Int32);
 typedef NainaStatusStrDart = Pointer<Utf8> Function(int);
 
+typedef NainaStagingPlanNative = Int32 Function(
+    Pointer<Utf8>, Pointer<Utf8>, Int32, Pointer<Utf8>, Pointer<Pointer<Utf8>>);
+typedef NainaStagingPlanDart = int Function(
+    Pointer<Utf8>, Pointer<Utf8>, int, Pointer<Utf8>, Pointer<Pointer<Utf8>>);
+
+typedef NainaFreeStringNative = Void Function(Pointer<Utf8>);
+typedef NainaFreeStringDart = void Function(Pointer<Utf8>);
+
+/// Open libnaina for the current platform.
+///
+/// Android packages the .so into the APK, so it resolves by name. iOS links it
+/// into the app binary, so the process itself exports the symbols.
+DynamicLibrary openNainaLibrary() {
+  if (Platform.isAndroid || Platform.isLinux) {
+    return DynamicLibrary.open('libnaina.so');
+  }
+  if (Platform.isIOS || Platform.isMacOS) return DynamicLibrary.process();
+  if (Platform.isWindows) return DynamicLibrary.open('naina.dll');
+  throw UnsupportedError('naina: unsupported platform ${Platform.operatingSystem}');
+}
+
 /// Resolved symbols from libnaina.
 ///
 /// Looked up eagerly in the constructor so a version mismatch fails at load
@@ -171,7 +193,12 @@ class NainaBindings {
         versionString = lib.lookupFunction<NainaVersionNative, NainaVersionDart>(
             'naina_version_string'),
         statusStr = lib.lookupFunction<NainaStatusStrNative, NainaStatusStrDart>(
-            'naina_status_str');
+            'naina_status_str'),
+        stagingPlan =
+            lib.lookupFunction<NainaStagingPlanNative, NainaStagingPlanDart>(
+                'naina_staging_plan'),
+        freeString = lib.lookupFunction<NainaFreeStringNative, NainaFreeStringDart>(
+            'naina_free_string');
 
   final NainaInitDart init;
   final NainaReleaseDart release;
@@ -184,4 +211,19 @@ class NainaBindings {
   final NainaStrDart pageJson;
   final NainaVersionDart versionString;
   final NainaStatusStrDart statusStr;
+  final NainaStagingPlanDart stagingPlan;
+  final NainaFreeStringDart freeString;
+}
+
+/// Thrown when the native library reports a failure.
+///
+/// Declared here rather than in naina.dart so src/models.dart can throw it
+/// without importing the public library and creating a cycle.
+class NainaException implements Exception {
+  const NainaException(this.status, this.message);
+  final int status;
+  final String message;
+
+  @override
+  String toString() => 'NainaException(\$status): \$message';
 }

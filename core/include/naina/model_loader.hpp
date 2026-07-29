@@ -95,6 +95,14 @@ public:
                               std::filesystem::path* out_path) const;
 
     const std::filesystem::path& cache_root() const { return cache_root_; }
+
+    // Override where weights are cached, ignoring the manifest's default.
+    //
+    // Needed because `models_root` in naina_config is what callers actually mean
+    // by "put the models here", while the manifest's cache_root defaults to
+    // ~/.cache — which on Android expands to a literal "~" on a read-only
+    // filesystem, since there is no HOME.
+    void set_cache_root(std::filesystem::path root) { cache_root_ = std::move(root); }
     const std::vector<ModelEntry>& all() const { return models_; }
 
 private:

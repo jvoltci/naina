@@ -18,7 +18,6 @@ library;
 
 import 'dart:async';
 import 'dart:ffi';
-import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -26,7 +25,8 @@ import 'package:ffi/ffi.dart';
 
 import 'src/bindings.dart';
 
-export 'src/bindings.dart' show NainaTier;
+export 'src/bindings.dart' show NainaException, NainaStatus, NainaTier;
+export 'src/models.dart' show ModelFile, NainaModels, StagingProgress;
 
 /// One recognised line of text.
 class NainaLine {
@@ -79,16 +79,6 @@ class NainaPageResult {
       : lines.map((l) => l.confidence).reduce((a, b) => a + b) / lines.length;
 }
 
-/// Thrown when the native library reports a failure.
-class NainaException implements Exception {
-  const NainaException(this.status, this.message);
-  final int status;
-  final String message;
-
-  @override
-  String toString() => 'NainaException($status): $message';
-}
-
 /// An open naina context.
 ///
 /// Holds loaded models — tens to hundreds of megabytes — so call [close] when
@@ -98,17 +88,6 @@ class Naina {
 
   final NainaBindings _bindings;
   Pointer<NainaCtx> _ctx;
-
-  static DynamicLibrary _openLibrary() {
-    // Android: the .so is packaged into the APK by the plugin's Gradle build and
-    // resolved by name. iOS: static-linked into the app binary, so the process
-    // itself exports the symbols.
-    if (Platform.isAndroid) return DynamicLibrary.open('libnaina.so');
-    if (Platform.isIOS || Platform.isMacOS) return DynamicLibrary.process();
-    if (Platform.isLinux) return DynamicLibrary.open('libnaina.so');
-    if (Platform.isWindows) return DynamicLibrary.open('naina.dll');
-    throw UnsupportedError('naina: unsupported platform ${Platform.operatingSystem}');
-  }
 
   /// Open a context.
   ///
@@ -130,7 +109,7 @@ class Naina {
     int numThreads = 0,
     String? language,
   }) async {
-    final bindings = NainaBindings(_openLibrary());
+    final bindings = NainaBindings(openNainaLibrary());
 
     final cfg = calloc<NainaConfig>();
     final ctxOut = calloc<Pointer<NainaCtx>>();

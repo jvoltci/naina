@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -248,6 +249,14 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
             registry_path = std::filesystem::current_path() / "models" / "registry.yaml";
         }
         ctx->registry = naina::ModelRegistry::load(registry_path);
+
+        // models_root means "keep the models here", not merely "find the
+        // manifest here". Without this the manifest's own cache_root wins, which
+        // defaults to ~/.cache — unusable in a sandboxed app, where HOME is
+        // unset and "~" stays literal on a read-only filesystem.
+        if (cfg != nullptr && cfg->models_root != nullptr && cfg->models_root[0] != '\0') {
+            ctx->registry.set_cache_root(cfg->models_root);
+        }
     } catch (const std::exception&) {
         return NAINA_E_MODEL_NOT_FOUND;
     }
@@ -554,4 +563,115 @@ extern "C" const char* naina_region_kind_str(naina_region_kind k) {
             break;
     }
     return "unknown";
+}
+
+// ── Model staging ─────────────────────────────────────────────────────
+//
+// Shared by every host that fetches weights itself: Android (the NDK has no
+// libcurl) and the browser (no sockets, and GitHub release assets send no CORS
+// header). The WASM binding wraps this same logic through embind.
+
+namespace {
+
+// Escape only what can appear in a filesystem path or a release URL. Model ids
+// and URLs are ASCII by construction, so the full escape table is unnecessary.
+void json_escape_into(const std::string& in, std::string* out) {
+    for (const char c : in) {
+        if (c == '"' || c == '\\') {
+            *out += '\\';
+        }
+        *out += c;
+    }
+}
+
+}  // namespace
+
+extern "C" naina_status naina_staging_plan(const char* registry_path,
+                                           const char* models_root,
+                                           naina_tier tier,
+                                           const char* language,
+                                           char** out_json) {
+    if (registry_path == nullptr || out_json == nullptr) {
+        return NAINA_E_INVALID_ARG;
+    }
+    *out_json = nullptr;
+
+    naina::Tier want = naina::Tier::Small;
+    if (tier == NAINA_TIER_TINY) {
+        want = naina::Tier::Tiny;
+    } else if (tier == NAINA_TIER_MEDIUM) {
+        want = naina::Tier::Medium;
+    }
+    const std::string lang = (language == nullptr) ? std::string() : std::string(language);
+
+    naina::ModelRegistry reg;
+    try {
+        reg = naina::ModelRegistry::load(registry_path);
+    } catch (const std::exception&) {
+        return NAINA_E_IO;
+    }
+    // Must match what naina_init will use, or the caller stages files where the
+    // core will not look for them.
+    if (models_root != nullptr && models_root[0] != '\0') {
+        reg.set_cache_root(models_root);
+    }
+
+    std::string out = "[";
+    bool first = true;
+    bool have_recognizer = false;
+    for (const naina::ModelEntry& m : reg.all()) {
+        if (m.tier != want) {
+            continue;
+        }
+        // Recognition is language-specific; detection and layout are shared
+        // across alphabets and must not be filtered out by a language request.
+        const bool lang_ok = (m.task == "text_recognize") ? (m.lang == lang) : m.lang.empty();
+        if (!lang_ok) {
+            continue;
+        }
+        if (m.task == "text_recognize") {
+            have_recognizer = true;
+        }
+        for (const auto& [kind, file] : m.files) {
+            if (file.url.empty()) {
+                continue;
+            }
+            if (!first) {
+                out += ',';
+            }
+            first = false;
+            out += "{\"path\":\"";
+            json_escape_into(reg.cache_path_for(m, kind).string(), &out);
+            out += "\",\"url\":\"";
+            json_escape_into(file.url, &out);
+            out += "\",\"bytes\":";
+            out += std::to_string(file.bytes);
+            out += '}';
+        }
+    }
+    out += ']';
+
+    if (first) {
+        return NAINA_E_MODEL_NOT_FOUND;
+    }
+
+    // Detection and layout match every language, so an unknown language still
+    // produces a non-empty plan — one with no recogniser in it. Staging that and
+    // then failing at init would be a confusing way to learn the language was
+    // wrong, and returning OK for it is worse: measured, "klingon" returned ok.
+    if (!have_recognizer) {
+        return NAINA_E_UNSUPPORTED;
+    }
+
+    auto* buf = static_cast<char*>(std::malloc(out.size() + 1));
+    if (buf == nullptr) {
+        return NAINA_E_OOM;
+    }
+    std::memcpy(buf, out.c_str(), out.size() + 1);
+    *out_json = buf;
+    return NAINA_OK;
+}
+
+extern "C" void naina_free_string(char* s) {
+    std::free(s);
 }

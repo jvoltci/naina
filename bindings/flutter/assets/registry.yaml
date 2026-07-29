@@ -1,0 +1,437 @@
+# naina — Model Registry
+#
+# Source of truth for every model the runtime can load.
+#
+#   tier = tiny    → ~11 MB total. Browser, phone, Pi Zero.
+#   tier = small   → ~54 MB total. Laptop, Pi 5, mobile app.
+#   tier = medium  → ~269 MB total. Server, desktop.
+#
+# This is a DEVICE axis, not a licence axis. Every model here is Apache-2.0
+# and safe for commercial use; what varies is size and the hardware it
+# suits. (naina v0.1 used tier for permissive-vs-research weights; OCR has
+# no such split, so the axis was repurposed.)
+#
+# Lookup happens by (task, tier). The runtime still falls back to a larger
+# tier when a task is missing at the requested one, though as of v0.3 every
+# task exists at every tier.
+#
+# Every sha256 below was verified by downloading the artifact and hashing
+# it. A truncated or substituted download fails closed rather than
+# producing silently wrong output.
+#
+# Validated by models/manifest.schema.json. CI fails on schema violations.
+
+schema_version: 1
+
+defaults:
+  cache_root: "${NAINA_CACHE:-~/.cache/naina/models}"
+  release_base: "https://github.com/jvoltci/naina/releases/download/models-v1"
+  # PaddleOCR publishes permissively-licensed ONNX exports on the Hugging
+  # Face Hub. The `${hf}` placeholder resolves to this base URL.
+  hf: "https://huggingface.co/PaddlePaddle"
+
+models:
+
+  # ─── Text detection (PP-OCRv6 det, DBNet head) ──────────────────────
+  #
+  # Input  "x"            f32 [N, 3, H, W]  — N/H/W all dynamic
+  # Output "fetch_name_0" f32 [N, 1, H, W]  — single-channel probability map
+
+  - id: text_detect.tiny
+    task: text_detect
+    tier: tiny
+    arch: pp_ocrv6_det
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv6_tiny_det.onnx"
+        source_url: "${hf}/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx"
+        sha256:     "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8"
+        bytes:      1780590
+    input:
+      shape:  [1, 3, -1, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+    output:
+      type: db_probability_map
+      postprocess:
+        thresh:         0.2
+        box_thresh:     0.4
+        unclip_ratio:   1.4
+        max_candidates: 3000
+
+  - id: text_detect.small
+    task: text_detect
+    tier: small
+    arch: pp_ocrv6_det
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv6_small_det.onnx"
+        source_url: "${hf}/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx"
+        sha256:     "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
+        bytes:      9880512
+    input:
+      shape:  [1, 3, -1, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+    output:
+      type: db_probability_map
+      postprocess:
+        thresh:         0.2
+        box_thresh:     0.4
+        unclip_ratio:   1.4
+        max_candidates: 3000
+
+  - id: text_detect.medium
+    task: text_detect
+    tier: medium
+    arch: pp_ocrv6_det
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv6_medium_det.onnx"
+        source_url: "${hf}/PP-OCRv6_medium_det_onnx/resolve/main/inference.onnx"
+        sha256:     "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+        bytes:      62032837
+    input:
+      shape:  [1, 3, -1, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+    output:
+      type: db_probability_map
+      postprocess:
+        thresh:         0.2
+        box_thresh:     0.4
+        unclip_ratio:   1.4
+        max_candidates: 3000
+
+  # ─── Text recognition (PP-OCRv6 rec, CTC head) ──────────────────────
+  #
+  # Input  "x"            f32 [N, 3, 48, W]  — height FIXED at 48
+  # Output "fetch_name_0" f32 [N, T, C]      — T ≈ W/8
+  #
+  # C is NOT constant across tiers. Verified by loading each ONNX graph:
+  #   tiny          6906 classes =  6904 chars + blank + space
+  #   small/medium 18710 classes = 18708 chars + blank + space
+  #
+  # Class layout follows PaddleOCR's CTCLabelDecode: index 0 is the CTC
+  # blank, charset entry i maps to class i+1, and the last class is a space
+  # (use_space_char). Getting num_classes wrong shifts every character in
+  # the output, so this is per-tier data, not a shared constant.
+  #
+  # The charset lives in each model's own inference.yml under
+  # PostProcess.character_dict. Rather than commit a derived copy, the
+  # manifest fetches that file as the `charset_yaml` kind and verifies it by
+  # sha256 like any other artifact. small and medium share an identical
+  # charset but ship byte-different yml files (the model_name field differs
+  # by one byte), so each carries its own hash.
+  #
+  # tiny's charset is far smaller — mostly CJK and Latin — so the
+  # "50 languages" claim applies to small and medium only.
+
+  # ── Devanagari ────────────────────────────────────────────────────
+  #
+  # A separate recognition alphabet, selected by `lang`. Detection and layout
+  # are script-agnostic and are NOT duplicated — measured on a real Devanagari
+  # page, DBNet found and located 82 lines correctly; only recognition was
+  # wrong.
+  #
+  # PP-OCRv5 rather than v6 because that is what upstream ships for this
+  # script, and only in a "mobile" size — so all three tiers share one model.
+  # That is honest rather than lazy: there is no larger Devanagari recogniser to
+  # offer.
+  #
+  # Verified compatible with naina's existing recognition path: input
+  # [N,3,48,W] (the same 48px strip height), CTCLabelDecode (the decoder
+  # ctc_decode.cc already implements), 568-char dict -> 570 classes once
+  # charset.cc prepends blank and appends space.
+
+  - id: text_recognize.devanagari
+    task: text_recognize
+    tier: tiny
+    lang: devanagari
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_devanagari_rec.onnx"
+        source_url: "${hf}/devanagari_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "cb789212ce96c69d3e74728ae4309d179281d68cb3945d0616b67cafab41c986"
+        bytes:      7912311
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_devanagari_rec.yml"
+        source_url: "${hf}/devanagari_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "9bd172dd26440c8ce94d1cde5d5baea6aefdc7cf3c5c8492e0beedef656d4e54"
+        bytes:      5027
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 570
+
+  - id: text_recognize.devanagari_small
+    task: text_recognize
+    tier: small
+    lang: devanagari
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_devanagari_rec.onnx"
+        source_url: "${hf}/devanagari_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "cb789212ce96c69d3e74728ae4309d179281d68cb3945d0616b67cafab41c986"
+        bytes:      7912311
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_devanagari_rec.yml"
+        source_url: "${hf}/devanagari_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "9bd172dd26440c8ce94d1cde5d5baea6aefdc7cf3c5c8492e0beedef656d4e54"
+        bytes:      5027
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 570
+
+  - id: text_recognize.tiny
+    task: text_recognize
+    tier: tiny
+    arch: pp_ocrv6_rec
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv6_tiny_rec.onnx"
+        source_url: "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
+        bytes:      4462639
+      charset_yaml:
+        url:        "${release_base}/ppocrv6_tiny_rec_charset.yml"
+        source_url: "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.yml"
+        sha256:     "66170210bad538e83fff3c4a3867e547d6bf20b50d64b20347c4b913f3034ea1"
+        bytes:      55571
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 6906
+
+  - id: text_recognize.small
+    task: text_recognize
+    tier: small
+    arch: pp_ocrv6_rec
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv6_small_rec.onnx"
+        source_url: "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
+        bytes:      21159378
+      charset_yaml:
+        url:        "${release_base}/ppocrv6_small_rec_charset.yml"
+        source_url: "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.yml"
+        sha256:     "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"
+        bytes:      150579
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 18710
+
+  - id: text_recognize.medium
+    task: text_recognize
+    tier: medium
+    arch: pp_ocrv6_rec
+    license: Apache-2.0
+    paper: "PP-OCRv6, arXiv:2606.13108"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv6_medium_rec.onnx"
+        source_url: "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+        bytes:      76554979
+      charset_yaml:
+        url:        "${release_base}/ppocrv6_medium_rec_charset.yml"
+        source_url: "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.yml"
+        sha256:     "991b700facf5b50a7de193468207d5f4255b538dde0d312ae3b7c7a9b6873129"
+        bytes:      150580
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 18710
+
+  # ─── Layout analysis (PP-DocLayout) ─────────────────────────────────
+  #
+  # All three tiers use the PP-DocLayout S/M/L family, which shares one
+  # 23-class label list and one [N, 6] output of
+  # [class_id, score, x1, y1, x2, y2] plus a detection count. One decode path,
+  # one class mapping.
+  #
+  # PP-DocLayoutV3 was the original choice for medium and was DROPPED. It is a
+  # different contract despite the similar name: [N, 7] rows carrying a mask
+  # index, 25 classes rather than 23, and a 300x200x200 int32 mask output —
+  # 48 MB that naina discards. L is the same size, same accuracy class, and
+  # needs none of that special-casing. The V3 asset remains in the release but
+  # is unreferenced.
+  #
+  # INPUTS still are not uniform, so the module feeds BY NAME from
+  # session->inputs() rather than positionally:
+  #
+  #   S   image[1,3,480,480], scale_factor[1,2]
+  #   M   image[1,3,640,640], scale_factor[1,2]
+  #   L   im_shape[1,2], image[1,3,640,640], scale_factor[1,2]
+  #
+  # S and M carry NMS inside the graph, capping them at batch_size == 1.
+  # Irrelevant here — layout runs one page at a time.
+  #
+  # S and M have no upstream ONNX build; naina exports them with
+  # tools/paddle2onnx_layout.py. That export is byte-deterministic and verified
+  # per-column against the Paddle original (classes exact, scores to 5e-7,
+  # coordinates to 3e-4 px), so the artifact can be independently reproduced.
+
+  - id: layout_detect.tiny
+    task: layout_detect
+    tier: tiny
+    arch: pp_doclayout_s
+    license: Apache-2.0
+    files:
+      onnx:
+        url:        "${release_base}/ppdoclayout_s.onnx"
+        source_url: "${hf}/PP-DocLayout-S/resolve/main/inference.pdiparams"
+        sha256:     "f905a530dd36fe4ab6613457a52e75bca2bb8c3e3d53eb4cb902e21a2d4c2548"
+        bytes:      4904714
+    input:
+      shape:  [1, 3, 480, 480]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: fixed, target: [480, 480]}
+    output:
+      type: layout_regions
+      postprocess:
+        score_thresh: 0.5
+
+  - id: layout_detect.small
+    task: layout_detect
+    tier: small
+    arch: pp_doclayout_m
+    license: Apache-2.0
+    files:
+      onnx:
+        url:        "${release_base}/ppdoclayout_m.onnx"
+        source_url: "${hf}/PP-DocLayout-M/resolve/main/inference.pdiparams"
+        sha256:     "7ae030241e5780af8736c077d3c5ce700ca83589c251fd962ee2234de2343947"
+        bytes:      23484258
+    input:
+      shape:  [1, 3, 640, 640]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: fixed, target: [640, 640]}
+    output:
+      type: layout_regions
+      postprocess:
+        score_thresh: 0.5
+
+  - id: layout_detect.medium
+    task: layout_detect
+    tier: medium
+    arch: pp_doclayout_l
+    license: Apache-2.0
+    files:
+      onnx:
+        url:        "${release_base}/ppdoclayout_l.onnx"
+        source_url: "${hf}/PP-DocLayout-L/resolve/main/inference.pdiparams"
+        sha256:     "4c5efa9a4c3682e1ff8fe16e00f1a84d240e3df25867b6223d933685bd5e18b0"
+        bytes:      129398697
+    input:
+      shape:  [1, 3, 640, 640]
+      pixfmt: rgb
+      dtype:  f32
+      preprocess:
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.485, 0.456, 0.406]
+        std:   [0.229, 0.224, 0.225]
+        resize: {mode: fixed, target: [640, 640]}
+    output:
+      type: layout_regions
+      postprocess:
+        score_thresh: 0.5

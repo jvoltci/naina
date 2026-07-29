@@ -230,6 +230,38 @@ NAINA_API void naina_free_regions(naina_region* regions, int32_t count);
 /* Human-readable name for a region class. Static string, never null. */
 NAINA_API const char* naina_region_kind_str(naina_region_kind k);
 
+/* ─── Model staging ───────────────────────────────────────────────────
+ *
+ * For hosts that must fetch weights themselves. Android and the browser both
+ * need this: neither has libcurl, so the core cannot download, and both need to
+ * know exactly which files to place and where.
+ *
+ * Returns a JSON array:
+ *   [{"path":"<absolute cache path>","url":"...","bytes":N}, ...]
+ *
+ * The caller downloads each `url` to its `path`, then naina_init finds the files
+ * present and sha256-verifies them exactly as if it had fetched them itself — so
+ * a host doing the fetching does not weaken the integrity check.
+ *
+ * Computed here rather than by each host because the cache layout
+ * (<root>/<task>/<id>/<sha256[:16]>__<basename>) and the ${release_base}
+ * substitution live in the model loader. A host-side reimplementation would be a
+ * second source of truth that drifts the first time either changes.
+ *
+ * `models_root` must be the SAME value later passed to naina_init, or the caller
+ * stages files where the core will not look. NULL uses the manifest's default.
+ *
+ * `language` may be NULL or "" for the default alphabet. On success writes a
+ * NUL-terminated UTF-8 string the caller MUST release with naina_free_string. */
+NAINA_API naina_status naina_staging_plan(const char* registry_path,
+                                          const char* models_root,
+                                          naina_tier tier,
+                                          const char* language,
+                                          char** out_json);
+
+/* Release a string handed out by naina_staging_plan. */
+NAINA_API void naina_free_string(char* s);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

@@ -81,13 +81,22 @@ class _ReaderPageState extends State<ReaderPage> {
       // The app sandbox cannot write to naina's default cache location, so give
       // it somewhere inside our own container.
       final dir = await getApplicationSupportDirectory();
+      final root = '${dir.path}/naina';
 
-      setState(() => _status = 'Reading (first run downloads ~11 MB)…');
+      // Android's core has no libcurl, so Dart fetches the weights. Returns
+      // immediately once they are on disk.
+      await NainaModels.stage(
+        modelsRoot: root,
+        onProgress: (p) => setState(() => _status =
+            'Fetching ${p.file.displayName} — ${(p.fraction * 100).toStringAsFixed(0)}%'),
+      );
+
+      setState(() => _status = 'Reading…');
       final page = await readRgbInIsolate(
         rgb,
         width: width,
         height: height,
-        modelsRoot: '${dir.path}/naina',
+        modelsRoot: root,
       );
 
       setState(() {
