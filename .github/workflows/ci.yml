@@ -199,6 +199,53 @@ jobs:
       - name: Test
         run: npx vitest run
 
+  rust:
+    name: rust ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: bindings/rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
+      - name: Install ONNX Runtime (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ORT_VERSION=1.20.1
+          curl -fsSL -o ort.tgz \
+            "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz"
+          tar -xzf ort.tgz
+          sudo cp -r onnxruntime-linux-x64-${ORT_VERSION}/include/* /usr/local/include/
+          sudo cp -r onnxruntime-linux-x64-${ORT_VERSION}/lib/*     /usr/local/lib/
+          sudo ldconfig
+      - name: Install system deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja cmake yaml-cpp onnxruntime
+
+      # Builds the core from source through build.rs, which is the path a
+      # crates.io user takes — so CI exercises what they will, not a shortcut.
+      - name: Vendor the core
+        run: ./vendor.sh
+
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Test
+        run: cargo test
+
   manifest-schema:
     name: validate model registry
     runs-on: ubuntu-latest

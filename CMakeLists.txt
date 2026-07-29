@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(naina
     VERSION 0.2.0
-    DESCRIPTION "Embeddable computer-vision runtime for face & person understanding"
+    DESCRIPTION "Embeddable document-reading runtime. OCR from one C++ core."
     LANGUAGES CXX C
 )
 
@@ -33,6 +33,7 @@ option(NAINA_BUILD_TESTS         "Build naina unit tests"          ON)
 option(NAINA_BUILD_SHARED        "Build naina as a shared library" ON)
 option(NAINA_BUILD_PYTHON        "Build the Python binding (naina-py)" OFF)
 option(NAINA_BUILD_WASM          "Build the WASM binding (Emscripten only)" OFF)
+option(NAINA_BUILD_RUST          "Building for the Rust crate (no install rules)" OFF)
 option(NAINA_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors" ON)
 
 # Vendor yaml-cpp statically instead of linking a system copy. Redistributable
@@ -109,8 +110,10 @@ endif()
 # C++ install / package-config rules fire for the standalone library
 # install, NOT for the binding builds. The Python wheel wants only the .so and
 # registry.yaml; the WASM build produces a .mjs/.wasm pair with nothing to
-# install at all, and its vendored static yaml-cpp is not in any export set.
-if(NOT NAINA_BUILD_PYTHON AND NOT NAINA_BUILD_WASM)
+# install at all; the Rust crate links the static archive directly. All three
+# vendor yaml-cpp statically, and a vendored yaml-cpp is not in any export set,
+# so exporting naina-core would fail outright.
+if(NOT NAINA_BUILD_PYTHON AND NOT NAINA_BUILD_WASM AND NOT NAINA_BUILD_RUST)
     include(GNUInstallDirs)
     include(CMakePackageConfigHelpers)
 

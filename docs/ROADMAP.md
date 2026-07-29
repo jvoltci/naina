@@ -156,9 +156,20 @@ Turn a bag of lines into a document.
 - [ ] Medium tier in the browser. `ppdoclayout_l.onnx` is 129 MB and GitHub Pages
       caps a single file at 100 MB, so the app offers tiny and small only.
 
-## v0.5 — Rust
+## v0.5 — Rust  *(built)*
 
-- [ ] `bindings/rust` over the C ABI, published to crates.io
+- [x] `bindings/rust` over the C ABI. Safe wrapper with the unsafe surface
+      confined to `src/ffi.rs` and the marshalling in `read_rgb`. 13 tests pass
+      against a real `libnaina`, including reading a page end to end and
+      asserting `naina_config` is 48 bytes with 8-byte alignment — matching the C
+      compiler, because a mismatch there would write `tier` into the wrong slot
+      and silently load a different model.
+- [x] `Reader` is `Send` but **not** `Sync`: the native context is not internally
+      synchronised and concurrent reads would race on its session cache.
+- [x] Vendors the C++ core for a self-contained crate (`vendor.sh`), but
+      deliberately **not** ONNX Runtime — ~17 MB per platform with its own floors,
+      and four bundled copies would inherit all of that silently.
+- [ ] Published to crates.io. Needs `cargo publish` with a token.
 - [ ] Golden corpus passes from Rust
 
 ## v1.0 — Guarantees

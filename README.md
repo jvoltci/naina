@@ -13,6 +13,7 @@
   <a href="https://www.npmjs.com/package/@jvoltci/naina"><img src="https://img.shields.io/npm/v/@jvoltci/naina?label=npm&color=CB3837" alt="npm"></a>
   <a href="https://www.npmjs.com/package/@jvoltci/naina-wasm"><img src="https://img.shields.io/npm/v/@jvoltci/naina-wasm?label=npm%20wasm&color=654FF0" alt="npm wasm"></a>
   <a href="https://pub.dev/packages/naina"><img src="https://img.shields.io/pub/v/naina?label=pub.dev&color=0175C2" alt="pub.dev"></a>
+  <a href="https://crates.io/crates/naina"><img src="https://img.shields.io/crates/v/naina?label=crates.io&color=E43717" alt="crates.io"></a>
 </p>
 
 <h3 align="center">Read any document. One C++ core, everywhere.</h3>
@@ -30,9 +31,9 @@ upload, no account. PDFs and images, Latin/CJK and Devanagari.
 
 > **Publishing status.** The web app and docs are live. The Python, Node and
 > Flutter packages are built and tested but not yet on PyPI, npm or pub.dev — the
-> version badges above go green when they are. There is **no Rust crate**; that is
-> [v0.5 on the roadmap](docs/ROADMAP.md) and nothing has been published to
-> crates.io. Build from source meanwhile; see [Install](#install).
+> version badges above go green when they are. Publishing needs one `git tag`
+> for PyPI and npm, and a `cargo publish` for crates.io. Build from source
+> meanwhile; see [Install](#install).
 
 ## Packages
 
@@ -42,7 +43,7 @@ upload, no account. PDFs and images, Latin/CJK and Devanagari.
 | `@jvoltci/naina` | [npm](https://www.npmjs.com/package/@jvoltci/naina) | Node, inference off the event loop | built, unpublished |
 | `@jvoltci/naina-wasm` | [npm](https://www.npmjs.com/package/@jvoltci/naina-wasm) | Browser, 143 KB brotli | built, unpublished |
 | `naina` | [pub.dev](https://pub.dev/packages/naina) | Flutter, FFI, Android + iOS | built; Android verified on-device, iOS unproven |
-| `naina` | crates.io | Rust over the C ABI | **not started** |
+| `naina` | [crates.io](https://crates.io/crates/naina) | Rust over the C ABI | built, unpublished |
 | — | — | [MCP server](mcp/) for LLM tools | works, in-repo |
 
 ```python
