@@ -28,6 +28,21 @@ std::vector<naina_point> convex_hull(std::vector<naina_point> pts);
 // fewer than 3 distinct points are supplied.
 bool min_area_quad(const std::vector<naina_point>& pts, naina_point out[4]);
 
+// Reorder 4 corners in place to [top-left, top-right, bottom-right,
+// bottom-left] in image coordinates.
+//
+// min_area_quad returns corners in its own rotating-calipers (u, v) frame,
+// whose u axis is whichever hull edge minimised the area. That axis can point
+// left or upward, so corner[0] is NOT reliably top-left. Recognition warps the
+// quad assuming it is, and a mis-ordered quad reads the strip mirrored or
+// upside down — which surfaces as plausible-looking garbage text rather than an
+// error, so it is easy to miss.
+//
+// This is PaddleOCR's order_points_clockwise: split by x into a left and a
+// right pair, then within each pair the smaller y is the upper corner. Text
+// rotated beyond roughly 45 degrees is out of scope, as it is upstream too.
+void order_quad_clockwise(naina_point q[4]);
+
 // Expand a convex polygon outward so each edge moves `distance` along its
 // outward normal, then re-intersect adjacent edges. This is what DBNet's
 // "unclip" step does; for a convex polygon it is exactly equivalent to a

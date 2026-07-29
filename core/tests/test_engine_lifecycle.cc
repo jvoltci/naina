@@ -79,10 +79,25 @@ int main() {
     naina_ctx_t* ctx = nullptr;
     const naina_status init_rc = naina_init(&cfg, &ctx);
 
-    // If no backend is compiled in, init returns NAINA_E_BACKEND_UNAVAIL —
-    // that's a valid environment for the "core-only" build matrix.
+    // A build with no backend compiled in is legitimate (the "core-only"
+    // matrix entry), but it cannot run inference — so skipping here means this
+    // test validates nothing. Set NAINA_REQUIRE_BACKEND=1 to turn that into a
+    // hard failure. CI and the dev presets set it, because a silent skip once
+    // hid the fact that a whole clean rebuild had dropped ONNX Runtime and
+    // every test still reported green.
     if (init_rc == NAINA_E_BACKEND_UNAVAIL) {
-        std::printf("engine_lifecycle: no backend available, skipping (OK)\n");
+        const char* require = std::getenv("NAINA_REQUIRE_BACKEND");
+        if (require != nullptr && require[0] != '0') {
+            std::fprintf(stderr,
+                         "FAIL no inference backend compiled in, but "
+                         "NAINA_REQUIRE_BACKEND=1.\n"
+                         "     Configure with -DNAINA_WITH_ONNXRUNTIME=ON.\n");
+            return 1;
+        }
+        std::fprintf(stderr,
+                     "SKIP engine_lifecycle: no inference backend compiled in, so the\n"
+                     "     ABI contract checks below did NOT run. This is a vacuous pass.\n"
+                     "     Configure with -DNAINA_WITH_ONNXRUNTIME=ON to exercise them.\n");
         return 0;
     }
     EXPECT(init_rc == NAINA_OK);
@@ -101,22 +116,38 @@ int main() {
     naina_image_t* img = nullptr;
     EXPECT(naina_image_wrap(pixels.data(), W, H, W * 3, NAINA_PIXFMT_RGB8, &img) == NAINA_OK);
 
-    // With a valid image but no weights on disk, detect must fail rather than
-    // report a bogus empty success. NAINA_E_UNSUPPORTED is expected while the
-    // module is stubbed; MODEL_NOT_FOUND / IO once it is wired but offline.
+    // The image is flat mid-grey, so it contains no text. Two outcomes are
+    // legitimate and which one occurs depends only on whether weights happen
+    // to be in the cache:
+    //   - weights absent (offline)  -> MODEL_NOT_FOUND, nothing produced
+    //   - weights present           -> OK with zero detections
+    // The invariant that actually matters, and holds either way, is that a
+    // blank image never yields a detection.
     naina_textbox* boxes = nullptr;
     int32_t nboxes = -1;
     const naina_status dt = naina_text_detect(ctx, img, &boxes, &nboxes);
-    EXPECT(dt != NAINA_OK);
+    EXPECT(dt == NAINA_OK || dt == NAINA_E_MODEL_NOT_FOUND || dt == NAINA_E_IO);
     EXPECT(nboxes == 0);
     EXPECT(boxes == nullptr);
     naina_free_textboxes(boxes, nboxes);
 
-    // naina_read has the same contract.
     naina_page_t* page = nullptr;
     const naina_status rd = naina_read(ctx, img, &page);
-    EXPECT(rd != NAINA_OK);
-    EXPECT(page == nullptr);
+    EXPECT(rd == NAINA_OK || rd == NAINA_E_MODEL_NOT_FOUND || rd == NAINA_E_IO);
+    if (rd == NAINA_OK) {
+        EXPECT(page != nullptr);
+        if (page != nullptr) {
+            const naina_textline* lines = nullptr;
+            int32_t nlines = -1;
+            EXPECT(naina_page_lines(page, &lines, &nlines) == NAINA_OK);
+            EXPECT(nlines == 0);
+            // Markdown of a blank page is the empty string, never null.
+            EXPECT(naina_page_markdown(page) != nullptr);
+            EXPECT(std::string(naina_page_markdown(page)).empty());
+        }
+    } else {
+        EXPECT(page == nullptr);
+    }
     naina_page_release(page);
 
     // A config declaring version 1 is still accepted — the header's ABI rule
