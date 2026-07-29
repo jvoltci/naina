@@ -27,24 +27,54 @@
 </p>
 
 **[Use it in your browser now →](https://jvoltci.github.io/naina/)** No install, no
-upload, no account. PDFs and images, Latin/CJK and Devanagari.
+upload, no account. PDFs and images, in ten scripts.
 
-> **Publishing status.** The web app and docs are live. The Python, Node and
-> Flutter packages are built and tested but not yet on PyPI, npm or pub.dev — the
-> version badges above go green when they are. Publishing needs one `git tag`
-> for PyPI and npm, and a `cargo publish` for crates.io. Build from source
-> meanwhile; see [Install](#install).
+## Scripts
+
+| `language` | Reads |
+|---|---|
+| *(default)* | Latin, Chinese, Japanese |
+| `arabic` | Arabic, Persian, Urdu |
+| `cyrillic` | Russian, Bulgarian, Serbian, Mongolian |
+| `devanagari` | Hindi, Marathi, Nepali, Sanskrit |
+| `el` | Greek |
+| `eslav` | Ukrainian, Belarusian, Russian |
+| `korean` | Korean |
+| `ta` | Tamil |
+| `te` | Telugu |
+| `th` | Thai |
+
+```python
+page = naina.read("invoice.png", language="devanagari")
+```
+
+A tier picks model *size*; a language picks the *alphabet*. Detection and layout
+are script-agnostic and shared, so a language costs one 8 MB model rather than
+three.
+
+> **Choosing wrong is silent.** Read a Hindi page with the default alphabet and it
+> returns fluent-looking Latin at ~0.75 confidence, not an error — confidence
+> measures certainty *within* the model's own alphabet and cannot express "wrong
+> alphabet". An unrecognised `language` value **does** raise.
+
+> **v0.2.0 is out on PyPI and crates.io.** The web app and docs are live. npm and
+> pub.dev are blocked on account setup rather than on code — see the table below.
 
 ## Packages
 
 | Package | Registry | What it does | State |
 |---|---|---|---|
-| `naina` | [PyPI](https://pypi.org/project/naina/) | Python, self-contained wheels | built, unpublished |
-| `@jvoltci/naina` | [npm](https://www.npmjs.com/package/@jvoltci/naina) | Node, inference off the event loop | built, unpublished |
-| `@jvoltci/naina-wasm` | [npm](https://www.npmjs.com/package/@jvoltci/naina-wasm) | Browser, 143 KB brotli | built, unpublished |
-| `naina` | [pub.dev](https://pub.dev/packages/naina) | Flutter, FFI, Android + iOS | built; Android verified on-device, iOS unproven |
-| `naina` | [crates.io](https://crates.io/crates/naina) | Rust over the C ABI | built, unpublished |
+| `naina` | [PyPI](https://pypi.org/project/naina/) | Python, self-contained wheels | ✅ **published** |
+| `naina` | [crates.io](https://crates.io/crates/naina) | Rust over the C ABI | ✅ **published** |
+| `@jvoltci/naina` | npm | Node, inference off the event loop | built; publish blocked, see below |
+| `@jvoltci/naina-wasm` | npm | Browser, 143 KB brotli | built; publish blocked |
+| `naina` | pub.dev | Flutter, FFI | built; Android verified on a device, iOS unproven |
 | — | — | [MCP server](mcp/) for LLM tools | works, in-repo |
+
+The npm publish fails with `E404` on `PUT @jvoltci/naina`, which means the
+`@jvoltci` scope is not resolvable for the authenticated account — it must exist
+as an npm **org** or match the account's username. (Unscoped `naina` on npm is
+already taken by someone else, so the scope is not optional.)
 
 ```python
 import naina

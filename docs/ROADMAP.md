@@ -101,10 +101,15 @@ Turn a bag of lines into a document.
       An unknown language returns `NAINA_E_UNSUPPORTED` rather than falling back
       to Latin.
 
-- [ ] **The other scripts.** Arabic, Tamil, Telugu, Thai, Korean, Cyrillic and
-      ~14 more ship upstream in the identical shape (ONNX, `[N,3,48,W]`,
-      `CTCLabelDecode`), so each is a registry entry plus a mirrored file. The
-      machinery is done.
+- [x] **Ten alphabets.** Default (Latin, Chinese, Japanese) plus arabic,
+      cyrillic, devanagari, el, eslav, korean, ta, te, th — every script upstream
+      ships as ONNX. Each was verified against naina's recognition path before
+      being added (`[N,3,48,W]`, `CTCLabelDecode`, `num_classes == dict + 2`);
+      all nine matched, none needed a code change. Mirrored into naina's release
+      and sha256-verified by re-download. Registry entries are generated from the
+      files rather than hand-written, so a hash cannot be mistyped.
+      Verified in a real browser: Greek returned `Ελληνικά κείμενο 2026` and
+      Cyrillic `Русский текст 2026`, both exact.
 
 - [ ] **Detect a script mismatch rather than relying on the caller.** Even with a
       language option, someone will read Hindi with the Latin model and get

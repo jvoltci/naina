@@ -23,8 +23,16 @@ freely.
 
 | `language` | Reads | Weights |
 |---|---|---|
-| *(default)* | Latin, Chinese, Japanese, Korean | per tier, above |
-| `devanagari` | Hindi, Marathi, Nepali, Sanskrit | 7.9 MB, PP-OCRv5 mobile |
+| *(default)* | Latin, Chinese, Japanese | per tier, above |
+| `arabic` | Arabic, Persian, Urdu | ~8 MB, PP-OCRv5 mobile |
+| `cyrillic` | Russian, Bulgarian, Serbian, Mongolian | ~8 MB, PP-OCRv5 mobile |
+| `devanagari` | Hindi, Marathi, Nepali, Sanskrit | ~8 MB, PP-OCRv5 mobile |
+| `el` | Greek | ~8 MB, PP-OCRv5 mobile |
+| `eslav` | Ukrainian, Belarusian, Russian | ~8 MB, PP-OCRv5 mobile |
+| `korean` | Korean | ~8 MB, PP-OCRv5 mobile |
+| `ta` | Tamil | ~8 MB, PP-OCRv5 mobile |
+| `te` | Telugu | ~8 MB, PP-OCRv5 mobile |
+| `th` | Thai | ~8 MB, PP-OCRv5 mobile |
 
 ```python
 page = naina.read("hindi.png", tier="tiny", language="devanagari")
@@ -34,8 +42,10 @@ Detection and layout are script-agnostic and shared — they are not duplicated 
 language. Measured on a Devanagari page, detection found and located all lines
 correctly even with the wrong recognition alphabet; only the reading was wrong.
 
-Devanagari exists in one size upstream, so every tier uses the same 7.9 MB
-recogniser.
+Each script exists in one size upstream, so every tier shares the same recogniser
+for a given language. Every one was verified against naina's recognition path
+before being added: `[N,3,48,W]` input, `CTCLabelDecode`, and
+`num_classes == dict + 2`.
 
 ## Picking one
 

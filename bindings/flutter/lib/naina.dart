@@ -25,7 +25,8 @@ import 'package:ffi/ffi.dart';
 
 import 'src/bindings.dart';
 
-export 'src/bindings.dart' show NainaException, NainaStatus, NainaTier;
+export 'src/bindings.dart'
+    show NainaException, NainaLanguage, NainaStatus, NainaTier;
 export 'src/models.dart' show ModelFile, NainaModels, StagingProgress;
 
 /// One recognised line of text.

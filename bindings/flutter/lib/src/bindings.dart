@@ -37,6 +37,53 @@ abstract final class NainaTier {
   static const int medium = 3;
 }
 
+/// Recognition alphabets naina ships.
+///
+/// A tier picks model size; a language picks the alphabet. Detection and layout
+/// are script-agnostic and shared, so a language costs one model rather than
+/// three.
+///
+/// Choosing wrong does not raise: the model reads confidently in whatever
+/// alphabet it was given, so a Hindi page read as [latin] returns plausible
+/// Latin. An unrecognised value DOES raise.
+abstract final class NainaLanguage {
+  /// Latin, Chinese and Japanese. The default.
+  static const latin = '';
+
+  /// Arabic, Persian, Urdu
+  static const arabic = 'arabic';
+  /// Russian, Bulgarian, Serbian
+  static const cyrillic = 'cyrillic';
+  /// Hindi, Marathi, Nepali, Sanskrit
+  static const devanagari = 'devanagari';
+  /// Greek
+  static const el = 'el';
+  /// Ukrainian, Belarusian, Russian
+  static const eslav = 'eslav';
+  /// Korean
+  static const korean = 'korean';
+  /// Tamil
+  static const ta = 'ta';
+  /// Telugu
+  static const te = 'te';
+  /// Thai
+  static const th = 'th';
+
+  /// Every alphabet available, for building a picker.
+  static const all = <String>[
+    latin,
+    arabic,
+    cyrillic,
+    devanagari,
+    el,
+    eslav,
+    korean,
+    ta,
+    te,
+    th,
+  ];
+}
+
 abstract final class NainaPixfmt {
   static const int rgb8 = 0;
   static const int bgr8 = 1;
