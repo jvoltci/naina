@@ -40,12 +40,33 @@ struct Config {
     // Regions thinner than this in either dimension are discarded — they are
     // never real document structure and only confuse reading order.
     float min_side = 4.0F;
+
+    // Cross-class duplicate suppression. PaddleDetection runs NMS PER CLASS, so
+    // one physical box comes back once per plausible label and nothing upstream
+    // removes the extras. Measured on a real page: a running head returned
+    // `text` at 0.677 and `header` at 0.481 for byte-identical coordinates.
+    //
+    // Deliberately high, because overlap between DIFFERENT regions is normal and
+    // meaningful: a caption sits against its figure, a title against its table.
+    // At 0.5 this would delete real structure. The duplicates it must catch have
+    // IoU at or near 1.0, so a strict threshold removes them and nothing else.
+    float dedupe_iou = 0.85F;
 };
 
 // Map a PP-DocLayout class id to naina's region kind. Exposed for testing
 // because the mapping is data, not logic, and getting it wrong silently
 // mislabels every region.
 naina_region_kind kind_from_class_id(int32_t class_id);
+
+// Drop regions that duplicate a higher-scoring region's box, regardless of
+// class. Keeps the highest-scoring label per physical box and preserves input
+// order among survivors, so reading order is unaffected.
+//
+// Exposed for testing: the threshold trades a real failure (one box emitted
+// twice under two labels) against a worse one (deleting a caption because it
+// touches its figure), and that balance needs to be pinned by tests rather than
+// argued about.
+void dedupe_overlapping(float iou_thresh, std::vector<naina_region>* regions);
 
 // Run layout analysis. Region boxes are in SOURCE image coordinates.
 // `order` is left at -1; doc_assemble assigns reading order.
