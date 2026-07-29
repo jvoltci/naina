@@ -45,9 +45,10 @@ models:
     paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${hf}/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx"
-        sha256: "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8"
-        bytes:  1780590
+        url:        "${release_base}/ppocrv6_tiny_det.onnx"
+        source_url: "${hf}/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx"
+        sha256:     "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8"
+        bytes:      1780590
     input:
       shape:  [1, 3, -1, -1]
       pixfmt: bgr
@@ -73,9 +74,10 @@ models:
     paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${hf}/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx"
-        sha256: "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
-        bytes:  9880512
+        url:        "${release_base}/ppocrv6_small_det.onnx"
+        source_url: "${hf}/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx"
+        sha256:     "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
+        bytes:      9880512
     input:
       shape:  [1, 3, -1, -1]
       pixfmt: bgr
@@ -101,9 +103,10 @@ models:
     paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${hf}/PP-OCRv6_medium_det_onnx/resolve/main/inference.onnx"
-        sha256: "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
-        bytes:  62032837
+        url:        "${release_base}/ppocrv6_medium_det.onnx"
+        source_url: "${hf}/PP-OCRv6_medium_det_onnx/resolve/main/inference.onnx"
+        sha256:     "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+        bytes:      62032837
     input:
       shape:  [1, 3, -1, -1]
       pixfmt: bgr
@@ -153,13 +156,15 @@ models:
     paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
-        sha256: "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
-        bytes:  4462639
+        url:        "${release_base}/ppocrv6_tiny_rec.onnx"
+        source_url: "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
+        bytes:      4462639
       charset_yaml:
-        url:    "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.yml"
-        sha256: "66170210bad538e83fff3c4a3867e547d6bf20b50d64b20347c4b913f3034ea1"
-        bytes:  55571
+        url:        "${release_base}/ppocrv6_tiny_rec_charset.yml"
+        source_url: "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.yml"
+        sha256:     "66170210bad538e83fff3c4a3867e547d6bf20b50d64b20347c4b913f3034ea1"
+        bytes:      55571
     input:
       shape:  [-1, 3, 48, -1]
       pixfmt: bgr
@@ -184,13 +189,15 @@ models:
     paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
-        sha256: "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
-        bytes:  21159378
+        url:        "${release_base}/ppocrv6_small_rec.onnx"
+        source_url: "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
+        bytes:      21159378
       charset_yaml:
-        url:    "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.yml"
-        sha256: "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"
-        bytes:  150579
+        url:        "${release_base}/ppocrv6_small_rec_charset.yml"
+        source_url: "${hf}/PP-OCRv6_small_rec_onnx/resolve/main/inference.yml"
+        sha256:     "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"
+        bytes:      150579
     input:
       shape:  [-1, 3, 48, -1]
       pixfmt: bgr
@@ -215,13 +222,15 @@ models:
     paper: "PP-OCRv6, arXiv:2606.13108"
     files:
       onnx:
-        url:    "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx"
-        sha256: "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
-        bytes:  76554979
+        url:        "${release_base}/ppocrv6_medium_rec.onnx"
+        source_url: "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+        bytes:      76554979
       charset_yaml:
-        url:    "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.yml"
-        sha256: "991b700facf5b50a7de193468207d5f4255b538dde0d312ae3b7c7a9b6873129"
-        bytes:  150580
+        url:        "${release_base}/ppocrv6_medium_rec_charset.yml"
+        source_url: "${hf}/PP-OCRv6_medium_rec_onnx/resolve/main/inference.yml"
+        sha256:     "991b700facf5b50a7de193468207d5f4255b538dde0d312ae3b7c7a9b6873129"
+        bytes:      150580
     input:
       shape:  [-1, 3, 48, -1]
       pixfmt: bgr
@@ -254,9 +263,10 @@ models:
     license: Apache-2.0
     files:
       onnx:
-        url:    "${hf}/PP-DocLayoutV3_onnx/resolve/main/inference.onnx"
-        sha256: "45bf71750b00739a41fc209f132eb104a4d6b5bb29483c9078164d8b87cf28ba"
-        bytes:  130502049
+        url:        "${release_base}/ppdoclayoutv3.onnx"
+        source_url: "${hf}/PP-DocLayoutV3_onnx/resolve/main/inference.onnx"
+        sha256:     "45bf71750b00739a41fc209f132eb104a4d6b5bb29483c9078164d8b87cf28ba"
+        bytes:      130502049
     input:
       shape:  [1, 3, 800, 800]
       pixfmt: rgb
