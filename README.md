@@ -3,8 +3,6 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/naina/"><img src="https://img.shields.io/pypi/v/naina.svg" alt="PyPI version"></a>
-  <a href="https://www.npmjs.com/package/@jvoltci/naina"><img src="https://img.shields.io/npm/v/@jvoltci/naina.svg" alt="npm version"></a>
   <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
   <a href="https://github.com/jvoltci/naina/actions/workflows/ci.yml"><img src="https://github.com/jvoltci/naina/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/jvoltci/naina/stargazers"><img src="https://img.shields.io/github/stars/jvoltci/naina.svg?style=social" alt="GitHub stars"></a>
@@ -13,12 +11,15 @@
 <h3 align="center">An embeddable document-reading runtime. One C++ core, every language, from a browser tab to a GPU server.</h3>
 
 <p align="center">
-  <a href="https://jvoltci.github.io/naina/"><b>🔎 Try in browser</b></a> ·
-  <a href="https://jvoltci.github.io/naina/doc/"><b>📚 Documentation</b></a> ·
-  <a href="https://pypi.org/project/naina/"><b>📦 PyPI</b></a> ·
-  <a href="https://www.npmjs.com/package/@jvoltci/naina"><b>📦 npm</b></a> ·
+  <a href="docs/ARCHITECTURE.md"><b>📐 Architecture</b></a> ·
+  <a href="docs/ROADMAP.md"><b>🗺️ Roadmap</b></a> ·
+  <a href="https://github.com/jvoltci/naina/releases/tag/models-v1"><b>📦 Model weights</b></a> ·
   <a href="https://github.com/jvoltci/naina/discussions"><b>💬 Discussions</b></a>
 </p>
+
+> **Pre-release.** naina is not published to PyPI or npm yet, and there is no
+> browser build. Build from source with the instructions below. What works
+> today is listed in [Status](#status), and what does not is listed there too.
 
 ```python
 import naina
@@ -84,11 +85,11 @@ browser build could not describe document structure. See
 
 | Binding | Status | Install |
 | --- | --- | --- |
-| C / C++ | ✅ | `naina.h` — the contract every other binding targets |
-| Python | ✅ | `pip install naina` |
-| Node / TypeScript | ✅ | `npm install @jvoltci/naina` |
-| Rust | planned v0.5 | `cargo add naina` |
-| WASM / browser | planned v0.4 | `npm install naina-wasm` |
+| C / C++ | ✅ works | `naina.h` — the contract every other binding targets |
+| Python | ✅ works, unpublished | build from source; `pip install naina` once released |
+| Node / TypeScript | ✅ works, unpublished | build from source; needs a local toolchain |
+| Rust | ❌ v0.5 | — |
+| WASM / browser | ❌ v0.4 | — |
 
 **Weights are mirrored, not borrowed.** naina fetches from
 [its own release](https://github.com/jvoltci/naina/releases/tag/models-v1), not
@@ -148,12 +149,7 @@ chart/formula semantic extraction.
 
 ## Install
 
-```bash
-pip install naina                    # Python
-npm install @jvoltci/naina           # Node / TypeScript
-```
-
-From source:
+Not yet on PyPI or npm — see the note at the top. Build from source:
 
 ```bash
 cmake --preset macos-arm64           # or linux-x86_64, linux-arm64, windows-x86_64
