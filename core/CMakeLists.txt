@@ -24,6 +24,7 @@ set(NAINA_SOURCES
     src/modules/db_postprocess.cc
     src/modules/charset.cc
     src/modules/ctc_decode.cc
+    src/page.cc
     src/api.cc
     src/api_cpp.cc
 )

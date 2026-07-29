@@ -77,6 +77,25 @@ OUTPUT  name "fetch_name_0"  FLOAT  [N, 1, H, W]     single-channel probability 
 TensorRT shape hints: min 1x3x32x32, opt 1x3x736x736, max 1x3x4000x4000
 ```
 
+**Output resolution equals input resolution.** Measured by running the tiny
+det model under onnxruntime at four input sizes:
+
+| input | output | same res |
+| --- | --- | --- |
+| `1x3x640x640` | `1x1x640x640` | yes |
+| `1x3x960x480` | `1x1x960x480` | yes |
+| `1x3x736x736` | `1x1x736x736` | yes |
+| `1x3x128x96` | `1x1x128x96` | yes |
+
+This matters because the ONNX backend copies results into a **caller-allocated**
+buffer and discards the real shape — it errors only if the buffer is too small.
+So the detection module must size its output buffer as exactly
+`out_h * out_w` floats. Guessing wrong either errors or silently reads garbage.
+
+On random-noise input the probability map maxes out around 0.002, far under the
+0.2 binarisation threshold, so noise correctly yields zero detections. That is a
+useful end-to-end assertion.
+
 Preprocess (from `inference.yml`): decode **BGR**, normalise `order: hwc`
 with `scale = 1/255`, `mean = [0.485, 0.456, 0.406]`,
 `std = [0.229, 0.224, 0.225]`, then to CHW. Resize is `DetResizeForTest`
@@ -117,6 +136,27 @@ matches) but ship `inference.yml` files differing by one byte in
 The charset is fetched as the `charset_yaml` file kind — each model's own
 `inference.yml`, hash-verified like any other artifact — rather than
 committed to the repo as a derived copy.
+
+**`T = W / 8`, exactly.** Measured under onnxruntime on the tiny rec model:
+
+| W | 32 | 48 | 96 | 160 | 192 | 320 | 640 | 1200 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| T | 4 | 6 | 12 | 20 | 24 | 40 | 80 | 150 |
+
+So a strip width that is a multiple of 8 gives an exact, predictable output
+size — which the caller must know, since the backend copies into a
+caller-allocated buffer and discards the shape. **Round strip widths up to a
+multiple of 8** rather than reimplementing the graph's floor-division chain.
+
+**The graph already applies softmax.** Measured: output rows sum to 1.0
+(±2e-6). So `ctc_decode` is right to treat the values as probabilities
+directly — do not add a softmax, and do not treat them as raw logits.
+
+**Batching requires a uniform width.** The input is one tensor, so every strip
+in a batch must share `W`. PaddleOCR sorts by aspect ratio and pads each batch
+to its max width. v0.2 deliberately does **not** do this — it runs one strip
+per session call, which is simpler and correct. Batching is a later
+optimisation, not a v0.2 requirement.
 
 **tiny's charset is much smaller and is mostly CJK + Latin.** The
 "50 languages" claim applies to small and medium only; do not repeat it for
