@@ -3,12 +3,15 @@
 Read this before you deploy naina anywhere that matters. Everything here is
 measured, and several of these were found the hard way.
 
-## Script detection is automatic in the browser, manual elsewhere
+## Script detection is automatic, in every binding
 
-The [web app](https://jvoltci.github.io/naina/) detects the script for you. It
-reads with the default alphabet first, and if mean confidence falls below 0.95 it
-re-reads a downscaled copy with each other alphabet and keeps the best — provided
-it beats the default by a clear margin.
+Pass `language="auto"` and naina picks the alphabet per image. It recognises a
+sample of the highest-scoring detected boxes with each alphabet the registry
+describes and keeps the best, provided it beats the default by a margin. The
+chosen alphabet is reported back on the page, so it is never a silent guess.
+
+Detection is script-agnostic and runs once, so this costs recognition on a
+handful of strips rather than a second pass over the page.
 
 That comparison is *relative*, on the same image, which is the only thing that
 works. Measured: Cyrillic read with the wrong Devanagari model still scored
@@ -16,13 +19,17 @@ works. Measured: Cyrillic read with the wrong Devanagari model still scored
 And on Latin input every alphabet ties near 0.98 because they all contain Latin,
 so the default has to be displaced by a margin rather than merely beaten.
 
-**The libraries do not auto-detect.** Python, Node, Rust and Flutter take an
-explicit `language`, because auto-detection means having every alphabet's weights
-present — around 70 MB — which defeats the point of an 11 MB tier. The browser can
-afford it because the app serves all of them from its own origin.
+!!! warning "`auto` only considers alphabets already cached"
+    It will not download every model to answer the question — that would mean
+    88 MB where a named language needs 11 MB. On a build with no network in the
+    core (browser, Android), stage the candidates first or name the language.
 
-So in a library, naina reads **Latin + CJK** by default and any other alphabet
-when asked:
+    The [web app](https://jvoltci.github.io/naina/) handles this in two phases:
+    read with the default, and only if the result is weak fetch the other
+    alphabets and ask the core to decide. So a Latin document still costs 11 MB.
+
+naina reads **Latin + CJK** by default, `auto` to detect, or any alphabet by
+name:
 
 ```python
 page = naina.read("hindi.png", language="devanagari")
