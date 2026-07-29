@@ -32,6 +32,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 option(NAINA_BUILD_TESTS         "Build naina unit tests"          ON)
 option(NAINA_BUILD_SHARED        "Build naina as a shared library" ON)
 option(NAINA_BUILD_PYTHON        "Build the Python binding (naina-py)" OFF)
+option(NAINA_BUILD_WASM          "Build the WASM binding (Emscripten only)" OFF)
 option(NAINA_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors" ON)
 
 # Vendor yaml-cpp statically instead of linking a system copy. Redistributable
@@ -46,6 +47,9 @@ option(NAINA_RELEASE             "This is a release build (no -dev suffix)" OFF)
 
 option(NAINA_WITH_ONNXRUNTIME    "Enable ONNX Runtime backend" OFF)
 option(NAINA_WITH_NCNN           "Enable NCNN backend"         OFF)
+# Browser backend: naina's core compiled to WASM, execution delegated to
+# onnxruntime-web through JS. Emscripten only.
+option(NAINA_WITH_WASMJS         "Enable browser backend (onnxruntime-web)" OFF)
 option(NAINA_WITH_OPENVINO       "Enable OpenVINO backend"     OFF)
 option(NAINA_WITH_COREML         "Enable CoreML backend (Apple only)" OFF)
 option(NAINA_WITH_TENSORRT       "Enable TensorRT backend (NVIDIA only)" OFF)
@@ -84,13 +88,17 @@ if(NAINA_BUILD_PYTHON)
     add_subdirectory(bindings/python)
 endif()
 
+if(NAINA_BUILD_WASM)
+    add_subdirectory(bindings/wasm)
+endif()
+
 # ─── Install + export ──────────────────────────────────────────────────
 
 # C++ install / package-config rules fire for the standalone library
-# install, NOT for the Python wheel build (where we only want the .so and
-# the registry.yaml). NAINA_BUILD_PYTHON suppresses these so the wheel
-# stays small and self-contained.
-if(NOT NAINA_BUILD_PYTHON)
+# install, NOT for the binding builds. The Python wheel wants only the .so and
+# registry.yaml; the WASM build produces a .mjs/.wasm pair with nothing to
+# install at all, and its vendored static yaml-cpp is not in any export set.
+if(NOT NAINA_BUILD_PYTHON AND NOT NAINA_BUILD_WASM)
     include(GNUInstallDirs)
     include(CMakePackageConfigHelpers)
 
