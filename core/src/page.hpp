@@ -37,6 +37,14 @@ public:
     const char* markdown() const;
     const char* json() const;
 
+    // Install markdown produced by doc_assemble. Without this the page falls
+    // back to joining recognised lines, which is correct only when no layout
+    // model ran.
+    void set_markdown(std::string md);
+
+    // Assign a line's region after layout analysis.
+    void set_line_region(size_t line_index, int32_t region_id);
+
 private:
     // Stable string storage. Never reallocates existing nodes, unlike vector.
     std::deque<std::string> texts_;

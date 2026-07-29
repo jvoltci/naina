@@ -77,6 +77,17 @@ void Page::add_region(const naina_bbox& bbox, naina_region_kind kind, int32_t or
     json_.reset();
 }
 
+void Page::set_markdown(std::string md) {
+    markdown_ = std::move(md);
+}
+
+void Page::set_line_region(size_t line_index, int32_t region_id) {
+    if (line_index < lines_.size()) {
+        lines_[line_index].region_id = region_id;
+        json_.reset();
+    }
+}
+
 const char* Page::markdown() const {
     if (!markdown_.has_value()) {
         std::string out;

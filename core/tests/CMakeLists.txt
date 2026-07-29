@@ -49,3 +49,6 @@ if(NAINA_WITH_ONNXRUNTIME OR NAINA_WITH_NCNN)
         ENVIRONMENT "NAINA_REQUIRE_BACKEND=1"
     )
 endif()
+
+naina_add_test(test_doc_assemble)
+target_include_directories(test_doc_assemble PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
