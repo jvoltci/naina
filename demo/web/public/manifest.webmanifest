@@ -1,0 +1,13 @@
+{
+  "name": "naina — OCR in your browser",
+  "short_name": "naina",
+  "description": "Read text out of any document image, entirely on your device.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

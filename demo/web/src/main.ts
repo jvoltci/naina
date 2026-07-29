@@ -1,307 +1,304 @@
+// naina web demo.
+//
+// Everything here is UI. The OCR itself is one call into the WASM core:
+//
+//   reader.readJson(rgb, width, height)
+//
+// If you find yourself adding image processing or box decoding to this file, it
+// belongs in the C++ core instead — keeping it there is what makes the browser
+// and the server produce the same answers.
+
+import { createReader } from '@jvoltci/naina-wasm';
 import './styles.css';
-import * as ort from 'onnxruntime-web';
-import { Engine } from './engine';
-import type { FrameResult } from './types';
 
-// ── ORT runtime config ──────────────────────────────────────────────────
-// onnxruntime-web ≥1.18 resolves its own wasm assets through the bundler
-// (Vite hashes them into dist/assets/), so we don't set wasmPaths. We
-// only tune the thread count for the WASM EP.
-ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 1);
+type Line = {
+  text: string;
+  confidence: number;
+  score: number;
+  region_id: number;
+  quad: number[]; // x0,y0,x1,y1,x2,y2,x3,y3 in source pixels
+};
+type Region = { kind: string; order: number; bbox: number[] };
+type Page = { lines: Line[]; regions: Region[] };
+type Reader = Awaited<ReturnType<typeof createReader>>;
 
-// ── DOM refs ────────────────────────────────────────────────────────────
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const video      = $<HTMLVideoElement>('video');
-const overlay    = $<HTMLCanvasElement>('overlay');
-const statusEl   = $<HTMLDivElement>('status');
-const startBtn   = $<HTMLButtonElement>('start-btn');
-const stopBtn    = $<HTMLButtonElement>('stop-btn');
-const enrolBtn   = $<HTMLButtonElement>('enrol-btn');
-const enrolName  = $<HTMLInputElement>('enrol-name');
-const continuous = $<HTMLInputElement>('continuous');
-const thresholdR = $<HTMLInputElement>('threshold');
-const thresholdV = $<HTMLSpanElement>('threshold-value');
-const galleryUl  = $<HTMLUListElement>('gallery-list');
-const clearBtn   = $<HTMLButtonElement>('clear-btn');
-const mFaces     = $<HTMLElement>('m-faces');
-const mDetect    = $<HTMLElement>('m-detect');
-const mEmbed     = $<HTMLElement>('m-embed');
-const mFps       = $<HTMLElement>('m-fps');
-const mBackend   = $<HTMLElement>('m-backend');
 
-const ctx = overlay.getContext('2d')!;
+const dropEl = $<HTMLElement>('drop');
+const fileEl = $<HTMLInputElement>('file');
+const tierEl = $<HTMLSelectElement>('tier');
+const boxesEl = $<HTMLInputElement>('show-boxes');
+const statusEl = $<HTMLElement>('status');
+const statusTextEl = $<HTMLElement>('status-text');
+const barFillEl = $<HTMLElement>('bar-fill');
+const resultsEl = $<HTMLElement>('results');
+const canvasEl = $<HTMLCanvasElement>('canvas');
+const outputEl = $<HTMLElement>('output');
+const metaEl = $<HTMLElement>('meta');
+const errorEl = $<HTMLElement>('error');
+const tabMdEl = $<HTMLButtonElement>('tab-md');
+const tabJsonEl = $<HTMLButtonElement>('tab-json');
+const copyEl = $<HTMLButtonElement>('copy');
+const downloadEl = $<HTMLButtonElement>('download');
+const offlineBadgeEl = $<HTMLElement>('offline-badge');
 
-// ── state ───────────────────────────────────────────────────────────────
-let engine: Engine | null = null;
-let stream: MediaStream | null = null;
-let rafId = 0;
-let lastFrameTs = 0;
-let fpsEMA = 0;
-let selectedFaceIdx = -1;
-let lastFrameResult: FrameResult | null = null;
-let consecutiveErrors = 0;
-const MAX_CONSECUTIVE_ERRORS = 5;
+// One reader per tier, kept alive: creating one downloads weights, so returning
+// to a tier already used should cost nothing.
+const readers = new Map<string, Reader>();
 
-threshold(); // init label
+let lastMarkdown = '';
+let lastJson: Page | null = null;
+let lastBitmap: ImageBitmap | null = null;
+let view: 'md' | 'json' = 'md';
 
-// ── boot ────────────────────────────────────────────────────────────────
-(async function init() {
-  setStatus('Loading models (~40 MB, first run only)…');
-  try {
-    engine = await Engine.create({
-      modelBase: `${import.meta.env.BASE_URL}models`,
-      // OpenCV Zoo's YuNet 2023mar has a fixed 640x640 input. Don't
-      // change this unless you swap to a dynamic-input variant.
-      detectorInputSize: 640,
-      confidenceThreshold: 0.6,
-      nmsIouThreshold: 0.3,
-    });
-    mBackend.textContent = engine.backend;
-    setStatus('Models loaded. Click Start to begin.');
-    refreshGalleryUI();
-  } catch (err) {
-    console.error(err);
-    setStatus(`Failed to load models: ${(err as Error).message}`);
+function setStatus(text: string, fraction: number | null) {
+  statusEl.hidden = false;
+  statusTextEl.textContent = text;
+  if (fraction === null) {
+    barFillEl.style.width = '100%';
+    barFillEl.classList.add('is-indeterminate');
+  } else {
+    barFillEl.classList.remove('is-indeterminate');
+    barFillEl.style.width = `${Math.round(fraction * 100)}%`;
   }
-})();
-
-// ── controls ────────────────────────────────────────────────────────────
-startBtn.addEventListener('click', startCamera);
-stopBtn .addEventListener('click', stopCamera);
-clearBtn.addEventListener('click', () => { engine?.gallery.clear(); refreshGalleryUI(); });
-thresholdR.addEventListener('input', threshold);
-enrolBtn.addEventListener('click', enrolSelected);
-overlay.addEventListener('click', onOverlayClick);
-
-function threshold() {
-  thresholdV.textContent = (+thresholdR.value).toFixed(2);
 }
 
-async function startCamera() {
-  if (!engine) { setStatus('Engine not ready yet.'); return; }
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-      audio: false,
-    });
-  } catch (err) {
-    setStatus(`Camera permission denied or unavailable: ${(err as Error).message}`);
+function clearStatus() {
+  statusEl.hidden = true;
+  barFillEl.classList.remove('is-indeterminate');
+}
+
+function showError(message: string) {
+  clearStatus();
+  errorEl.hidden = false;
+  errorEl.textContent = message;
+}
+
+/**
+ * Decode at native resolution and hand naina the raw pixels.
+ *
+ * Deliberately no scaling here. Canvas scaling uses a browser-defined filter —
+ * the HTML spec leaves it implementation-defined and Chrome, Safari and Firefox
+ * differ — so resizing here would make the result depend on the browser. naina's
+ * own resize is the same code on every platform.
+ */
+function toRgb(bitmap: ImageBitmap): Uint8Array {
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('could not get a 2D canvas context');
+  ctx.drawImage(bitmap, 0, 0);
+  const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+
+  const rgb = new Uint8Array(bitmap.width * bitmap.height * 3);
+  for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+    rgb[j] = data[i];
+    rgb[j + 1] = data[i + 1];
+    rgb[j + 2] = data[i + 2];
+  }
+  return rgb;
+}
+
+async function readerFor(tier: string): Promise<Reader> {
+  const existing = readers.get(tier);
+  if (existing) return existing;
+
+  const mb = tier === 'tiny' ? 11 : 54;
+  setStatus(`Fetching the ${tier} model — about ${mb} MB, once…`, 0);
+
+  const reader = await createReader({
+    tier: tier as 'tiny' | 'small',
+    onProgress: (done: number, total: number, path: string) => {
+      const name = path.slice(path.lastIndexOf('/') + 1).replace(/^[0-9a-f]{16}__/, '');
+      setStatus(`Fetching weights — ${name} (${done} of ${total})`, done / total);
+    },
+  });
+  readers.set(tier, reader);
+  return reader;
+}
+
+function drawOverlay() {
+  if (!lastBitmap) return;
+
+  // Cap the backing store so a 4000px scan does not allocate an enormous
+  // canvas. This affects only what is drawn, never what naina read.
+  const maxSide = 1400;
+  const scale = Math.min(1, maxSide / Math.max(lastBitmap.width, lastBitmap.height));
+  canvasEl.width = Math.round(lastBitmap.width * scale);
+  canvasEl.height = Math.round(lastBitmap.height * scale);
+
+  const ctx = canvasEl.getContext('2d');
+  if (!ctx) return;
+  ctx.drawImage(lastBitmap, 0, 0, canvasEl.width, canvasEl.height);
+
+  if (!boxesEl.checked || !lastJson) return;
+
+  for (const line of lastJson.lines) {
+    const q = line.quad;
+    if (q.length < 8) continue;
+
+    // Confidence drives the hue — green when sure, amber when not — so it is
+    // obvious at a glance which lines to distrust.
+    const t = Math.max(0, Math.min(1, (line.confidence - 0.5) / 0.5));
+    const hue = Math.round(120 * t);
+    ctx.strokeStyle = `hsl(${hue} 85% 55% / 0.95)`;
+    ctx.fillStyle = `hsl(${hue} 85% 55% / 0.10)`;
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(q[0] * scale, q[1] * scale);
+    for (let i = 2; i < 8; i += 2) ctx.lineTo(q[i] * scale, q[i + 1] * scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+function renderOutput() {
+  tabMdEl.classList.toggle('is-active', view === 'md');
+  tabJsonEl.classList.toggle('is-active', view === 'json');
+  outputEl.textContent =
+    view === 'md' ? lastMarkdown : lastJson ? JSON.stringify(lastJson, null, 2) : '';
+}
+
+async function read(bitmap: ImageBitmap) {
+  errorEl.hidden = true;
+
+  const reader = await readerFor(tierEl.value);
+  setStatus('Reading the page…', null);
+  const rgb = toRgb(bitmap);
+
+  const started = performance.now();
+  const markdown = await reader.readMarkdown(rgb, bitmap.width, bitmap.height);
+  const page = (await reader.readJson(rgb, bitmap.width, bitmap.height)) as Page | null;
+  const elapsed = performance.now() - started;
+
+  if (!markdown && !page) {
+    showError(`naina could not read that page: ${reader.lastError()}`);
     return;
   }
 
-  video.srcObject = stream;
-  await video.play();
-  syncCanvasToVideo();
+  lastBitmap = bitmap;
+  lastMarkdown = markdown;
+  lastJson = page;
 
-  startBtn.disabled = true;
-  stopBtn.disabled  = false;
-  setStatus('Running…');
-  lastFrameTs = performance.now();
-  fpsEMA = 0;
-  loop();
+  const lines = page?.lines.length ?? 0;
+  const regions = page?.regions.length ?? 0;
+  const mean = lines && page ? page.lines.reduce((a, l) => a + l.confidence, 0) / lines : 0;
+  metaEl.textContent =
+    `${bitmap.width}×${bitmap.height} · ${lines} lines · ${regions} regions · ` +
+    `mean confidence ${mean.toFixed(2)} · ${(elapsed / 1000).toFixed(1)}s`;
+
+  clearStatus();
+  resultsEl.hidden = false;
+  drawOverlay();
+  renderOutput();
 }
 
-function stopCamera() {
-  cancelAnimationFrame(rafId);
-  rafId = 0;
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-  }
-  video.srcObject = null;
-  startBtn.disabled = false;
-  stopBtn.disabled  = true;
-  setStatus('Stopped.');
-  selectedFaceIdx = -1;
-  enrolBtn.disabled = true;
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-}
-
-function syncCanvasToVideo() {
-  overlay.width  = video.videoWidth  || 1280;
-  overlay.height = video.videoHeight || 720;
-}
-
-// ── main loop ───────────────────────────────────────────────────────────
-async function loop() {
-  if (!engine || !stream) return;
-
-  const now = performance.now();
-  const dt = now - lastFrameTs;
-  lastFrameTs = now;
-  const fps = 1000 / Math.max(1, dt);
-  fpsEMA = fpsEMA === 0 ? fps : 0.9 * fpsEMA + 0.1 * fps;
-
-  let result: FrameResult;
+async function handleFile(file: File | Blob) {
+  errorEl.hidden = true;
+  let bitmap: ImageBitmap;
   try {
-    if (continuous.checked) {
-      result = await engine.recognizeFrame(video, +thresholdR.value);
-    } else {
-      const faces = await engine.detectFaces(video);
-      result = {
-        faces,
-        matches: faces.map(() => ({ identityId: null, name: 'unknown', similarity: 0 })),
-        timings: { detectMs: 0, embedMsPerFace: 0 },
-      };
-    }
-  } catch (err) {
-    consecutiveErrors++;
-    console.error(err);
-    setStatus(`Inference error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${(err as Error).message}`);
-    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-      stopCamera();
-      setStatus(`Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors. Try refreshing the page.`);
-      return;
-    }
-    // Re-draw last good result so bbox doesn't flicker on transient errors.
-    syncCanvasToVideo();
-    if (lastFrameResult) draw(lastFrameResult);
-    rafId = requestAnimationFrame(loop);
+    bitmap = await createImageBitmap(file);
+  } catch {
+    showError('That file could not be decoded as an image.');
     return;
   }
-
-  consecutiveErrors = 0;
-  lastFrameResult = result;
-
-  // Clamp selection if face count changed.
-  if (selectedFaceIdx >= result.faces.length) selectedFaceIdx = -1;
-
-  syncCanvasToVideo();
-  draw(result);
-  updateMetrics(result, fpsEMA);
-
-  rafId = requestAnimationFrame(loop);
+  try {
+    await read(bitmap);
+  } catch (e) {
+    showError(e instanceof Error ? e.message : String(e));
+  }
 }
 
-// ── drawing ─────────────────────────────────────────────────────────────
-function draw(result: FrameResult) {
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-  ctx.lineWidth = 3;
-  ctx.font = '600 16px ui-sans-serif, system-ui, sans-serif';
-  ctx.textBaseline = 'bottom';
+// ── wiring ─────────────────────────────────────────────────────────────
 
-  result.faces.forEach((face, i) => {
-    const match = result.matches[i];
-    const isSelected = i === selectedFaceIdx;
-    const recognized = match.identityId !== null;
-    const color = isSelected ? '#5eead4'
-                : recognized ? '#34d399'
-                :              '#f59e0b';
+dropEl.addEventListener('click', () => fileEl.click());
+dropEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileEl.click();
+  }
+});
+fileEl.addEventListener('change', () => {
+  const f = fileEl.files?.[0];
+  if (f) void handleFile(f);
+});
 
-    // bbox
-    ctx.strokeStyle = color;
-    ctx.strokeRect(face.bbox.x, face.bbox.y, face.bbox.w, face.bbox.h);
-
-    // landmarks
-    ctx.fillStyle = color;
-    for (const p of face.landmarks) {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // label
-    const label = recognized
-      ? `${match.name} · ${(match.similarity * 100).toFixed(0)}%`
-      : (engine!.gallery.size() > 0
-          ? `unknown · ${(match.similarity * 100).toFixed(0)}%`
-          : `face #${i + 1}`);
-    drawLabel(face.bbox.x, face.bbox.y, label, color);
+for (const type of ['dragenter', 'dragover'] as const) {
+  dropEl.addEventListener(type, (e) => {
+    e.preventDefault();
+    dropEl.classList.add('is-over');
   });
 }
-
-function drawLabel(x: number, y: number, text: string, color: string) {
-  const pad = 4;
-  const metrics = ctx.measureText(text);
-  const w = metrics.width + pad * 2;
-  const h = 22;
-  // The video and overlay are flipped via CSS (scaleX(-1)) so the user
-  // sees a mirror image. We draw labels in canvas coords, then flip the
-  // text horizontally so it reads correctly on screen.
-  ctx.save();
-  ctx.translate(x, Math.max(h, y));
-  ctx.scale(-1, 1);                 // unflip text horizontally
-  ctx.fillStyle = color;
-  ctx.fillRect(-w, -h, w, h);
-  ctx.fillStyle = '#0a0f2c';
-  ctx.fillText(text, -w + pad, -pad);
-  ctx.restore();
+for (const type of ['dragleave', 'drop'] as const) {
+  dropEl.addEventListener(type, () => dropEl.classList.remove('is-over'));
 }
+dropEl.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer?.files?.[0];
+  if (f) void handleFile(f);
+});
 
-function updateMetrics(result: FrameResult, fps: number) {
-  mFaces.textContent  = String(result.faces.length);
-  mDetect.textContent = `${result.timings.detectMs.toFixed(1)} ms`;
-  mEmbed.textContent  = result.faces.length
-    ? `${result.timings.embedMsPerFace.toFixed(1)} ms`
-    : '— ms';
-  mFps.textContent    = `${fps.toFixed(1)} fps`;
-}
+// Paste anywhere on the page — the fastest path for a screenshot.
+window.addEventListener('paste', (e) => {
+  const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+    i.type.startsWith('image/'),
+  );
+  const blob = item?.getAsFile();
+  if (blob) void handleFile(blob);
+});
 
-function setStatus(msg: string) { statusEl.textContent = msg; }
+boxesEl.addEventListener('change', drawOverlay);
+tabMdEl.addEventListener('click', () => {
+  view = 'md';
+  renderOutput();
+});
+tabJsonEl.addEventListener('click', () => {
+  view = 'json';
+  renderOutput();
+});
 
-// ── selection + enrolment ───────────────────────────────────────────────
-function onOverlayClick(ev: MouseEvent) {
-  if (!lastFrameResult) return;
-  const rect = overlay.getBoundingClientRect();
-  // Canvas drawing is in unflipped coords. The CSS scaleX(-1) means the
-  // user sees pixel column W-1-clickX. Translate accordingly.
-  const cx = (overlay.width  / rect.width)  * (rect.width  - (ev.clientX - rect.left));
-  const cy = (overlay.height / rect.height) * (ev.clientY - rect.top);
+copyEl.addEventListener('click', async () => {
+  const text = view === 'md' ? lastMarkdown : JSON.stringify(lastJson, null, 2);
+  await navigator.clipboard.writeText(text);
+  copyEl.textContent = 'Copied';
+  setTimeout(() => {
+    copyEl.textContent = 'Copy';
+  }, 1200);
+});
 
-  const hit = lastFrameResult.faces.findIndex(f =>
-    cx >= f.bbox.x && cx <= f.bbox.x + f.bbox.w &&
-    cy >= f.bbox.y && cy <= f.bbox.y + f.bbox.h);
+downloadEl.addEventListener('click', () => {
+  const md = view === 'md';
+  const blob = new Blob([md ? lastMarkdown : JSON.stringify(lastJson, null, 2)], {
+    type: md ? 'text/markdown' : 'application/json',
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = md ? 'page.md' : 'page.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 
-  selectedFaceIdx = hit;
-  enrolBtn.disabled = hit < 0;
-  if (lastFrameResult) draw(lastFrameResult);
-}
+// Switching tier invalidates what is on screen, since it was read by the other
+// model. Re-read the same image rather than leaving a stale result beside a new
+// label.
+tierEl.addEventListener('change', () => {
+  if (lastBitmap) void read(lastBitmap).catch((e: unknown) => showError(String(e)));
+});
 
-async function enrolSelected() {
-  if (!engine || selectedFaceIdx < 0 || !lastFrameResult) return;
-  const name = enrolName.value.trim();
-  if (!name) { setStatus('Type a name first.'); return; }
+// ── offline ────────────────────────────────────────────────────────────
 
-  // Snapshot the *current* video frame at the time of the click,
-  // because the live frame may have moved on.
-  const face = lastFrameResult.faces[selectedFaceIdx];
-  try {
-    const emb = await engine.embedFace(video, face);
-    engine.gallery.enrol(name, emb);
-    enrolName.value = '';
-    refreshGalleryUI();
-    setStatus(`Enrolled ${name}. Now showing live recognition.`);
-  } catch (err) {
-    setStatus(`Enrolment failed: ${(err as Error).message}`);
-  }
-}
-
-function refreshGalleryUI() {
-  if (!engine) return;
-  galleryUl.innerHTML = '';
-  const list = engine.gallery.list();
-  if (list.length === 0) {
-    const li = document.createElement('li');
-    li.style.color = 'var(--fg-dim)';
-    li.style.fontStyle = 'italic';
-    li.textContent = 'No one enrolled yet';
-    galleryUl.appendChild(li);
-    return;
-  }
-  for (const item of list) {
-    const li = document.createElement('li');
-    const name = document.createElement('span');
-    name.textContent = item.name;
-    const pill = document.createElement('span');
-    pill.className = 'pill';
-    pill.textContent = `${item.embedding.length}-d`;
-    const rm = document.createElement('button');
-    rm.textContent = 'remove';
-    rm.addEventListener('click', () => {
-      engine!.gallery.remove(item.id);
-      refreshGalleryUI();
-    });
-    li.append(name, pill, rm);
-    galleryUl.appendChild(li);
-  }
+// The service worker caches the app shell and the wasm. Model weights are
+// cached separately by the runtime, keyed on their immutable release URLs.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`)
+      .then(() => {
+        offlineBadgeEl.hidden = false;
+      })
+      .catch(() => {
+        // Offline support is a bonus; the app works without it.
+      });
+  });
 }

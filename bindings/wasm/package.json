@@ -1,12 +1,15 @@
 {
   "name": "@jvoltci/naina-wasm",
   "version": "0.2.0",
-  "description": "naina in the browser — OCR from the same C++ core, compiled to WebAssembly",
+  "description": "naina in the browser \u2014 OCR from the same C++ core, compiled to WebAssembly",
   "type": "module",
   "license": "Apache-2.0",
   "main": "./src/index.mjs",
   "exports": {
-    ".": "./src/index.mjs",
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    },
     "./runtime": "./src/runtime.mjs",
     "./naina.wasm": "./dist/naina.wasm"
   },
@@ -36,5 +39,6 @@
   ],
   "engines": {
     "node": ">=20"
-  }
+  },
+  "types": "./src/index.d.ts"
 }
