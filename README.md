@@ -71,10 +71,16 @@ three.
 | `naina` | pub.dev | Flutter, FFI | built; Android verified on a device, iOS unproven |
 | — | — | [MCP server](mcp/) for LLM tools | works, in-repo |
 
-The npm publish fails with `E404` on `PUT @jvoltci/naina`, which means the
-`@jvoltci` scope is not resolvable for the authenticated account — it must exist
-as an npm **org** or match the account's username. (Unscoped `naina` on npm is
-already taken by someone else, so the scope is not optional.)
+**npm is not published yet.** The publish fails with `E404` on
+`PUT @jvoltci/naina`. Unscoped `naina` on npm is taken by another package, so the
+scope is not optional. Resolving it needs an npm token with write access to the
+`@jvoltci` scope — or better, npm's Trusted Publishing (OIDC), which the release
+workflow is already wired for: both npm jobs request `id-token: write`, so
+enabling it is a matter of dropping the `NODE_AUTH_TOKEN` line.
+
+Trusted Publishing is worth preferring here, and not only on principle: npm
+granular tokens with write access expire in **90 days at most**, so a
+token-based release breaks on a timer.
 
 ```python
 import naina
