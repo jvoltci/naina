@@ -1,6 +1,5 @@
 # naina OCR Core — v0.2 Text Spotting Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn naina's existing C++ inference engine into a text spotter — detect text quads in an image, recognise the characters in each, and return them through the C ABI to the existing Python and Node bindings.
 

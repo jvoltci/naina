@@ -1,4 +1,0 @@
-- [naina OCR pivot](naina-ocr-pivot.md) — naina lives at ~/Documents/code/naina; rebuilt from face recognition into an OCR runtime; wins on distribution, not accuracy
-- [Verify by running, not reading](verify-by-running-not-reading.md) — plans, hand-computed numbers and agent reports here have repeatedly been confidently wrong; execute before believing
-- [jvoltci package conventions](jvoltci-package-conventions.md) — GitHub `jvoltci`; house README/hero-SVG/mkdocs style, platform-agnostic by default, never paste tokens in chat
-- [naina known gaps](naina-known-gaps.md) — it fabricates Hindi text at 0.758 confidence; ORT dictates every platform floor; WebGPU silently kills layout

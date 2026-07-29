@@ -9,7 +9,7 @@ fully usable surface, not a half-built layer.
 > reading, which is what the name always suited — *naina* means eyes. The face
 > modules are preserved on the
 > [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack) branch. See
-> [the design spec](https://github.com/jvoltci/naina/blob/master/docs/superpowers/specs/2026-07-28-naina-ocr-design.md) for why.
+> [the design spec](https://github.com/jvoltci/naina/blob/master/docs/design/specs/2026-07-28-naina-ocr-design.md) for why.
 
 ## v0.1 — Engine  *(shipped)*
 

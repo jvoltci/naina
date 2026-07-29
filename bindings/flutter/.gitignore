@@ -12,3 +12,4 @@ ios/Pods/
 example/android/local.properties
 example/ios/Pods/
 example/integration_test/
+android/.gradle/

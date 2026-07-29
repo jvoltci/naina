@@ -275,7 +275,7 @@ dependency bump away, not a rewrite.
 
 - [**Architecture**](docs/ARCHITECTURE.md) — the C ABI, backends, model registry
 - [**Roadmap**](docs/ROADMAP.md) — what ships when
-- [**Design spec**](docs/superpowers/specs/2026-07-28-naina-ocr-design.md) — why naina is shaped this way
+- [**Design spec**](docs/design/specs/2026-07-28-naina-ocr-design.md) — why naina is shaped this way
 - [**Contributing**](CONTRIBUTING.md)
 
 ## The name

@@ -82,3 +82,8 @@ Thumbs.db
 
 # CMake user presets
 CMakeUserPresets.json
+
+# Local working notes and assistant context. Never committed: these are scratch,
+# and transcripts can carry pasted credentials.
+.session/
+CLAUDE.md
