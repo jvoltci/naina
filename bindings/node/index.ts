@@ -98,6 +98,17 @@ export interface EngineOptions {
     tier?: Tier;
     modelsRoot?: string;
     numThreads?: number;
+
+    /**
+     * Recognition alphabet. Omitted or `''` reads Latin and CJK;
+     * `'devanagari'` reads Hindi, Marathi, Nepali and Sanskrit.
+     *
+     * Choosing wrong does not raise: reading a Devanagari page with the default
+     * alphabet returns plausible-looking Latin at high confidence, because
+     * confidence measures certainty *within* the model's own alphabet. An
+     * unrecognised value throws rather than falling back.
+     */
+    language?: string;
 }
 
 // ── Native module surface ────────────────────────────────────────────

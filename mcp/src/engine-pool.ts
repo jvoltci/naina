@@ -42,17 +42,20 @@ export function baseOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): BaseEn
 
 export class EnginePool {
     private readonly base: BaseEngineOptions;
-    private readonly engines = new Map<Tier, Engine>();
+    // Keyed by "tier/language": those select different recognition models, so
+    // one Engine cannot serve both.
+    private readonly engines = new Map<string, Engine>();
 
     constructor(base: BaseEngineOptions = {}) {
         this.base = base;
     }
 
-    get(tier: Tier = 'auto'): Engine {
-        let engine = this.engines.get(tier);
+    get(tier: Tier = 'auto', language: string = ''): Engine {
+        const key = `${tier}/${language}`;
+        let engine = this.engines.get(key);
         if (engine === undefined) {
-            engine = new Engine({ ...this.base, tier });
-            this.engines.set(tier, engine);
+            engine = new Engine({ ...this.base, tier, language });
+            this.engines.set(key, engine);
         }
         return engine;
     }

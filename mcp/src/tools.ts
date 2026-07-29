@@ -30,9 +30,24 @@ const readInputShape = {
                 'Default "auto". Weights for a tier are downloaded and cached on that tier\'s first use -- ' +
                 'that first call can take up to a minute on a slow connection; later calls are fast.',
         ),
+    language: z
+        .enum(['latin', 'devanagari'])
+        .optional()
+        .describe(
+            'Script of the document. "latin" (default) also covers Chinese, Japanese and Korean. ' +
+                '"devanagari" reads Hindi, Marathi, Nepali and Sanskrit. ' +
+                'IMPORTANT: choosing wrong does not produce an error -- reading a Hindi page as ' +
+                '"latin" returns plausible-looking but entirely wrong Latin text at high ' +
+                'confidence. Set this from the document, and do not trust confidence to warn you.',
+        ),
 };
 
-type ReadArgs = { path?: string; imageBase64?: string; tier?: 'auto' | 'tiny' | 'small' | 'medium' };
+type ReadArgs = {
+    path?: string;
+    imageBase64?: string;
+    tier?: 'auto' | 'tiny' | 'small' | 'medium';
+    language?: 'latin' | 'devanagari';
+};
 
 function toolError(err: unknown): CallToolResult {
     const known = err instanceof NainaMcpError ? err : translateEngineError(err);
@@ -54,7 +69,10 @@ export function registerTools(server: McpServer, engines: EnginePool): void {
         async (args: ReadArgs): Promise<CallToolResult> => {
             try {
                 const image = await decodeImage({ path: args.path, imageBase64: args.imageBase64 });
-                const engine = engines.get(args.tier ?? 'auto');
+                const engine = engines.get(
+                    args.tier ?? 'auto',
+                    args.language === 'devanagari' ? 'devanagari' : '',
+                );
                 const page = await engine.read(image);
                 return { content: [{ type: 'text', text: page.markdown }] };
             } catch (err) {
@@ -78,7 +96,10 @@ export function registerTools(server: McpServer, engines: EnginePool): void {
         async (args: ReadArgs): Promise<CallToolResult> => {
             try {
                 const image = await decodeImage({ path: args.path, imageBase64: args.imageBase64 });
-                const engine = engines.get(args.tier ?? 'auto');
+                const engine = engines.get(
+                    args.tier ?? 'auto',
+                    args.language === 'devanagari' ? 'devanagari' : '',
+                );
                 const page = await engine.read(image);
                 const detailed = {
                     width: image.width,
