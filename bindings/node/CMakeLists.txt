@@ -13,6 +13,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(NAINA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(NAINA_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(NAINA_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+# An addon with no inference backend compiled in cannot read anything, so
+# default this ON rather than inheriting the option's OFF default. Left
+# overridable so a caller can deliberately build core-only.
+if(NOT DEFINED NAINA_WITH_ONNXRUNTIME)
+    set(NAINA_WITH_ONNXRUNTIME ON CACHE BOOL "" FORCE)
+endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../.. naina_core_build EXCLUDE_FROM_ALL)
 
 # ── Native module ──────────────────────────────────────────────────────
