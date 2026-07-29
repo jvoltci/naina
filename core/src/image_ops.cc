@@ -347,8 +347,8 @@ void resize_det_bgr_planar_f32(const ImageView& src,
             for (int32_t x = 0; x < plan.out_w; ++x) {
                 const float fx = (static_cast<float>(x) + 0.5F) * inv_x - 0.5F;
                 const float raw = bilinear_u8(src, fx, fy, ch);
-                out[static_cast<size_t>(y) * static_cast<size_t>(plan.out_w) + static_cast<size_t>(x)] =
-                    (raw * s - m) / d;
+                out[static_cast<size_t>(y) * static_cast<size_t>(plan.out_w) +
+                    static_cast<size_t>(x)] = (raw * s - m) / d;
             }
         }
     }
@@ -441,8 +441,8 @@ void warp_quad_bgr_planar_f32(const ImageView& src,
                 const float d = (std_[ch] != 0.0F) ? std_[ch] : 1.0F;
                 const float raw = bilinear_u8(src, sx, sy, ch);
                 dst[static_cast<size_t>(ch) * plane +
-                    static_cast<size_t>(y) * static_cast<size_t>(plan.width) + static_cast<size_t>(x)] =
-                    (raw * scale[ch] - mean[ch]) / d;
+                    static_cast<size_t>(y) * static_cast<size_t>(plan.width) +
+                    static_cast<size_t>(x)] = (raw * scale[ch] - mean[ch]) / d;
             }
         }
     }

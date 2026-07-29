@@ -68,7 +68,8 @@ static std::vector<uint8_t> make_bgr(int w, int h) {
     std::vector<uint8_t> px(static_cast<size_t>(w) * static_cast<size_t>(h) * 3);
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
-            const size_t i = (static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 3;
+            const size_t i =
+                (static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 3;
             px[i + 0] = 10;   // B constant
             px[i + 1] = 128;  // G constant
             px[i + 2] = 250;  // R constant
@@ -91,8 +92,9 @@ static void test_resize_det_normalises_per_channel() {
     const float mean[3] = {0.485F, 0.456F, 0.406F};
     const float sd[3] = {0.229F, 0.224F, 0.225F};
 
-    std::vector<float> dst(static_cast<size_t>(3) * static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h),
-                            -999.0F);
+    std::vector<float> dst(
+        static_cast<size_t>(3) * static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h),
+        -999.0F);
     resize_det_bgr_planar_f32(src, plan, scale, mean, sd, dst.data());
 
     // Planar layout: channel 0 is the whole first plane.
@@ -127,8 +129,9 @@ static void test_resize_det_downscales_dimensions() {
     const float scale[3] = {1.0F, 1.0F, 1.0F};
     const float mean[3] = {0.0F, 0.0F, 0.0F};
     const float sd[3] = {1.0F, 1.0F, 1.0F};
-    std::vector<float> dst(static_cast<size_t>(3) * static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h),
-                            -999.0F);
+    std::vector<float> dst(
+        static_cast<size_t>(3) * static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h),
+        -999.0F);
     resize_det_bgr_planar_f32(src, plan, scale, mean, sd, dst.data());
 
     // With identity normalisation the raw channel values survive.
@@ -199,7 +202,8 @@ static void test_warp_quad_extracts_the_right_pixels() {
     std::vector<uint8_t> px(static_cast<size_t>(w) * static_cast<size_t>(h) * 3, 0);
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
-            const size_t i = (static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 3;
+            const size_t i =
+                (static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 3;
             const uint8_t v = (x >= w / 2) ? 200 : 0;
             px[i + 0] = v;
             px[i + 1] = v;
@@ -218,8 +222,9 @@ static void test_warp_quad_extracts_the_right_pixels() {
     const float scale[3] = {1.0F, 1.0F, 1.0F};
     const float mean[3] = {0.0F, 0.0F, 0.0F};
     const float sd[3] = {1.0F, 1.0F, 1.0F};
-    std::vector<float> dst(static_cast<size_t>(3) * static_cast<size_t>(s.width) * static_cast<size_t>(s.height),
-                            -999.0F);
+    std::vector<float> dst(
+        static_cast<size_t>(3) * static_cast<size_t>(s.width) * static_cast<size_t>(s.height),
+        -999.0F);
     naina::internal::warp_quad_bgr_planar_f32(src, q, s, scale, mean, sd, dst.data());
 
     // Every sample came from the bright half.

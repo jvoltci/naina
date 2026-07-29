@@ -20,8 +20,8 @@
 namespace naina::internal::text_recognize {
 
 struct Config {
-    int32_t height = 48;      // rec input height is fixed by the graph
-    int32_t max_width = 1200; // clamp so one bad quad cannot allocate unbounded
+    int32_t height = 48;       // rec input height is fixed by the graph
+    int32_t max_width = 1200;  // clamp so one bad quad cannot allocate unbounded
     float scale[3] = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F / 255.0F};
     float mean[3] = {0.5F, 0.5F, 0.5F};
     float std_[3] = {0.5F, 0.5F, 0.5F};

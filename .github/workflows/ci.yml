@@ -44,19 +44,43 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
 
+      # No apt package exists for ONNX Runtime, so take the upstream release
+      # tarball. The presets enable the backend on every platform, because a
+      # build without one cannot run inference and its tests pass vacuously.
+      - name: Install ONNX Runtime (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ORT_VERSION: 1.20.1
+        run: |
+          set -euo pipefail
+          curl -fsSL -o ort.tgz \
+            "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz"
+          sudo mkdir -p /usr/local
+          sudo tar -xzf ort.tgz -C /usr/local --strip-components=1
+          sudo ldconfig
+          test -f /usr/local/include/onnxruntime_c_api.h
+
       - name: Install build deps (macOS)
         if: runner.os == 'macOS'
         # libcurl ships with macOS; nothing extra to install for it.
-        run: brew install ninja cmake yaml-cpp
+        run: brew install ninja cmake yaml-cpp onnxruntime
 
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
+
+      # Guard the trap that once hid a whole backend-less build: every test
+      # either needs no backend or skips without one, so the suite reported
+      # 100% green while the inference path was not compiled at all.
+      - name: Assert an inference backend is compiled in
+        run: |
+          grep -q '^NAINA_WITH_ONNXRUNTIME:BOOL=ON$' \
+            build/${{ matrix.preset }}/CMakeCache.txt
 
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }}
 
       - name: Test
-        run: ctest --preset ${{ matrix.preset == 'macos-arm64' && 'macos-arm64' || 'linux-x86_64' }}
+        run: ctest --preset ${{ matrix.preset }}
         continue-on-error: false
 
   format:
@@ -95,9 +119,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
+      # pyproject sets NAINA_WITH_ONNXRUNTIME=ON, since a wheel with no
+      # inference backend cannot read anything.
+      - name: Install ONNX Runtime (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ORT_VERSION: 1.20.1
+        run: |
+          set -euo pipefail
+          curl -fsSL -o ort.tgz \
+            "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz"
+          sudo mkdir -p /usr/local
+          sudo tar -xzf ort.tgz -C /usr/local --strip-components=1
+          sudo ldconfig
       - name: Install system deps (macOS)
         if: runner.os == 'macOS'
-        run: brew install ninja cmake yaml-cpp
+        run: brew install ninja cmake yaml-cpp onnxruntime
 
       - name: pip install naina
         # Plain install (not editable) so it runs through the full sdist path

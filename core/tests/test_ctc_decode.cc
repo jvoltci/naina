@@ -1,7 +1,6 @@
 // CTC greedy decode: [T, C] logits -> string + confidence.
-#include "modules/ctc_decode.hpp"
-
 #include "modules/charset.hpp"
+#include "modules/ctc_decode.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -80,7 +79,9 @@ static void test_confidence_is_mean_over_emitted_steps_only() {
     // Two emitted characters at 0.8, plus a blank step at 0.99 that must NOT
     // inflate the average.
     std::vector<float> v(3 * 5, 0.0F);
-    auto set = [&](int t, int c, float p) { v[static_cast<size_t>(t * 5 + c)] = p; };
+    auto set = [&](int t, int c, float p) {
+        v[static_cast<size_t>(t * 5 + c)] = p;
+    };
     set(0, 1, 0.8F);
     set(1, 0, 0.99F);  // blank
     set(2, 2, 0.8F);

@@ -47,7 +47,8 @@ static void test_text_pointers_stay_valid_after_many_appends() {
     constexpr int kN = 500;
     for (int i = 0; i < kN; ++i) {
         p.add_line(box_at(static_cast<float>(i), 0.0F, 10.0F, 5.0F, 0.9F),
-                   "line-" + std::to_string(i), 0.8F);
+                   "line-" + std::to_string(i),
+                   0.8F);
     }
     const auto lines = p.lines();
     EXPECT(lines.size() == static_cast<size_t>(kN));

@@ -21,11 +21,11 @@ struct Bitmap {
 };
 
 struct Config {
-    float thresh = 0.2F;          // probability -> foreground
-    float box_thresh = 0.4F;      // mean probability inside a box to keep it
-    float unclip_ratio = 1.4F;    // DBNet shrink compensation
+    float thresh = 0.2F;        // probability -> foreground
+    float box_thresh = 0.4F;    // mean probability inside a box to keep it
+    float unclip_ratio = 1.4F;  // DBNet shrink compensation
     int32_t max_candidates = 3000;
-    float min_box_side = 3.0F;    // discard boxes thinner than this
+    float min_box_side = 3.0F;  // discard boxes thinner than this
 };
 
 // Threshold a probability map into a Bitmap. `prob` is height*width row-major.
@@ -34,15 +34,11 @@ Bitmap binarize(const float* prob, int32_t width, int32_t height, float thresh);
 // Border pixels of each 8-connected foreground blob, at most
 // `max_candidates` blobs. Blob order follows a raster scan of seed pixels,
 // which makes the output deterministic.
-std::vector<std::vector<naina_point>> find_blob_borders(const Bitmap& bm,
-                                                        int32_t max_candidates);
+std::vector<std::vector<naina_point>> find_blob_borders(const Bitmap& bm, int32_t max_candidates);
 
 // Mean probability inside a quad, sampled over its axis-aligned extent.
 // This is PaddleOCR's box_score_fast.
-float box_score(const float* prob,
-                int32_t width,
-                int32_t height,
-                const naina_point quad[4]);
+float box_score(const float* prob, int32_t width, int32_t height, const naina_point quad[4]);
 
 // Full decode: probability map -> quads in probability-map coordinates.
 // Callers scale the result back to source coordinates.

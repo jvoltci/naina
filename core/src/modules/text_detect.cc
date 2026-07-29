@@ -22,8 +22,7 @@ naina_status detect(backend::ISession* session,
     }
 
     // 1) Plan the resize, then build the normalised planar BGR input.
-    const DetResize plan =
-        plan_det_resize(src.width, src.height, cfg.limit_side, cfg.multiple_of);
+    const DetResize plan = plan_det_resize(src.width, src.height, cfg.limit_side, cfg.multiple_of);
     if (plan.out_w <= 0 || plan.out_h <= 0) {
         return NAINA_E_INVALID_ARG;
     }
@@ -31,19 +30,19 @@ naina_status detect(backend::ISession* session,
     std::vector<float> input(3U * plane);
     resize_det_bgr_planar_f32(src, plan, cfg.scale, cfg.mean, cfg.std_, input.data());
 
-    Tensor in = Tensor::view(input.data(),
-                             {1, 3, static_cast<int64_t>(plan.out_h),
-                              static_cast<int64_t>(plan.out_w)},
-                             DType::F32);
+    Tensor in =
+        Tensor::view(input.data(),
+                     {1, 3, static_cast<int64_t>(plan.out_h), static_cast<int64_t>(plan.out_w)},
+                     DType::F32);
 
     // 2) The backend copies results into a caller-allocated buffer and drops
     //    the real shape, so the size must be exact. DBNet's output resolution
     //    equals its input resolution.
     std::vector<float> prob(plane, 0.0F);
-    Tensor out = Tensor::view(prob.data(),
-                              {1, 1, static_cast<int64_t>(plan.out_h),
-                               static_cast<int64_t>(plan.out_w)},
-                              DType::F32);
+    Tensor out =
+        Tensor::view(prob.data(),
+                     {1, 1, static_cast<int64_t>(plan.out_h), static_cast<int64_t>(plan.out_w)},
+                     DType::F32);
 
     std::vector<Tensor> ins;
     ins.push_back(std::move(in));

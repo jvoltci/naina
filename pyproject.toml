@@ -68,3 +68,8 @@ sdist.exclude = [
 NAINA_BUILD_PYTHON = "ON"
 NAINA_BUILD_TESTS = "OFF"
 NAINA_BUILD_SHARED = "OFF"
+# A wheel with no inference backend compiled in cannot read anything, so this
+# is ON rather than inheriting the option's OFF default. Release-engineering
+# note: this links the SYSTEM onnxruntime, so publishable wheels need it
+# vendored (delocate on macOS, auditwheel on Linux) rather than assumed.
+NAINA_WITH_ONNXRUNTIME = "ON"
