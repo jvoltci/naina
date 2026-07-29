@@ -1,0 +1,8 @@
+# The raw transcript is ~11 MB of conversation and is kept locally for reference,
+# not committed: it is not repository material, it would sit in git history
+# forever, and transcripts can contain pasted credentials. One revoked npm token
+# was already found and redacted in this copy.
+#
+# The memory/ files beside it ARE committed — they are short, durable project
+# context worth keeping.
+transcript-*.jsonl
