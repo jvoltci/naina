@@ -70,6 +70,18 @@ else()
         -Wnull-dereference -Wdouble-promotion
         -Wformat=2
     )
+    # GCC 12 emits a false -Wrestrict inside libstdc++'s own char_traits.h when
+    # optimising std::string appends, claiming a memcpy of
+    # 9223372036854775810 bytes. The number is nonsense and the code is a plain
+    # `*out += str`; it is a known GCC bug, not a defect here. It only bites at
+    # -O3, which is why it appeared in the manylinux_2_28 wheel build (gcc-toolset-12)
+    # and on no other compiler naina builds with.
+    #
+    # Scoped to GCC so clang and MSVC keep the full check.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(naina_warnings INTERFACE -Wno-restrict)
+    endif()
+
     if(NAINA_WARNINGS_AS_ERRORS)
         target_compile_options(naina_warnings INTERFACE -Werror)
     endif()
