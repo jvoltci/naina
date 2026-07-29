@@ -123,22 +123,19 @@ before-all = "bash {project}/tools/ci/install_onnxruntime.sh"
 # it into the wheel. Without it the repair step fails with "not found" even
 # though the file is right there.
 #
-# MACOSX_DEPLOYMENT_TARGET is 11.0 here for x86_64 only; arm64 is overridden
-# below. It is NOT a free choice -- see that override.
-environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "11.0", DYLD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
-
-# arm64 wheels must declare macOS 13.3, because ONNX Runtime says so.
+# MACOSX_DEPLOYMENT_TARGET is 13.3 and that is NOT a free choice. ONNX Runtime
+# 1.20.1's dylib is built with a minimum target of 13.3 on BOTH architectures,
+# and delocate refuses to bundle it into a wheel claiming less -- correctly,
+# because such a wheel would install happily on macOS 11 and then fail at import
+# with a dyld error. Install-then-crash is worse than not building.
 #
-# ORT 1.20.1's arm64 dylib is itself built with a minimum target of 13.3.
-# delocate refuses to bundle it into a wheel tagged 11.0 -- correctly, because
-# that wheel would install happily on macOS 11 and then fail at import with a
-# dyld error. The floor here is ORT's, not naina's; naina's own code targets
-# 11.0 fine, which is why x86_64 keeps it.
+# The floor is ORT's, not naina's: naina's own code compiles for 11.0 without
+# complaint. An earlier version of this file set 11.0 globally with a 13.3
+# override for arm64 only, on the assumption that the x86_64 dylib was built
+# lower. Measured: it is not. Both need 13.3, so there is no override.
 #
-# Revisit whenever the pinned ORT version changes: this number tracks that
-# dependency, not a decision of ours.
-[[tool.cibuildwheel.overrides]]
-select = "*-macosx_arm64"
+# Revisit whenever the pinned ORT version moves; this number tracks that
+# dependency.
 environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "13.3", DYLD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
 
 [tool.cibuildwheel.linux]
