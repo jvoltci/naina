@@ -9,7 +9,7 @@ fully usable surface, not a half-built layer.
 > reading, which is what the name always suited — *naina* means eyes. The face
 > modules are preserved on the
 > [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack) branch. See
-> [the design spec](superpowers/specs/2026-07-28-naina-ocr-design.md) for why.
+> [the design spec](https://github.com/jvoltci/naina/blob/master/docs/superpowers/specs/2026-07-28-naina-ocr-design.md) for why.
 
 ## v0.1 — Engine  *(shipped)*
 
@@ -115,12 +115,28 @@ Turn a bag of lines into a document.
       via `stagingPlan()`, so the cache layout has one definition.
 - [x] Verified reading a real A4 page: 33 lines, mean confidence 0.99,
       correct `#`/`##` structure, deterministic across runs.
-- [ ] PWA at `jvoltci.github.io/naina/` — client-side only, no upload, offline
-      after first visit via service worker + Cache API keyed on model sha256
-- [ ] mkdocs-material documentation at `jvoltci.github.io/naina/doc/`
-- [ ] WebGPU execution provider where available. The bridge already requests
-      `['webgpu','wasm']` by default and ort falls back silently, but WebGPU has
-      not been measured — the numbers above are WASM SIMD.
+- [x] Production web app at `jvoltci.github.io/naina/` — client-side only, no
+      upload, no account, no page limit. PDFs via pdf.js, multi-page batches, OCR
+      in a Web Worker so the tab never freezes, offline after first visit.
+      Verified end to end in real Chrome via Playwright (`app/test/e2e.mjs`),
+      which is the only test that can reach OffscreenCanvas, createImageBitmap,
+      module workers and ASYNCIFY-in-a-worker.
+- [x] mkdocs-material documentation at `jvoltci.github.io/naina/doc/`
+- [x] **Weights are served same-origin, not from the GitHub release.** Release
+      assets 302 to release-assets.githubusercontent.com and neither hop sends
+      `Access-Control-Allow-Origin`, so a browser cannot fetch them at all —
+      measured against the live release. Every other binding is unaffected. The
+      deploy stages tiny + small (65.9 MB) into the Pages artifact, reading the
+      file list from the core via `stagingPlan()` so it cannot drift. sha256
+      verification still happens in the C++ core.
+- [ ] WebGPU execution provider. **Currently off by default because it silently
+      breaks layout, which is worse than crashing.** Chrome 141 on an M3
+      initialises ORT's JSEP provider and then fails a MatMul kernel; ORT recovers
+      node by node, so text still returned 33 lines at 0.99 confidence and looked
+      correct, while layout regions went from 9 to 0 and the markdown lost all
+      structure. Needs real numbers before it becomes a default.
+- [ ] Medium tier in the browser. `ppdoclayout_l.onnx` is 129 MB and GitHub Pages
+      caps a single file at 100 MB, so the app offers tiny and small only.
 
 ## v0.5 — Rust
 

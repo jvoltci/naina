@@ -1,0 +1,86 @@
+site_name: naina
+site_description: Embeddable document-reading runtime. OCR from one C++ core — server, laptop, phone, Pi, browser.
+site_url: https://jvoltci.github.io/naina/doc/
+repo_url: https://github.com/jvoltci/naina
+repo_name: jvoltci/naina
+edit_uri: edit/master/docs/
+
+docs_dir: docs
+
+# The planning records are kept in-repo deliberately (they explain why the
+# design is what it is) but they are working documents, not documentation.
+exclude_docs: |
+  superpowers/
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+  font:
+    text: Outfit
+    code: JetBrains Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+nav:
+  - Start here:
+      - Overview: index.md
+      - Install: install.md
+      - Tiers: tiers.md
+  - Use it from:
+      - Python: python.md
+      - Node: node.md
+      - Browser: browser.md
+      - An LLM (MCP): mcp.md
+  - Understand it:
+      - Architecture: ARCHITECTURE.md
+      - What it cannot do: limits.md
+      - Roadmap: ROADMAP.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jvoltci/naina
+
+extra_css:
+  - assets/extra.css
