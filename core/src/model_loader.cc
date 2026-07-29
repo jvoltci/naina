@@ -228,10 +228,9 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
             for (const auto& kv : m["files"]) {
                 const auto kind = kv.first.as<std::string>();
                 FileEntry fe;
-                fe.url = substitute_hf(
-                    substitute_release_base(kv.second["url"].as<std::string>(""),
-                                            reg.release_base_),
-                    hf);
+                fe.url = substitute_hf(substitute_release_base(kv.second["url"].as<std::string>(""),
+                                                               reg.release_base_),
+                                       hf);
                 fe.sha256 = lower(kv.second["sha256"].as<std::string>(""));
                 fe.bytes = kv.second["bytes"].as<int64_t>(0);
                 entry.files.emplace(kind, std::move(fe));

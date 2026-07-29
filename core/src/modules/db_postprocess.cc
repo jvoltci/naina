@@ -25,8 +25,7 @@ Bitmap binarize(const float* prob, int32_t width, int32_t height, float thresh) 
     return bm;
 }
 
-std::vector<std::vector<naina_point>> find_blob_borders(const Bitmap& bm,
-                                                        int32_t max_candidates) {
+std::vector<std::vector<naina_point>> find_blob_borders(const Bitmap& bm, int32_t max_candidates) {
     std::vector<std::vector<naina_point>> blobs;
     if (bm.width <= 0 || bm.height <= 0 || bm.px.empty()) {
         return blobs;
@@ -47,7 +46,8 @@ std::vector<std::vector<naina_point>> find_blob_borders(const Bitmap& bm,
     std::vector<int32_t> stack;
     for (int32_t y = 0; y < h && static_cast<int32_t>(blobs.size()) < max_candidates; ++y) {
         for (int32_t x = 0; x < w && static_cast<int32_t>(blobs.size()) < max_candidates; ++x) {
-            const size_t idx = static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x);
+            const size_t idx =
+                static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x);
             if (bm.px[idx] == 0 || seen[idx] != 0) {
                 continue;
             }
@@ -216,10 +216,10 @@ std::vector<naina_textbox> decode(const float* prob,
         naina_textbox tb{};
         for (int32_t i = 0; i < 4; ++i) {
             // Clamp to the map so downstream warping never samples outside.
-            tb.corners[i].x = std::clamp(grown[static_cast<size_t>(i)].x, 0.0F,
-                                         static_cast<float>(width - 1));
-            tb.corners[i].y = std::clamp(grown[static_cast<size_t>(i)].y, 0.0F,
-                                         static_cast<float>(height - 1));
+            tb.corners[i].x =
+                std::clamp(grown[static_cast<size_t>(i)].x, 0.0F, static_cast<float>(width - 1));
+            tb.corners[i].y =
+                std::clamp(grown[static_cast<size_t>(i)].y, 0.0F, static_cast<float>(height - 1));
         }
         tb.score = score;
         out.push_back(tb);

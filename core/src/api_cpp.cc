@@ -150,8 +150,100 @@ Engine& Engine::operator=(Engine&& other) noexcept {
     }
     return *this;
 }
-// The OCR method wrappers (read / lines / regions / markdown) land alongside
-// the modules that back them. Until then the C ABI is the supported surface;
-// see docs/superpowers/plans/2026-07-29-naina-ocr-core.md.
+// ── Page ─────────────────────────────────────────────────────────────
+
+Page::~Page() {
+    if (h_ != nullptr) {
+        naina_page_release(h_);
+    }
+}
+
+Page::Page(Page&& other) noexcept : h_(other.h_) {
+    other.h_ = nullptr;
+}
+
+Page& Page::operator=(Page&& other) noexcept {
+    if (this != &other) {
+        if (h_ != nullptr) {
+            naina_page_release(h_);
+        }
+        h_ = other.h_;
+        other.h_ = nullptr;
+    }
+    return *this;
+}
+
+std::vector<Line> Page::lines() const {
+    std::vector<Line> out;
+    if (h_ == nullptr) {
+        return out;
+    }
+    const naina_textline* arr = nullptr;
+    int32_t n = 0;
+    if (naina_page_lines(h_, &arr, &n) != NAINA_OK || arr == nullptr) {
+        return out;
+    }
+    out.reserve(static_cast<size_t>(n));
+    for (int32_t i = 0; i < n; ++i) {
+        Line l;
+        // Copy the text: the C ABI pointer is owned by the page.
+        l.text = arr[i].text != nullptr ? arr[i].text : "";
+        l.confidence = arr[i].confidence;
+        l.score = arr[i].box.score;
+        for (int c = 0; c < 4; ++c) {
+            l.quad[static_cast<size_t>(c)] =
+                Point{arr[i].box.corners[c].x, arr[i].box.corners[c].y};
+        }
+        out.push_back(std::move(l));
+    }
+    return out;
+}
+
+std::string Page::markdown() const {
+    if (h_ == nullptr) {
+        return {};
+    }
+    const char* s = naina_page_markdown(h_);
+    return s != nullptr ? std::string(s) : std::string();
+}
+
+std::string Page::json() const {
+    if (h_ == nullptr) {
+        return {};
+    }
+    const char* s = naina_page_json(h_);
+    return s != nullptr ? std::string(s) : std::string();
+}
+
+// ── Engine OCR surface ───────────────────────────────────────────────
+
+Page Engine::read(const Image& img) {
+    naina_page_t* p = nullptr;
+    const auto s = naina_read(ctx_, img.handle(), &p);
+    if (s != NAINA_OK) {
+        throw_if(s, "Engine::read");
+    }
+    return Page(p);
+}
+
+std::vector<std::array<Point, 4>> Engine::detect_text(const Image& img) {
+    naina_textbox* arr = nullptr;
+    int32_t n = 0;
+    const auto s = naina_text_detect(ctx_, img.handle(), &arr, &n);
+    if (s != NAINA_OK) {
+        throw_if(s, "Engine::detect_text");
+    }
+    std::vector<std::array<Point, 4>> out;
+    out.reserve(static_cast<size_t>(n));
+    for (int32_t i = 0; i < n; ++i) {
+        std::array<Point, 4> q{};
+        for (int c = 0; c < 4; ++c) {
+            q[static_cast<size_t>(c)] = Point{arr[i].corners[c].x, arr[i].corners[c].y};
+        }
+        out.push_back(q);
+    }
+    naina_free_textboxes(arr, n);
+    return out;
+}
 
 }  // namespace naina

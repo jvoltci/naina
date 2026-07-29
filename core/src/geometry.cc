@@ -47,7 +47,8 @@ std::vector<naina_point> convex_hull(std::vector<naina_point> pts) {
     std::sort(pts.begin(), pts.end(), [](const naina_point& a, const naina_point& b) {
         return a.x < b.x || (a.x == b.x && a.y < b.y);
     });
-    pts.erase(std::unique(pts.begin(), pts.end(),
+    pts.erase(std::unique(pts.begin(),
+                          pts.end(),
                           [](const naina_point& a, const naina_point& b) {
                               return a.x == b.x && a.y == b.y;
                           }),

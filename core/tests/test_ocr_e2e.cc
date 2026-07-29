@@ -98,14 +98,14 @@ int main() {
     naina_ctx_t* ctx = nullptr;
     const naina_status init_rc = naina_init(&cfg, &ctx);
     if (init_rc != NAINA_OK || ctx == nullptr) {
-        std::printf("test_ocr_e2e: init returned %s, skipping (OK)\n",
-                    naina_status_str(init_rc));
+        std::printf("test_ocr_e2e: init returned %s, skipping (OK)\n", naina_status_str(init_rc));
         return 0;
     }
 
     naina_image_t* wrapped = nullptr;
-    EXPECT(naina_image_wrap(img.rgb.data(), img.width, img.height, img.width * 3,
-                            NAINA_PIXFMT_RGB8, &wrapped) == NAINA_OK);
+    EXPECT(naina_image_wrap(
+               img.rgb.data(), img.width, img.height, img.width * 3, NAINA_PIXFMT_RGB8, &wrapped) ==
+           NAINA_OK);
 
     naina_page_t* page = nullptr;
     const naina_status rc = naina_read(ctx, wrapped, &page);
@@ -130,9 +130,11 @@ int main() {
     EXPECT(naina_page_lines(page, &lines, &n) == NAINA_OK);
     std::printf("test_ocr_e2e: %d line(s) detected\n", n);
     for (int32_t i = 0; i < n; ++i) {
-        std::printf("  [%d] conf=%.3f box_score=%.3f  %s\n", i,
+        std::printf("  [%d] conf=%.3f box_score=%.3f  %s\n",
+                    i,
                     static_cast<double>(lines[i].confidence),
-                    static_cast<double>(lines[i].box.score), lines[i].text);
+                    static_cast<double>(lines[i].box.score),
+                    lines[i].text);
     }
 
     const std::string md = naina_page_markdown(page);

@@ -87,8 +87,8 @@ static void test_rejects_missing_or_malformed_files() {
     fs::remove(p);
 
     // An empty character_dict is equally useless.
-    const fs::path e = write_temp("naina_charset_empty.yml",
-                                  "PostProcess:\n  character_dict: []\n");
+    const fs::path e =
+        write_temp("naina_charset_empty.yml", "PostProcess:\n  character_dict: []\n");
     EXPECT(!load_from_yaml(e, &cs));
     fs::remove(e);
 

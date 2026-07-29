@@ -24,8 +24,13 @@ static int failures = 0;
 
 static void test_hull_of_a_square_with_interior_points() {
     std::vector<naina_point> pts = {
-        {0, 0}, {10, 0}, {10, 10}, {0, 10},  // corners
-        {5, 5}, {3, 7},  {8, 2},             // interior, must be dropped
+        {0, 0},
+        {10, 0},
+        {10, 10},
+        {0, 10},  // corners
+        {5, 5},
+        {3, 7},
+        {8, 2},  // interior, must be dropped
     };
     const auto hull = convex_hull(pts);
     EXPECT(hull.size() == 4);
@@ -35,8 +40,12 @@ static void test_hull_of_a_square_with_interior_points() {
 
 static void test_hull_handles_collinear_and_duplicate_points() {
     std::vector<naina_point> pts = {
-        {0, 0}, {5, 0}, {10, 0},  // collinear along the bottom
-        {10, 10}, {0, 10}, {0, 0} // duplicate of the first
+        {0, 0},
+        {5, 0},
+        {10, 0},  // collinear along the bottom
+        {10, 10},
+        {0, 10},
+        {0, 0}  // duplicate of the first
     };
     const auto hull = convex_hull(pts);
     // Collinear interior points are not vertices.
@@ -88,7 +97,7 @@ static void test_min_area_quad_beats_bounding_box_when_rotated() {
     EXPECT(min_area_quad(pts, out));
     std::vector<naina_point> q(out, out + 4);
     const float area = polygon_area(q);
-    EXPECT(area < 250.0F);              // strictly better than the 400 bbox
+    EXPECT(area < 250.0F);                    // strictly better than the 400 bbox
     EXPECT(std::fabs(area - 200.0F) < 1.0F);  // matches the true minimum
 }
 

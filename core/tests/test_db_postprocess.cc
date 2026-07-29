@@ -41,7 +41,8 @@ static Bitmap from_ascii(const std::vector<const char*>& rows) {
         const char* r = rows[static_cast<size_t>(y)];
         for (int32_t x = 0; r[x] != '\0'; ++x) {
             if (r[x] == '#') {
-                bm.px[static_cast<size_t>(y) * static_cast<size_t>(bm.width) + static_cast<size_t>(x)] = 1;
+                bm.px[static_cast<size_t>(y) * static_cast<size_t>(bm.width) +
+                      static_cast<size_t>(x)] = 1;
             }
         }
     }
@@ -121,7 +122,8 @@ static void test_max_candidates_caps_output() {
     bm.px.assign(static_cast<size_t>(bm.width) * static_cast<size_t>(bm.height), 0);
     for (int32_t y = 0; y < bm.height; y += 2) {
         for (int32_t x = 0; x < bm.width; x += 2) {
-            bm.px[static_cast<size_t>(y) * static_cast<size_t>(bm.width) + static_cast<size_t>(x)] = 1;
+            bm.px[static_cast<size_t>(y) * static_cast<size_t>(bm.width) + static_cast<size_t>(x)] =
+                1;
         }
     }
     const auto blobs = find_blob_borders(bm, 3);

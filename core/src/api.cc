@@ -15,8 +15,8 @@
 #include "page.hpp"
 
 #include <cmath>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <mutex>

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace py = pybind11;
 
@@ -29,7 +30,9 @@ naina::PixFmt infer_pixfmt(const py::array_t<uint8_t>& arr) {
     throw std::invalid_argument("naina: image must be (H, W, 3) RGB or (H, W) grayscale uint8");
 }
 
-naina::Image image_from_numpy(py::array_t<uint8_t, py::array::c_style | py::array::forcecast> arr) {
+using NpImage = py::array_t<uint8_t, py::array::c_style | py::array::forcecast>;
+
+naina::Image image_from_numpy(const NpImage& arr) {
     const auto fmt = infer_pixfmt(arr);
     const int h = static_cast<int>(arr.shape(0));
     const int w = static_cast<int>(arr.shape(1));
@@ -38,16 +41,10 @@ naina::Image image_from_numpy(py::array_t<uint8_t, py::array::c_style | py::arra
     return naina::Image(arr.data(), w, h, stride, fmt);
 }
 
-py::array_t<float> embedding_to_numpy(std::vector<float>&& v) {
-    py::array_t<float> out(static_cast<py::ssize_t>(v.size()));
-    std::memcpy(out.mutable_data(), v.data(), v.size() * sizeof(float));
-    return out;
-}
-
 }  // namespace
 
 PYBIND11_MODULE(_binding, m) {
-    m.doc() = "naina — embeddable face & person CV runtime (Python binding)";
+    m.doc() = "naina — embeddable document reading runtime (Python binding)";
     m.attr("__version__") = naina_version_string();
 
     py::register_exception<naina::Error>(m, "NainaError");
@@ -60,103 +57,98 @@ PYBIND11_MODULE(_binding, m) {
         .value("TENSORRT", naina::Backend::TensorRT)
         .value("OPENVINO", naina::Backend::OpenVINO);
 
-    py::class_<naina::BBox>(m, "BBox")
-        .def_readonly("x", &naina::BBox::x)
-        .def_readonly("y", &naina::BBox::y)
-        .def_readonly("w", &naina::BBox::w)
-        .def_readonly("h", &naina::BBox::h)
-        .def_readonly("score", &naina::BBox::score)
-        .def("__repr__", [](const naina::BBox& b) {
-            return "<BBox x=" + std::to_string(b.x) + " y=" + std::to_string(b.y) +
-                   " w=" + std::to_string(b.w) + " h=" + std::to_string(b.h) +
-                   " score=" + std::to_string(b.score) + ">";
-        });
+    // Device tier: model size, not licence. Every model naina ships is
+    // Apache-2.0; tiers differ in size and the hardware they suit.
+    py::enum_<naina::Tier>(m, "Tier")
+        .value("AUTO", naina::Tier::Auto)
+        .value("TINY", naina::Tier::Tiny)
+        .value("SMALL", naina::Tier::Small)
+        .value("MEDIUM", naina::Tier::Medium);
 
     py::class_<naina::Point>(m, "Point")
         .def_readonly("x", &naina::Point::x)
-        .def_readonly("y", &naina::Point::y);
+        .def_readonly("y", &naina::Point::y)
+        .def("__repr__", [](const naina::Point& p) {
+            return "Point(x=" + std::to_string(p.x) + ", y=" + std::to_string(p.y) + ")";
+        });
 
-    py::class_<naina::Face>(m, "Face")
-        .def_readonly("bbox", &naina::Face::bbox)
-        .def_readonly("quality", &naina::Face::quality)
-        .def_readonly("track_id", &naina::Face::track_id)
-        .def_property_readonly("landmarks",
-                               [](const naina::Face& f) {
-                                   py::list out;
-                                   for (const auto& p : f.landmarks) {
-                                       out.append(p);
-                                   }
-                                   return out;
-                               })
-        .def("__repr__", [](const naina::Face& f) {
-            return "<Face bbox=(" + std::to_string(f.bbox.x) + "," + std::to_string(f.bbox.y) +
-                   "," + std::to_string(f.bbox.w) + "," + std::to_string(f.bbox.h) +
-                   ") score=" + std::to_string(f.bbox.score) + ">";
+    py::class_<naina::Line>(m, "Line")
+        .def_readonly("text", &naina::Line::text)
+        .def_readonly("confidence", &naina::Line::confidence)
+        .def_readonly("score", &naina::Line::score)
+        .def_readonly("quad", &naina::Line::quad)
+        .def("__str__", [](const naina::Line& l) { return l.text; })
+        .def("__repr__", [](const naina::Line& l) {
+            return "Line(text=" + py::repr(py::cast(l.text)).cast<std::string>() +
+                   ", confidence=" + std::to_string(l.confidence) + ")";
+        });
+
+    py::class_<naina::Page>(m, "Page")
+        .def_property_readonly("lines", &naina::Page::lines)
+        .def_property_readonly("markdown", &naina::Page::markdown)
+        .def_property_readonly("json", &naina::Page::json)
+        .def_property_readonly(
+            "text", [](const naina::Page& p) { return p.markdown(); },
+            "Alias for markdown — the plain reading of the page.")
+        .def("__str__", &naina::Page::markdown)
+        .def("__len__", [](const naina::Page& p) { return p.lines().size(); })
+        .def("__repr__", [](const naina::Page& p) {
+            return "Page(" + std::to_string(p.lines().size()) + " lines)";
         });
 
     py::class_<naina::Engine>(m, "Engine")
         .def(py::init([](naina::Backend backend,
+                         naina::Tier tier,
                          const std::string& models_root,
-                         int num_threads,
-                         bool enable_research_models) {
+                         int num_threads) {
                  naina::Config cfg;
                  cfg.backend = backend;
-                 cfg.models_root = std::filesystem::path(models_root);
+                 cfg.tier = tier;
                  cfg.num_threads = num_threads;
-                 cfg.enable_research_models = enable_research_models;
+                 if (!models_root.empty()) {
+                     cfg.models_root = models_root;
+                 }
                  return new naina::Engine(cfg);
              }),
              py::arg("backend") = naina::Backend::Auto,
-             py::arg("models_root") = "",
-             py::arg("num_threads") = 0,
-             py::arg("enable_research_models") = false,
-             "Construct the runtime. Set NAINA_REGISTRY=… or pass models_root "
-             "to point at the registry.yaml. Set NAINA_OFFLINE=1 to skip "
-             "downloads (uses cache only).")
+             py::arg("tier") = naina::Tier::Auto,
+             py::arg("models_root") = std::string(),
+             py::arg("num_threads") = 0)
         .def(
-            "detect_faces",
-            [](naina::Engine& self, py::array_t<uint8_t> image) {
-                auto img = image_from_numpy(image);
-                py::gil_scoped_release rel;
-                return self.detect_faces(img);
-            },
-            py::arg("image"))
-        .def(
-            "embed_face",
-            [](naina::Engine& self, py::array_t<uint8_t> image, const naina::Face& face) {
-                auto img = image_from_numpy(image);
-                std::vector<float> emb;
-                {
-                    py::gil_scoped_release rel;
-                    emb = self.embed_face(img, face);
-                }
-                return embedding_to_numpy(std::move(emb));
+            "read",
+            [](naina::Engine& self, const NpImage& image) {
+                const naina::Image img = image_from_numpy(image);
+                // Inference is pure native work and can take hundreds of
+                // milliseconds on a dense page, so release the GIL.
+                py::gil_scoped_release unlock;
+                return self.read(img);
             },
             py::arg("image"),
-            py::arg("face"))
-        .def("face_embed_dim", &naina::Engine::face_embed_dim)
+            "Read a document. Returns a Page with .markdown, .json and .lines.")
         .def(
-            "face_liveness",
-            [](naina::Engine& self, py::array_t<uint8_t> image, const naina::Face& face) {
-                auto img = image_from_numpy(image);
-                py::gil_scoped_release rel;
-                return self.face_liveness(img, face);
+            "detect_text",
+            [](naina::Engine& self, const NpImage& image) {
+                const naina::Image img = image_from_numpy(image);
+                py::gil_scoped_release unlock;
+                return self.detect_text(img);
             },
             py::arg("image"),
-            py::arg("face"),
-            "Liveness probability for `face`. Caller picks a threshold; "
-            "0.5 is a reasonable starting point.");
+            "Detect text quads without recognising them. Returns a list of "
+            "4-corner quads in source image coordinates.");
 
+    // The agent-facing one-liner.
     m.def(
-        "similarity",
-        [](py::array_t<float> a, py::array_t<float> b) {
-            if (a.ndim() != 1 || b.ndim() != 1 || a.shape(0) != b.shape(0)) {
-                throw std::invalid_argument(
-                    "similarity: inputs must be 1-D float arrays of equal length");
-            }
-            return naina::Engine::similarity(a.data(), b.data(), static_cast<int>(a.shape(0)));
+        "read",
+        [](const NpImage& image, naina::Tier tier) {
+            naina::Config cfg;
+            cfg.tier = tier;
+            naina::Engine engine(cfg);
+            const naina::Image img = image_from_numpy(image);
+            py::gil_scoped_release unlock;
+            return engine.read(img).markdown();
         },
-        py::arg("a"),
-        py::arg("b"),
-        "Cosine similarity between two L2-normalized embedding vectors.");
+        py::arg("image"),
+        py::arg("tier") = naina::Tier::Auto,
+        "Read an image and return markdown. Constructs a throwaway Engine, so "
+        "prefer Engine.read for repeated calls.");
 }

@@ -56,25 +56,23 @@ naina_status recognize(backend::ISession* session,
             strip.width = kWidthMultiple;
         }
 
-        const size_t plane =
-            static_cast<size_t>(strip.width) * static_cast<size_t>(strip.height);
+        const size_t plane = static_cast<size_t>(strip.width) * static_cast<size_t>(strip.height);
         std::vector<float> input(3U * plane);
-        warp_quad_bgr_planar_f32(src, box.corners, strip, cfg.scale, cfg.mean, cfg.std_,
-                                 input.data());
+        warp_quad_bgr_planar_f32(
+            src, box.corners, strip, cfg.scale, cfg.mean, cfg.std_, input.data());
 
         const int32_t num_steps = strip.width / kWidthMultiple;
-        std::vector<float> logits(static_cast<size_t>(num_steps) *
-                                      static_cast<size_t>(num_classes),
+        std::vector<float> logits(static_cast<size_t>(num_steps) * static_cast<size_t>(num_classes),
                                   0.0F);
 
-        Tensor in = Tensor::view(input.data(),
-                                 {1, 3, static_cast<int64_t>(strip.height),
-                                  static_cast<int64_t>(strip.width)},
-                                 DType::F32);
-        Tensor out = Tensor::view(logits.data(),
-                                  {1, static_cast<int64_t>(num_steps),
-                                   static_cast<int64_t>(num_classes)},
-                                  DType::F32);
+        Tensor in = Tensor::view(
+            input.data(),
+            {1, 3, static_cast<int64_t>(strip.height), static_cast<int64_t>(strip.width)},
+            DType::F32);
+        Tensor out =
+            Tensor::view(logits.data(),
+                         {1, static_cast<int64_t>(num_steps), static_cast<int64_t>(num_classes)},
+                         DType::F32);
 
         std::vector<Tensor> ins;
         ins.push_back(std::move(in));
