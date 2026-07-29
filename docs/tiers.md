@@ -16,6 +16,27 @@ page = naina.read("scan.png", tier="small")
 `auto` resolves to `small` today. It exists so a future release can choose by
 probing available memory without an ABI change.
 
+## Language is a separate axis
+
+Tier picks *size*; `language` picks the recognition *alphabet*. They combine
+freely.
+
+| `language` | Reads | Weights |
+|---|---|---|
+| *(default)* | Latin, Chinese, Japanese, Korean | per tier, above |
+| `devanagari` | Hindi, Marathi, Nepali, Sanskrit | 7.9 MB, PP-OCRv5 mobile |
+
+```python
+page = naina.read("hindi.png", tier="tiny", language="devanagari")
+```
+
+Detection and layout are script-agnostic and shared — they are not duplicated per
+language. Measured on a Devanagari page, detection found and located all lines
+correctly even with the wrong recognition alphabet; only the reading was wrong.
+
+Devanagari exists in one size upstream, so every tier uses the same 7.9 MB
+recogniser.
+
 ## Picking one
 
 **Start with `small`.** It is the best accuracy-per-megabyte point for anything

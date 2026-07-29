@@ -11,11 +11,12 @@ import { createReader, type NainaPage, type TierName } from '@jvoltci/naina-wasm
 type Reader = Awaited<ReturnType<typeof createReader>>;
 
 export type WorkerRequest =
-  | { id: number; kind: 'warm'; tier: TierName }
+  | { id: number; kind: 'warm'; tier: TierName; language: string }
   | {
       id: number;
       kind: 'read';
       tier: TierName;
+      language: string;
       rgb: Uint8Array;
       width: number;
       height: number;
@@ -32,14 +33,18 @@ const post = (msg: WorkerResponse) => self.postMessage(msg);
 
 // One reader per tier, kept alive: constructing one downloads weights, so a user
 // toggling back to a tier they already used should pay nothing.
-const readers = new Map<TierName, Reader>();
+// Keyed by tier AND language: they select different recognition models, so one
+// reader cannot serve both.
+const readers = new Map<string, Reader>();
 
-async function readerFor(tier: TierName, id: number): Promise<Reader> {
-  const existing = readers.get(tier);
+async function readerFor(tier: TierName, language: string, id: number): Promise<Reader> {
+  const key = `${tier}/${language}`;
+  const existing = readers.get(key);
   if (existing) return existing;
 
   const reader = await createReader({
     tier,
+    language,
     // Weights are served from this deployment, not from GitHub releases: a
     // release download redirects to release-assets.githubusercontent.com and
     // neither hop sends Access-Control-Allow-Origin, so a cross-origin fetch is
@@ -51,7 +56,7 @@ async function readerFor(tier: TierName, id: number): Promise<Reader> {
       post({ id, kind: 'progress', done, total, name });
     },
   });
-  readers.set(tier, reader);
+  readers.set(key, reader);
   return reader;
 }
 
@@ -59,12 +64,12 @@ self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
   const req = event.data;
   try {
     if (req.kind === 'warm') {
-      const reader = await readerFor(req.tier, req.id);
+      const reader = await readerFor(req.tier, req.language, req.id);
       post({ id: req.id, kind: 'warmed', tier: req.tier, version: reader.version() });
       return;
     }
 
-    const reader = await readerFor(req.tier, req.id);
+    const reader = await readerFor(req.tier, req.language, req.id);
     post({ id: req.id, kind: 'stage', label: 'Reading' });
 
     const started = performance.now();

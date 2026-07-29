@@ -47,9 +47,15 @@ struct FileEntry {
 };
 
 struct ModelEntry {
-    std::string id;    // e.g. "face_detect.default"
-    std::string task;  // "face_detect" | "face_embed" | ...
+    std::string id;    // e.g. "text_recognize.tiny"
+    std::string task;  // "text_detect" | "text_recognize" | "layout_detect"
     Tier tier = Tier::Small;
+
+    // Recognition alphabet, e.g. "devanagari". Empty means the default
+    // (Latin + CJK). Only recognition models carry this: detection and layout
+    // are script-agnostic, so they are shared across languages rather than
+    // duplicated per script.
+    std::string lang;
     std::string arch;
     std::string license;
     std::unordered_map<std::string, FileEntry> files;  // key: "onnx", "ncnn_param", ...
@@ -62,7 +68,16 @@ public:
     static ModelRegistry load(const std::filesystem::path& yaml_path);
 
     // Find a model by (task, tier). Returns nullopt if not present.
-    std::optional<ModelEntry> resolve(const std::string& task, Tier tier) const;
+    // Resolve by task, tier and language.
+    //
+    // `lang` empty selects the entry with no `lang` (the default alphabet). A
+    // non-empty `lang` matches only an entry declaring exactly that language —
+    // there is deliberately NO fallback to the default, because silently
+    // recognising Devanagari with a Latin alphabet is the bug this exists to
+    // fix. Callers get nullopt and should surface NAINA_E_UNSUPPORTED.
+    std::optional<ModelEntry> resolve(const std::string& task,
+                                      Tier tier,
+                                      const std::string& lang = "") const;
 
     // Compute the local cache path for a given model's file kind ("onnx",
     // "ncnn_param", "ncnn_bin", etc). The path is deterministic from the

@@ -24,6 +24,10 @@ const OUT = resolve(HERE, '..', 'public', 'models');
 const TIERS = { tiny: 1, small: 2, medium: 3 };
 
 const wanted = process.argv.slice(2).length ? process.argv.slice(2) : ['tiny', 'small'];
+
+// Every alphabet the app offers. Recognition differs per script; detection and
+// layout are shared, and the dedupe below collapses those duplicates.
+const LANGS = ['', 'devanagari'];
 for (const t of wanted) {
   if (!(t in TIERS)) {
     console.error(`unknown tier '${t}' (expected: ${Object.keys(TIERS).join(', ')})`);
@@ -48,17 +52,25 @@ await mkdir(OUT, { recursive: true });
 // charset files repeat.
 const files = new Map();
 for (const tier of wanted) {
-  const plan = JSON.parse(Module.stagingPlan(TIERS[tier]));
-  if (plan.length === 0) {
-    console.error(`registry lists no models for tier '${tier}'`);
-    process.exit(1);
-  }
-  for (const f of plan) {
-    files.set(f.url.slice(f.url.lastIndexOf('/') + 1), f);
+  for (const lang of LANGS) {
+    const plan = JSON.parse(Module.stagingPlan(TIERS[tier], lang));
+    if (plan.length === 0) {
+      // A language may not exist at every tier; that is not fatal, because
+      // resolve() falls back across tiers for the same alphabet.
+      console.log(`  (no models for tier '${tier}' lang '${lang || 'default'}')`);
+      continue;
+    }
+    for (const f of plan) {
+      files.set(f.url.slice(f.url.lastIndexOf('/') + 1), f);
+    }
   }
 }
+if (files.size === 0) {
+  console.error('registry lists no models for the requested tiers');
+  process.exit(1);
+}
 
-console.log(`staging ${files.size} file(s) for tier(s): ${wanted.join(', ')}`);
+console.log(`staging ${files.size} file(s) for tier(s) ${wanted.join(', ')} across ${LANGS.length} alphabet(s)`);
 
 let total = 0;
 for (const [name, f] of files) {

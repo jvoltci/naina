@@ -4,8 +4,9 @@
 /// the device: there is no network call and no cloud API.
 ///
 /// ```dart
-/// final naina = await Naina.open();
-/// final page = await naina.readRgb(rgb, width: w, height: h);
+/// final naina = await Naina.open();               // Latin + CJK
+/// // final naina = await Naina.open(language: 'devanagari');   // Hindi
+/// final page = naina.readRgbSync(rgb, width: w, height: h);
 /// print(page.text);
 /// naina.close();
 /// ```
@@ -39,9 +40,10 @@ class NainaLine {
 
   /// Mean per-character probability over the characters actually emitted.
   ///
-  /// Beware: this cannot express "this script is not in my alphabet". naina's
-  /// character set has no Devanagari, and a Devanagari page still returns
-  /// plausible-looking Latin at around 0.75. See the package README.
+  /// Beware: this cannot express "this script is not in my alphabet". Read a
+  /// Devanagari page with the default Latin alphabet and it still returns
+  /// plausible-looking Latin at around 0.75. Pass `language: 'devanagari'` for
+  /// Hindi rather than trusting confidence to warn you.
   final double confidence;
 
   /// Four corners, clockwise from top-left, in source-image pixels. Not
@@ -113,6 +115,12 @@ class Naina {
   /// [tier] selects model size, not capability: [NainaTier.tiny] is ~11 MB and
   /// the right default on a phone; [NainaTier.small] is ~54 MB and more accurate.
   ///
+  /// [language] selects the recognition alphabet: null or empty reads Latin and
+  /// CJK, `'devanagari'` reads Hindi, Marathi, Nepali and Sanskrit. An unknown
+  /// value throws — reading Devanagari with the Latin model returns
+  /// plausible-looking wrong text rather than an error, which is exactly what
+  /// this prevents.
+  ///
   /// [modelsRoot] is where weights are cached. On mobile, pass a path inside the
   /// app's own documents directory — the default (`~/.cache`) is not writable in
   /// a sandboxed app.
@@ -120,24 +128,30 @@ class Naina {
     int tier = NainaTier.tiny,
     String? modelsRoot,
     int numThreads = 0,
+    String? language,
   }) async {
     final bindings = NainaBindings(_openLibrary());
 
     final cfg = calloc<NainaConfig>();
     final ctxOut = calloc<Pointer<NainaCtx>>();
     Pointer<Utf8> rootPtr = nullptr;
+    Pointer<Utf8> langPtr = nullptr;
     try {
       if (modelsRoot != null) {
         rootPtr = modelsRoot.toNativeUtf8();
       }
+      if (language != null && language.isNotEmpty) {
+        langPtr = language.toNativeUtf8();
+      }
       cfg.ref
-        ..version = 2
+        ..version = 3
         ..backend = 0 // NAINA_BACKEND_AUTO
         ..device = 0 // NAINA_DEVICE_AUTO
         ..modelsRoot = rootPtr
         ..numThreads = numThreads
         ..enableResearchModels = 0
-        ..tier = tier;
+        ..tier = tier
+        ..language = langPtr;
 
       final rc = bindings.init(cfg, ctxOut);
       if (rc != NainaStatus.ok || ctxOut.value == nullptr) {
@@ -146,6 +160,7 @@ class Naina {
       return Naina._(bindings, ctxOut.value);
     } finally {
       if (rootPtr != nullptr) calloc.free(rootPtr);
+      if (langPtr != nullptr) calloc.free(langPtr);
       calloc.free(cfg);
       calloc.free(ctxOut);
     }
@@ -268,9 +283,11 @@ Future<NainaPageResult> readRgbInIsolate(
   required int height,
   int tier = NainaTier.tiny,
   String? modelsRoot,
+  String? language,
 }) {
   return Isolate.run(() async {
-    final naina = await Naina.open(tier: tier, modelsRoot: modelsRoot);
+    final naina =
+        await Naina.open(tier: tier, modelsRoot: modelsRoot, language: language);
     try {
       return naina.readRgbSync(rgb, width: width, height: height);
     } finally {

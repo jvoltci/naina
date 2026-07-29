@@ -23,6 +23,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const dropEl = $<HTMLElement>('drop');
 const fileEl = $<HTMLInputElement>('file');
 const tierEl = $<HTMLSelectElement>('tier');
+const langEl = $<HTMLSelectElement>('language');
 const boxesEl = $<HTMLInputElement>('show-boxes');
 const statusEl = $<HTMLElement>('status');
 const statusTextEl = $<HTMLElement>('status-text');
@@ -52,9 +53,14 @@ let busy = false;
 // Remember the model choice: a returning user should not have to re-pick it, and
 // the weights for it are already cached.
 const SAVED_TIER = 'naina.tier';
+const SAVED_LANG = 'naina.language';
 const savedTier = localStorage.getItem(SAVED_TIER);
 if (savedTier && [...tierEl.options].some((o) => o.value === savedTier)) {
   tierEl.value = savedTier;
+}
+const savedLang = localStorage.getItem(SAVED_LANG);
+if (savedLang !== null && [...langEl.options].some((o) => o.value === savedLang)) {
+  langEl.value = savedLang;
 }
 
 // ── worker plumbing ────────────────────────────────────────────────────
@@ -229,7 +235,12 @@ function render() {
 
 // ── reading ────────────────────────────────────────────────────────────
 
-async function readPages(pages: SourcePage[], tier: TierName, verb: string) {
+async function readPages(
+  pages: SourcePage[],
+  tier: TierName,
+  language: string,
+  verb: string,
+) {
   results = [];
   current = 0;
 
@@ -241,6 +252,7 @@ async function readPages(pages: SourcePage[], tier: TierName, verb: string) {
       const res = await ask({
         kind: 'read',
         tier,
+        language,
         rgb: toRgb(page.bitmap),
         width: page.bitmap.width,
         height: page.bitmap.height,
@@ -278,6 +290,7 @@ async function handleFiles(files: (File | Blob)[]) {
 
   try {
     const tier = tierEl.value as TierName;
+    const language = langEl.value;
     setStatus('Opening…', null);
 
     const pages: SourcePage[] = [];
@@ -291,8 +304,9 @@ async function handleFiles(files: (File | Blob)[]) {
       return;
     }
 
-    await readPages(pages, tier, 'Reading');
+    await readPages(pages, tier, language, 'Reading');
     localStorage.setItem(SAVED_TIER, tier);
+    localStorage.setItem(SAVED_LANG, language);
   } catch (e) {
     showError(e instanceof Error ? e.message : String(e));
   } finally {
@@ -387,15 +401,21 @@ downloadAllEl.addEventListener('click', () => {
 
 // Switching model invalidates what is on screen, since it was read by the other
 // one. Re-read rather than showing a stale result under a new label.
-tierEl.addEventListener('change', () => {
+function reReadOnSelectorChange() {
   localStorage.setItem(SAVED_TIER, tierEl.value);
+  localStorage.setItem(SAVED_LANG, langEl.value);
   if (!results.length || busy) return;
   busy = true;
   const pages = results.map((r) => r.page);
-  void readPages(pages, tierEl.value as TierName, 'Re-reading').finally(() => {
-    busy = false;
-  });
-});
+  void readPages(pages, tierEl.value as TierName, langEl.value, 'Re-reading').finally(
+    () => {
+      busy = false;
+    },
+  );
+}
+
+tierEl.addEventListener('change', reReadOnSelectorChange);
+langEl.addEventListener('change', reReadOnSelectorChange);
 
 // ── offline ────────────────────────────────────────────────────────────
 

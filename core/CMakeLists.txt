@@ -81,12 +81,19 @@ else()
     message(STATUS "  yaml-cpp:          system")
 endif()
 
-# Emscripten has no sockets layer to hand libcurl, and the host page fetches
-# models itself (see the __EMSCRIPTEN__ branch in model_loader.cc). sha256
-# verification still runs in the shared core, so integrity is not weakened.
-if(EMSCRIPTEN)
-    message(STATUS "  libcurl:           skipped (Emscripten; JS stages models)")
+# Some targets have no libcurl to link and no business fetching anything
+# themselves: Emscripten has no sockets layer, and the Android NDK ships no
+# libcurl. On both, the host (the page, or the Dart side) fetches model files and
+# stages them, and the core reads them off disk.
+#
+# sha256 verification still happens in the shared core, so a staged file is
+# checked exactly as a downloaded one would be — the integrity guarantee does not
+# depend on who did the fetching.
+if(EMSCRIPTEN OR ANDROID)
+    set(NAINA_NO_CURL ON)
+    message(STATUS "  libcurl:           skipped (host stages models)")
 else()
+    set(NAINA_NO_CURL OFF)
     find_package(CURL REQUIRED)
 endif()
 
@@ -132,8 +139,10 @@ target_link_libraries(naina-core
         $<BUILD_INTERFACE:naina_warnings>
         yaml-cpp::yaml-cpp
 )
-if(NOT EMSCRIPTEN)
+if(NOT NAINA_NO_CURL)
     target_link_libraries(naina-core PRIVATE CURL::libcurl)
+else()
+    target_compile_definitions(naina-core PRIVATE NAINA_NO_CURL=1)
 endif()
 
 # Export symbols on Windows, hide on Unix (visibility is set at project level).

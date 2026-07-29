@@ -91,6 +91,10 @@ final class NainaConfig extends Struct {
   external int enableResearchModels;
   @Int32()
   external int tier;
+
+  /// Recognition alphabet, e.g. "devanagari". nullptr or "" is the default
+  /// (Latin + CJK). Honoured when [version] >= 3.
+  external Pointer<Utf8> language;
 }
 
 // Opaque handles.

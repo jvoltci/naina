@@ -32,10 +32,13 @@ dev_dependencies:
 flutter:
   plugin:
     platforms:
+      # ffiPlugin with NO pluginClass. Dart calls the C ABI directly, so there is
+      # no method channel and nothing to register. Declaring a pluginClass makes
+      # the tool emit a GeneratedPluginRegistrant referencing a Java/Kotlin class
+      # that a pure-native module has no toolchain to compile, which fails the
+      # host app's build with "cannot find symbol".
       android:
         package: com.jvoltci.naina
-        pluginClass: NainaPlugin
         ffiPlugin: true
       ios:
-        pluginClass: NainaPlugin
         ffiPlugin: true

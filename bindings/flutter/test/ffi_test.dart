@@ -85,12 +85,14 @@ void main() {
     // C compiler's, because a mismatch writes `tier` into the wrong slot and
     // silently loads a different model than asked for.
     //
-    // Measured from C on a 64-bit target: 40 bytes, with field offsets
-    // 0, 4, 8, 16, 24, 28, 32. The 40 is not 6*4+8 -- there are four bytes of
-    // padding before models_root to align the pointer, and four more at the tail.
-    // My first guess of 32 was wrong for exactly that reason.
+    // Measured from C on a 64-bit target: 48 bytes since `language` was
+    // appended for config version 3, with existing field offsets UNCHANGED at
+    // 0, 4, 8, 16, 24, 28, 32. That the earlier offsets did not move is what
+    // makes the addition ABI-safe; it was 40 before.
+    //
+    // Note it is not simply 6*4+2*8 -- four bytes of padding align models_root.
     final ptr = sizeOf<Pointer<Void>>();
-    expect(sizeOf<NainaConfig>(), ptr == 8 ? 40 : 28);
+    expect(sizeOf<NainaConfig>(), ptr == 8 ? 48 : 32);
   });
 
   test('NainaTextbox is four points plus a score', () {
@@ -158,7 +160,8 @@ void main() {
         ..modelsRoot = nullptr
         ..numThreads = 0
         ..enableResearchModels = 0
-        ..tier = NainaTier.tiny;
+        ..tier = NainaTier.tiny
+        ..language = nullptr;
 
       final rc = bindings.init(cfg, out);
       if (rc != NainaStatus.ok) {
@@ -189,7 +192,8 @@ void main() {
         ..modelsRoot = nullptr
         ..numThreads = 0
         ..enableResearchModels = 0
-        ..tier = 0;
+        ..tier = 0
+        ..language = nullptr;
 
       final rc = bindings.init(cfg, out);
       expect(rc, isNot(NainaStatus.invalidArg),

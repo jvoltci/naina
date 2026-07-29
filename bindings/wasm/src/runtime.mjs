@@ -251,9 +251,10 @@ export function installBridge(Module, opts = {}) {
  * @param {object} [opts]
  * @param {(done: number, total: number, path: string) => void} [opts.onProgress]
  * @param {string} [opts.baseUrl] serve weights from here instead of the registry host
+ * @param {string} [opts.language] recognition alphabet ('' = Latin + CJK)
  */
 export async function stageTier(Module, tier, opts = {}) {
-  const files = JSON.parse(Module.stagingPlan(tier));
+  const files = JSON.parse(Module.stagingPlan(tier, opts.language ?? ''));
   if (files.length === 0) {
     throw new Error(`naina: no models in registry for tier ${tier}`);
   }

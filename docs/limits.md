@@ -3,21 +3,35 @@
 Read this before you deploy naina anywhere that matters. Everything here is
 measured, and several of these were found the hard way.
 
-## It returns confident nonsense on scripts it cannot read
+## You must choose the script; it will not detect it
 
-PP-OCRv6's character set covers Latin and CJK. It has **no Devanagari** — and
-nothing in the output says so.
+naina reads **Latin + CJK** by default and **Devanagari** (Hindi, Marathi,
+Nepali, Sanskrit) when asked:
 
-A Devanagari page returns lines like `3rarearanlus Tarafaaa: f:` at **0.758
-confidence**. CTC confidence measures how sure the model is about the path it
-chose through its own alphabet; it cannot express "these glyphs are not in my
-alphabet at all". So the number is high and meaningless.
+```python
+page = naina.read("hindi.png", language="devanagari")
+```
 
-!!! danger "There is no automatic guard for this yet"
-    If you might receive documents in an unsupported script, check the language
-    before calling naina. Do not use confidence as a proxy — it will not save you.
+Read a Devanagari page with the default alphabet and it does **not** fail — it
+returns plausible-looking Latin. Measured on a real page: `3rarearanlus
+Tarafaaa: f:` at **0.758 confidence**. With `language="devanagari"` the same page
+returns `अयोध्याकाण्डे नवनवतितम: सग्गः` at 0.93.
 
-Tracked in the [roadmap](ROADMAP.md).
+CTC confidence measures certainty about the path chosen through the model's *own*
+alphabet. It cannot express "these glyphs are not in my alphabet", so it stays
+high and tells you nothing. **Do not use confidence to detect a script mismatch.**
+
+An unknown language value is an error rather than a silent fallback:
+
+```python
+naina.read("x.png", language="klingon")   # raises; does not read as Latin
+```
+
+!!! warning "Other scripts are still unsupported"
+    Arabic, Tamil, Telugu, Thai, Korean and Cyrillic are not wired up yet, and on
+    those naina behaves as it did for Hindi before: wrong text, no error. Upstream
+    ships models for them in the same shape, so adding them is registry work —
+    tracked in the [roadmap](ROADMAP.md).
 
 ## Handwriting is weak
 

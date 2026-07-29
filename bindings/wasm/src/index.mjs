@@ -23,6 +23,9 @@ export const TIER = { auto: 0, tiny: 1, small: 2, medium: 3 };
  * @param {string[]} [opts.executionProviders] ort EP order, default webgpu→wasm
  * @param {(done:number,total:number,path:string)=>void} [opts.onProgress]
  * @param {boolean} [opts.stage=true] set false to stage yourself later
+ * @param {string} [opts.language] recognition alphabet. '' is Latin + CJK;
+ *   'devanagari' reads Hindi, Marathi, Nepali and Sanskrit. An unknown value
+ *   throws rather than reading with the wrong alphabet.
  * @param {string} [opts.modelBaseUrl] serve weights from this origin instead of
  *   the registry's GitHub release URLs. A browser almost always needs this:
  *   release assets send no Access-Control-Allow-Origin, so cross-origin fetch of
@@ -42,12 +45,13 @@ export async function createReader(opts = {}) {
     await stageTier(Module, tier, {
       onProgress: opts.onProgress,
       baseUrl: opts.modelBaseUrl,
+      language: opts.language ?? '',
     });
   }
 
   // NAINA_BACKEND_AUTO: the registry picks onnxruntime-web because it is the
   // only backend compiled into this build.
-  const reader = new Module.Reader(tier, 0);
+  const reader = new Module.Reader(tier, 0, opts.language ?? '');
   if (!reader.ok()) {
     const msg = Module.statusText(reader.status());
     reader.delete();

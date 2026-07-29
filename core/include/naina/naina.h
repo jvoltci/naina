@@ -146,13 +146,25 @@ typedef struct {
 /* ─── Config ──────────────────────────────────────────────────────── */
 
 typedef struct {
-    int32_t version; /* 1 = pre-OCR layout; 2 adds `tier` */
+    int32_t version; /* 1 = pre-OCR; 2 adds `tier`; 3 adds `language` */
     naina_backend backend;
     naina_device device;
     const char* models_root;        /* NULL → $NAINA_CACHE / default */
     int32_t num_threads;            /* 0 = auto */
     int32_t enable_research_models; /* retained for ABI compatibility; ignored */
     naina_tier tier;                /* honoured when version >= 2 */
+
+    /* Recognition alphabet, e.g. "devanagari". NULL or "" selects the default
+     * (Latin + CJK). Honoured when version >= 3.
+     *
+     * A string rather than an enum on purpose: the set of scripts belongs to
+     * upstream and grows, and an enum would force an ABI change per language.
+     *
+     * An unknown language is an error (NAINA_E_UNSUPPORTED), never a silent
+     * fall back to the default alphabet. Recognising Devanagari with a Latin
+     * alphabet is what produced text like "3rarearanlus Tarafaaa:" at 0.758
+     * confidence, and that failure mode is the reason this field exists. */
+    const char* language;
 } naina_config;
 
 /* ─── Opaque handles ──────────────────────────────────────────────── */

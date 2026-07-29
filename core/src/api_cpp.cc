@@ -116,7 +116,7 @@ Image& Image::operator=(Image&& other) noexcept {
 
 Engine::Engine(const Config& cfg) {
     naina_config c{};
-    c.version = 2;
+    c.version = 3;
     c.backend = to_c(cfg.backend);
     c.device = to_c(cfg.device);
     const std::string root = cfg.models_root.string();
@@ -124,6 +124,8 @@ Engine::Engine(const Config& cfg) {
     c.num_threads = cfg.num_threads;
     c.enable_research_models = 0;
     c.tier = to_c(cfg.tier);
+    // Borrowed for the duration of naina_init, which copies it.
+    c.language = cfg.language.empty() ? nullptr : cfg.language.c_str();
     const auto s = naina_init(&c, &ctx_);
     if (s != NAINA_OK) {
         throw_if(s, "Engine::Engine");

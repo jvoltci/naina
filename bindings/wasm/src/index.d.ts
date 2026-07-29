@@ -57,6 +57,16 @@ export interface CreateReaderOptions {
   /** Set false to skip staging and call stageTier yourself later. */
   stage?: boolean;
   /**
+   * Recognition alphabet. `''` (default) is Latin + CJK; `'devanagari'` reads
+   * Hindi, Marathi, Nepali and Sanskrit.
+   *
+   * Detection and layout are script-agnostic and shared; only recognition
+   * changes. An unknown value throws rather than reading with the wrong
+   * alphabet — reading Devanagari with a Latin model returns plausible wrong
+   * text at high confidence, which is the failure this exists to prevent.
+   */
+  language?: string;
+  /**
    * Serve weights from this origin instead of the registry's GitHub release URLs.
    *
    * A browser almost always needs this. GitHub release downloads redirect to
@@ -112,6 +122,8 @@ export declare function stageTier(
     onProgress?: (done: number, total: number, path: string) => void;
     /** Serve weights from here instead of the registry host. */
     baseUrl?: string;
+    /** Recognition alphabet ('' = Latin + CJK). */
+    language?: string;
   },
 ): Promise<void>;
 

@@ -177,7 +177,7 @@ try {
   // stay on CPU by design. Filtering them by pattern keeps the assertion useful
   // for real errors instead of permanently red.
   const BENIGN =
-    /webgpu|falling back|VerifyEachNodeIsAssignedToAnEp|Some nodes were not assigned|Rerunning with verbose|favicon/i;
+    /webgpu|falling back|VerifyEachNodeIsAssignedToAnEp|Some nodes were not assigned|Rerunning with verbose|favicon|CleanUnusedInitializers|Removing initializer/i;
   const realErrors = pageErrors.filter((m) => !BENIGN.test(m));
   ok(realErrors.length === 0, `no console errors (${realErrors.slice(0, 2).join(' | ')})`);
 } finally {

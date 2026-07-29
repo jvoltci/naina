@@ -8,6 +8,11 @@
 group 'com.jvoltci.naina'
 version '0.2.0'
 
+// Pinned in one place: the C++ core links against these headers and this .so, so
+// the two must not drift.
+ext.ortVersion = '1.20.0'
+ext.ortExtractDir = "$projectDir/build/onnxruntime"
+
 buildscript {
     repositories {
         google()
@@ -33,8 +38,15 @@ android {
     ndkVersion '27.0.12077973'
 
     defaultConfig {
-        // 24 is ONNX Runtime's floor for its Android builds.
-        minSdk 24
+        // 28, not 24. The core allocates arena and tensor storage with
+        // std::aligned_alloc, which Android's libc only declares from API 28 —
+        // below that the NDK's libc++ leaves it as an unresolved using
+        // declaration and tensor.cc fails to compile. ONNX Runtime's own floor
+        // is 24, so this is naina's constraint, not ORT's.
+        //
+        // API 28 is Android 9 (2018). Lowering it would mean replacing
+        // aligned_alloc with posix_memalign throughout the core.
+        minSdk 28
 
         externalNativeBuild {
             cmake {
@@ -71,6 +83,31 @@ android {
     }
 }
 
+// The AAR carries headers/ and jni/<abi>/libonnxruntime.so. `implementation`
+// alone puts the .so in the APK but leaves nothing on disk for CMake to compile
+// against, so CMake failed with "ONNX Runtime headers not found". Resolve the
+// artifact into its own configuration and unzip it before CMake configures.
+configurations {
+    ortAar
+}
+
 dependencies {
-    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.20.0'
+    implementation "com.microsoft.onnxruntime:onnxruntime-android:$ortVersion"
+    ortAar "com.microsoft.onnxruntime:onnxruntime-android:$ortVersion@aar"
+}
+
+tasks.register('extractOnnxRuntime', Copy) {
+    description = 'Unpack the ONNX Runtime AAR so CMake can find headers and libs.'
+    from { zipTree(configurations.ortAar.singleFile) }
+    into ortExtractDir
+    // Only what the native build needs; the rest of the AAR is Java and metadata.
+    include 'headers/**', 'jni/**'
+}
+
+// externalNativeBuild's configure step must not run before the headers exist.
+// Matching by prefix covers every variant and ABI Gradle generates.
+tasks.configureEach { t ->
+    if (t.name.startsWith('configureCMake') || t.name.startsWith('buildCMake')) {
+        t.dependsOn 'extractOnnxRuntime'
+    }
 }
