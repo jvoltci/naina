@@ -1,6 +1,6 @@
 {
   "name": "@jvoltci/naina-wasm",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "naina in the browser \u2014 OCR from the same C++ core, compiled to WebAssembly",
   "type": "module",
   "license": "Apache-2.0",

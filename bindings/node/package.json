@@ -1,6 +1,6 @@
 {
     "name": "@jvoltci/naina",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Embeddable document-reading (OCR) runtime",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

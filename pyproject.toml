@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "naina"
-version = "0.2.0"
+version = "0.2.1"
 description = "Embeddable document-reading runtime. OCR from one C++ core, no OpenCV."
 readme = "README.md"
 license = { text = "Apache-2.0" }

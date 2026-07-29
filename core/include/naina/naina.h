@@ -23,7 +23,7 @@ extern "C" {
 
 #define NAINA_VERSION_MAJOR 0
 #define NAINA_VERSION_MINOR 2
-#define NAINA_VERSION_PATCH 0
+#define NAINA_VERSION_PATCH 1
 
 /* Symbol export. CMake defines NAINA_BUILDING_SHARED when compiling the
  * shared library; consumers don't need to define anything. */
