@@ -1,6 +1,7 @@
 // doc_assemble: line-to-region assignment, reading order, markdown emission.
 #include "modules/doc_assemble.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -108,8 +109,8 @@ static void test_small_region_does_not_steal_a_well_matched_line() {
 
 static void test_line_picks_best_overlap_when_regions_overlap() {
     std::vector<naina_region> regions = {
-        region(0, 0, 100, 40, NAINA_REGION_TEXT),   // covers a little
-        region(0, 20, 100, 100, NAINA_REGION_TEXT), // covers most of the line
+        region(0, 0, 100, 40, NAINA_REGION_TEXT),    // covers a little
+        region(0, 20, 100, 100, NAINA_REGION_TEXT),  // covers most of the line
     };
     std::vector<Line> lines = {line(10, 30, 50, 20, "mostly in the second")};
     assign_lines_to_regions(regions, {}, &lines);

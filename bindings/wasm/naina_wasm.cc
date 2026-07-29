@@ -94,8 +94,7 @@ private:
             last_ = status_;
             return false;
         }
-        const size_t need =
-            static_cast<size_t>(width) * static_cast<size_t>(height) * 3U;
+        const size_t need = static_cast<size_t>(width) * static_cast<size_t>(height) * 3U;
         if (width <= 0 || height <= 0 || rgb.size() < need) {
             last_ = NAINA_E_INVALID_ARG;
             return false;

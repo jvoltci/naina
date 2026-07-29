@@ -169,9 +169,26 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build cmake libyaml-cpp-dev libcurl4-openssl-dev
+
+      # The node addon builds with the same presets as the library, and those
+      # require an inference backend -- a build without one produces an addon
+      # that cannot read anything. Apt has no onnxruntime package, so install
+      # upstream's tarball, matching the library job.
+      - name: Install ONNX Runtime (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ORT_VERSION=1.20.1
+          curl -fsSL -o ort.tgz \
+            "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz"
+          tar -xzf ort.tgz
+          sudo cp -r onnxruntime-linux-x64-${ORT_VERSION}/include/* /usr/local/include/
+          sudo cp -r onnxruntime-linux-x64-${ORT_VERSION}/lib/*     /usr/local/lib/
+          sudo ldconfig
+          test -f /usr/local/include/onnxruntime_c_api.h
+
       - name: Install system deps (macOS)
         if: runner.os == 'macOS'
-        run: brew install ninja cmake yaml-cpp
+        run: brew install ninja cmake yaml-cpp onnxruntime
 
       - name: npm install
         run: npm install --no-audit --no-fund

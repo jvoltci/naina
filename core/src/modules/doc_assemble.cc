@@ -52,8 +52,7 @@ float vertical_overlap_ratio(const Rect& a, const Rect& b) {
 // Header, footer and page numbers are page furniture, not part of the reading
 // flow. They are ordered last and omitted from markdown.
 bool is_furniture(naina_region_kind k) {
-    return k == NAINA_REGION_HEADER || k == NAINA_REGION_FOOTER ||
-           k == NAINA_REGION_PAGENUM;
+    return k == NAINA_REGION_HEADER || k == NAINA_REGION_FOOTER || k == NAINA_REGION_PAGENUM;
 }
 
 // Lines belonging to `region_id`, in reading order within the region: top to
@@ -248,8 +247,7 @@ void order_regions(const Config& cfg, std::vector<naina_region>* regions) {
     }
 }
 
-std::string to_markdown(const std::vector<naina_region>& regions,
-                        const std::vector<Line>& lines) {
+std::string to_markdown(const std::vector<naina_region>& regions, const std::vector<Line>& lines) {
     std::string md;
 
     // No layout model available: fall back to the recognised lines in order.
@@ -306,8 +304,8 @@ std::string to_markdown(const std::vector<naina_region>& regions,
                 // that were never determined, so the raw cell text is fenced
                 // and labelled instead.
                 append_block(&md,
-                             "```text\n[table: structure not parsed]\n" +
-                                 join_with_newline(owned) + "\n```");
+                             "```text\n[table: structure not parsed]\n" + join_with_newline(owned) +
+                                 "\n```");
                 break;
 
             case NAINA_REGION_FIGURE:

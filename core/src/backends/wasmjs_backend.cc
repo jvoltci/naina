@@ -68,9 +68,7 @@ EM_ASYNC_JS(int, js_session_create, (const char* path, int device), {
     }
 });
 
-EM_JS(void, js_session_release, (int handle), {
-    globalThis.__naina_ort?.releaseSession(handle);
-});
+EM_JS(void, js_session_release, (int handle), { globalThis.__naina_ort ?.releaseSession(handle); });
 
 // Whether the host page has installed the bridge.
 //
@@ -78,8 +76,8 @@ EM_JS(void, js_session_release, (int handle), {
 // which a page served with a strict Content-Security-Policy will refuse. EM_JS
 // compiles to a direct import with no dynamic execution.
 EM_JS(int, js_bridge_ready, (), {
-    return (typeof globalThis.__naina_ort === 'object' && globalThis.__naina_ort !== null) ? 1
-                                                                                          : 0;
+    return (typeof globalThis.__naina_ort == = 'object' && globalThis.__naina_ort != = null) ? 1
+                                                                                             : 0;
 });
 
 // Tensor metadata is returned as JSON rather than through many small calls,
@@ -87,7 +85,7 @@ EM_JS(int, js_bridge_ready, (), {
 // per session. Caller owns the returned buffer and frees it with free().
 EM_JS(char*, js_session_io_json, (int handle, int want_outputs), {
     const rt = globalThis.__naina_ort;
-    const json = rt ? rt.describeIo(handle, want_outputs !== 0) : '[]';
+    const json = rt ? rt.describeIo(handle, want_outputs != = 0) : '[]';
     const len = lengthBytesUTF8(json) + 1;
     const buf = _malloc(len);
     stringToUTF8(json, buf, len);
@@ -369,8 +367,8 @@ public:
     bool available() const override { return js_bridge_ready() != 0; }
 
     std::unique_ptr<ISession> load(const std::filesystem::path& model_path,
-                                  const SessionOptions& opts,
-                                  naina_status* out_status) override {
+                                   const SessionOptions& opts,
+                                   naina_status* out_status) override {
         const int handle =
             js_session_create(model_path.string().c_str(), static_cast<int>(opts.device));
         if (handle == 0) {
