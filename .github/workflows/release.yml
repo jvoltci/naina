@@ -131,7 +131,13 @@ jobs:
           path: dist
           merge-multiple: true
       - run: ls -la dist/
+      # skip-existing so that fixing one publish job and re-tagging does not
+      # fail here on a version PyPI already has. A release has several
+      # independent publish targets, and one of them failing must not make the
+      # others unrepeatable.
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
 
   publish-npm:
     name: publish to npm
@@ -145,10 +151,13 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
+      # libyaml-cpp-dev was missing here, so find_package(yaml-cpp REQUIRED)
+      # failed and this job died before it ever reached npm. The CI node job
+      # installs it; this one did not, and only a real tag push exercised it.
       - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake libcurl4-openssl-dev
+          sudo apt-get install -y ninja-build cmake libcurl4-openssl-dev libyaml-cpp-dev
           bash tools/ci/install_onnxruntime.sh
 
       - name: Build addon
