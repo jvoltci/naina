@@ -118,8 +118,34 @@ NAINA_WITH_ONNXRUNTIME = "ON"
 # Fetch the official ORT release rather than relying on Homebrew, so the build
 # does not depend on the runner's package manager or CPU architecture.
 before-all = "bash {project}/tools/ci/install_onnxruntime.sh"
+#
+# DYLD_LIBRARY_PATH is what lets delocate resolve @rpath/libonnxruntime and copy
+# it into the wheel. Without it the repair step fails with "not found" even
+# though the file is right there.
+#
+# MACOSX_DEPLOYMENT_TARGET is 11.0 here for x86_64 only; arm64 is overridden
+# below. It is NOT a free choice -- see that override.
 environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "11.0", DYLD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
+
+# arm64 wheels must declare macOS 13.3, because ONNX Runtime says so.
+#
+# ORT 1.20.1's arm64 dylib is itself built with a minimum target of 13.3.
+# delocate refuses to bundle it into a wheel tagged 11.0 -- correctly, because
+# that wheel would install happily on macOS 11 and then fail at import with a
+# dyld error. The floor here is ORT's, not naina's; naina's own code targets
+# 11.0 fine, which is why x86_64 keeps it.
+#
+# Revisit whenever the pinned ORT version changes: this number tracks that
+# dependency, not a decision of ours.
+[[tool.cibuildwheel.overrides]]
+select = "*-macosx_arm64"
+environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "13.3", DYLD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
 
 [tool.cibuildwheel.linux]
 before-all = "bash {project}/tools/ci/install_build_deps.sh"
-environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime" }
+# LD_LIBRARY_PATH is the Linux counterpart of DYLD_LIBRARY_PATH above: auditwheel
+# has to find libonnxruntime.so.1 in order to vendor it into the wheel, and
+# without this it fails with "required library could not be located" even though
+# before-all has just unpacked it. Both repair tools need telling where the
+# bundled runtime lives.
+environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", LD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
