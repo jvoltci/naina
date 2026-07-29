@@ -38,13 +38,16 @@ void configure_paths_once() {
 // ABI rather than inventing a different lifetime model for one platform.
 class Reader {
 public:
-    Reader(int tier, int backend) {
+    Reader(int tier, int backend, const std::string& language)
+        : language_(language) {
         configure_paths_once();
         naina_config cfg{};
-        cfg.version = 2;
+        cfg.version = 3;
         cfg.backend = static_cast<naina_backend>(backend);
         cfg.device = NAINA_DEVICE_AUTO;
         cfg.tier = static_cast<naina_tier>(tier);
+        // Held in language_ so the pointer stays valid across naina_init.
+        cfg.language = language_.empty() ? nullptr : language_.c_str();
         status_ = naina_init(&cfg, &ctx_);
     }
 
@@ -115,6 +118,7 @@ private:
         return last_ == NAINA_OK && *out != nullptr;
     }
 
+    std::string language_;
     naina_ctx_t* ctx_ = nullptr;
     naina_status status_ = NAINA_E_INVALID_ARG;
     naina_status last_ = NAINA_OK;
@@ -147,7 +151,7 @@ void json_escape_into(const std::string& in, std::string* out) {
 // (<root>/<task>/<id>/<sha256[:16]>__<basename>) and the ${release_base}
 // substitution live in model_loader; a JS reimplementation would be a second
 // source of truth that drifts the first time either changes.
-std::string staging_plan(int tier_int) {
+std::string staging_plan(int tier_int, const std::string& lang) {
     configure_paths_once();
     const char* reg_path = std::getenv("NAINA_REGISTRY");
     if (reg_path == nullptr) {
@@ -171,7 +175,12 @@ std::string staging_plan(int tier_int) {
     std::string out = "[";
     bool first = true;
     for (const naina::ModelEntry& m : reg.all()) {
-        if (m.tier != want) {
+        // Recognition is language-specific; detection and layout are shared.
+        // Selecting by lang here is what makes the browser fetch the Devanagari
+        // recogniser instead of the Latin one.
+        const bool lang_ok =
+            (m.task == "text_recognize") ? (m.lang == lang) : m.lang.empty();
+        if (m.tier != want || !lang_ok) {
             continue;
         }
         for (const auto& [kind, file] : m.files) {
@@ -199,7 +208,7 @@ std::string staging_plan(int tier_int) {
 
 EMSCRIPTEN_BINDINGS(naina) {
     emscripten::class_<Reader>("Reader")
-        .constructor<int, int>()
+        .constructor<int, int, std::string>()
         .function("readMarkdown", &Reader::read_markdown)
         .function("readJson", &Reader::read_json)
         .function("status", &Reader::status)

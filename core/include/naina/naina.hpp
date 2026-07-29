@@ -35,6 +35,10 @@ struct Config {
     std::filesystem::path models_root;
     int num_threads = 0;
     Tier tier = Tier::Auto;
+
+    // Recognition alphabet, e.g. "devanagari". Empty selects the default
+    // (Latin + CJK). An unknown value throws rather than falling back.
+    std::string language;
 };
 
 class Error : public std::runtime_error {

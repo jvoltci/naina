@@ -222,6 +222,12 @@ Engine::Engine(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Engine>(info) 
             else if (s == "tensorrt")
                 cfg.backend = naina::Backend::TensorRT;
         }
+        // Recognition alphabet. Absent or "" is Latin + CJK; "devanagari"
+        // reads Hindi, Marathi, Nepali and Sanskrit. An unknown value throws
+        // rather than reading with the wrong alphabet.
+        if (opts.Has("language") && opts.Get("language").IsString()) {
+            cfg.language = opts.Get("language").As<Napi::String>();
+        }
         if (opts.Has("tier") && opts.Get("tier").IsString()) {
             const std::string s = opts.Get("tier").As<Napi::String>();
             if (s == "auto")

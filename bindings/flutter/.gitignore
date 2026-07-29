@@ -5,3 +5,10 @@ build/
 example/.dart_tool/
 example/build/
 example/pubspec.lock
+android/.cxx/
+android/build/
+android/local.properties
+ios/Pods/
+example/android/local.properties
+example/ios/Pods/
+example/integration_test/

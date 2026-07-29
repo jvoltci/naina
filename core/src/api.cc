@@ -80,6 +80,10 @@ struct naina_ctx {
     naina::ModelRegistry registry;
     naina_backend preferred_backend = NAINA_BACKEND_AUTO;
     naina::Tier tier = naina::Tier::Small;
+
+    // Recognition alphabet. Empty means the default (Latin + CJK). Detection
+    // and layout ignore this: they are script-agnostic.
+    std::string language;
     int num_threads = 0;
 
     std::mutex sess_mu;
@@ -99,9 +103,9 @@ struct naina_ctx {
             *out_status = NAINA_OK;
             return &rec_charset;
         }
-        auto entry = registry.resolve("text_recognize", tier);
+        auto entry = registry.resolve("text_recognize", tier, language);
         if (!entry && tier != naina::Tier::Medium) {
-            entry = registry.resolve("text_recognize", naina::Tier::Medium);
+            entry = registry.resolve("text_recognize", naina::Tier::Medium, language);
         }
         if (!entry || entry->files.find("charset_yaml") == entry->files.end()) {
             *out_status = NAINA_E_MODEL_NOT_FOUND;
@@ -147,12 +151,17 @@ struct naina_ctx {
             *out_status = NAINA_OK;
             return it->second.get();
         }
-        auto entry = registry.resolve(task, tier);
+        // Language applies to recognition only. Detection and layout are
+        // script-agnostic — measured on a Devanagari page, DBNet located all 82
+        // lines correctly — so they resolve with no language and are shared.
+        const std::string task_lang = (task == "text_recognize") ? language : std::string();
+
+        auto entry = registry.resolve(task, tier, task_lang);
         // Tier fallback: a tier that lacks this task degrades to a larger one
         // rather than failing. Every task currently exists at every tier, so
         // this is a safety net for future partial registries.
         if (!entry && tier != naina::Tier::Medium) {
-            entry = registry.resolve(task, naina::Tier::Medium);
+            entry = registry.resolve(task, naina::Tier::Medium, task_lang);
         }
         if (!entry) {
             *out_status = NAINA_E_MODEL_NOT_FOUND;
@@ -264,6 +273,22 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
             case NAINA_TIER_AUTO:
                 ctx->tier = naina::Tier::Small;
                 break;
+        }
+    }
+
+    // `language` only exists in config version >= 3. Older callers get the
+    // default alphabet, which is what they were already getting.
+    if (cfg != nullptr && cfg->version >= 3 && cfg->language != nullptr &&
+        cfg->language[0] != '\0') {
+        ctx->language = cfg->language;
+
+        // Reject an unknown language HERE, at init, rather than letting it
+        // surface later as a missing model or -- far worse -- as a silent fall
+        // back to the Latin alphabet. Recognising Devanagari with a Latin
+        // alphabet is what returned "3rarearanlus Tarafaaa:" at 0.758
+        // confidence, and refusing up front is the whole point of this field.
+        if (!ctx->registry.resolve("text_recognize", ctx->tier, ctx->language)) {
+            return NAINA_E_UNSUPPORTED;
         }
     }
 

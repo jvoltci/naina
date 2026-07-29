@@ -88,24 +88,31 @@ Turn a bag of lines into a document.
       of 7 regions on the same page. The correct label was usually present in the
       raw rows at a lower score, which suggests cross-class NMS above may recover
       some of this on its own — do that first, then reassess the threshold.
-- [ ] **Devanagari support, and stop guessing at unknown scripts.**
-      **This is the highest open priority.** A Hindi page returns lines like
-      `3rarearanlus Tarafaaa: f:` at 0.758 confidence, with nothing in the output
-      saying the script is unreadable — CTC confidence measures certainty within
-      the model's own alphabet and cannot express "not in my alphabet".
+- [x] **Devanagari support.** Hindi, Marathi, Nepali and Sanskrit, via a
+      `language` axis orthogonal to tier. Verified end to end: the page that
+      previously returned `3rarearanlus Tarafaaa: f:` at 0.758 confidence now
+      returns `अयोध्याकाण्डे नवनवतितम: सग्गः`, 129 lines at 0.90–0.99 native and
+      2731 Devanagari characters in a real browser.
 
-      Detection is script-agnostic and already correct: measured on a Devanagari
-      page, DBNet found 82 lines and located them properly. Only recognition is
-      wrong, which makes this a model-plus-registry change rather than new
-      engine work.
+      Detection and layout are shared, not duplicated — they are script-agnostic,
+      which is why this was a registry change rather than engine work.
+      `config.version` 3 appends a `language` string; existing offsets are
+      unchanged (40 → 48 bytes) so v1 and v2 configs still work, asserted by test.
+      An unknown language returns `NAINA_E_UNSUPPORTED` rather than falling back
+      to Latin.
 
-      `PaddlePaddle/devanagari_PP-OCRv5_mobile_rec_onnx` is verified compatible —
-      Apache-2.0, already ONNX (no paddle2onnx step), 7.9 MB, `[N,3,48,W]` input
-      matching naina's existing 48px rec path, `CTCLabelDecode`, 568-char dict →
-      570 classes. The same family covers ~20 more scripts.
+- [ ] **The other scripts.** Arabic, Tamil, Telugu, Thai, Korean, Cyrillic and
+      ~14 more ship upstream in the identical shape (ONNX, `[N,3,48,W]`,
+      `CTCLabelDecode`), so each is a registry entry plus a mirrored file. The
+      machinery is done.
 
-      Design, ABI plan and step list:
-      [devanagari-support](https://github.com/jvoltci/naina/blob/master/docs/superpowers/specs/2026-07-29-devanagari-support.md).
+- [ ] **Detect a script mismatch rather than relying on the caller.** Even with a
+      language option, someone will read Hindi with the Latin model and get
+      fluent nonsense. Confidence cannot express "wrong alphabet": measured 0.99
+      mean in-alphabet against ~0.62 for Devanagari-as-Latin, which looks
+      separable but is two samples. Collect a corpus across scripts before
+      setting any threshold; exposing a page-level aggregate is the safe half and
+      can land first.
 
 ## v0.4 — Browser  *(binding shipped)*
 

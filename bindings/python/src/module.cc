@@ -100,11 +100,13 @@ PYBIND11_MODULE(_binding, m) {
         .def(py::init([](naina::Backend backend,
                          naina::Tier tier,
                          const std::string& models_root,
-                         int num_threads) {
+                         int num_threads,
+                         const std::string& language) {
                  naina::Config cfg;
                  cfg.backend = backend;
                  cfg.tier = tier;
                  cfg.num_threads = num_threads;
+                 cfg.language = language;
                  if (!models_root.empty()) {
                      cfg.models_root = models_root;
                  }
@@ -113,7 +115,11 @@ PYBIND11_MODULE(_binding, m) {
              py::arg("backend") = naina::Backend::Auto,
              py::arg("tier") = naina::Tier::Auto,
              py::arg("models_root") = std::string(),
-             py::arg("num_threads") = 0)
+             py::arg("num_threads") = 0,
+             // Recognition alphabet. "" is Latin + CJK; "devanagari" reads
+             // Hindi, Marathi, Nepali and Sanskrit. An unknown value raises
+             // rather than silently reading with the wrong alphabet.
+             py::arg("language") = std::string())
         .def(
             "read",
             [](naina::Engine& self, const NpImage& image) {

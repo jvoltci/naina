@@ -4,7 +4,7 @@
 
 #include "sha256.hpp"
 
-#ifndef __EMSCRIPTEN__
+#ifndef NAINA_NO_CURL
 #include <curl/curl.h>
 #endif
 #include <yaml-cpp/yaml.h>
@@ -104,17 +104,17 @@ std::string lower(std::string s) {
     return s;
 }
 
-#ifdef __EMSCRIPTEN__
+#ifdef NAINA_NO_CURL
 
-// Under Emscripten there is no sockets layer to hand libcurl, and the host page
-// already owns fetching: JS pulls each model through the Cache API and writes
-// the bytes into the virtual filesystem at exactly the path cache_path_for()
-// produces. ensure_local then finds the file present and runs the SAME sha256
-// verification as every other platform, so the browser gets the same integrity
-// guarantee rather than a weaker one.
+// Builds with no network layer in the core: Emscripten (no sockets) and Android
+// (the NDK ships no libcurl). On both, the host owns fetching — JS through the
+// Cache API, or Dart through http — and writes the bytes into the path
+// cache_path_for() produces. ensure_local then finds the file present and runs
+// the SAME sha256 verification as every other platform, so these targets get the
+// same integrity guarantee rather than a weaker one.
 //
-// Reaching here means JS did not stage the file, which is a caller error, not a
-// network condition — so report it as a missing model.
+// Reaching here means the host did not stage the file, which is a caller error
+// rather than a network condition — so report it as a missing model.
 naina_status download_atomic(const std::string&, const fs::path&) {
     return NAINA_E_MODEL_NOT_FOUND;
 }
@@ -181,7 +181,7 @@ naina_status download_atomic(const std::string& url, const fs::path& dest) {
     return NAINA_OK;
 }
 
-#endif  // __EMSCRIPTEN__
+#endif  // NAINA_NO_CURL
 
 }  // namespace
 
@@ -242,6 +242,7 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
         entry.id = m["id"].as<std::string>();
         entry.task = m["task"].as<std::string>();
         entry.tier = tier_from_string(m["tier"] ? m["tier"].as<std::string>() : "small");
+        entry.lang = m["lang"] ? m["lang"].as<std::string>() : "";
         entry.arch = m["arch"].as<std::string>("");
         entry.license = m["license"].as<std::string>("");
 
@@ -265,10 +266,24 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
     return reg;
 }
 
-std::optional<ModelEntry> ModelRegistry::resolve(const std::string& task, Tier tier) const {
+std::optional<ModelEntry> ModelRegistry::resolve(const std::string& task,
+                                                 Tier tier,
+                                                 const std::string& lang) const {
     for (const auto& m : models_) {
-        if (m.task == task && m.tier == tier) {
+        if (m.task == task && m.tier == tier && m.lang == lang) {
             return m;
+        }
+    }
+
+    // A language-specific model may exist at only one tier — upstream ships
+    // Devanagari in a "mobile" size only. Rather than fail, fall back across
+    // TIERS for the same language, which changes model size but never the
+    // alphabet. Falling back across LANGUAGES is what we must never do.
+    if (!lang.empty()) {
+        for (const auto& m : models_) {
+            if (m.task == task && m.lang == lang) {
+                return m;
+            }
         }
     }
     return std::nullopt;

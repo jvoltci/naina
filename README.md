@@ -3,23 +3,47 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
   <a href="https://github.com/jvoltci/naina/actions/workflows/ci.yml"><img src="https://github.com/jvoltci/naina/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
   <a href="https://github.com/jvoltci/naina/stargazers"><img src="https://img.shields.io/github/stars/jvoltci/naina.svg?style=social" alt="GitHub stars"></a>
 </p>
 
-<h3 align="center">An embeddable document-reading runtime. One C++ core, every language, from a browser tab to a GPU server.</h3>
-
 <p align="center">
-  <a href="docs/ARCHITECTURE.md"><b>📐 Architecture</b></a> ·
-  <a href="docs/ROADMAP.md"><b>🗺️ Roadmap</b></a> ·
-  <a href="https://github.com/jvoltci/naina/releases/tag/models-v1"><b>📦 Model weights</b></a> ·
-  <a href="https://github.com/jvoltci/naina/discussions"><b>💬 Discussions</b></a>
+  <a href="https://pypi.org/project/naina/"><img src="https://img.shields.io/pypi/v/naina?label=pypi&color=3775A9" alt="PyPI"></a>
+  <a href="https://www.npmjs.com/package/@jvoltci/naina"><img src="https://img.shields.io/npm/v/@jvoltci/naina?label=npm&color=CB3837" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@jvoltci/naina-wasm"><img src="https://img.shields.io/npm/v/@jvoltci/naina-wasm?label=npm%20wasm&color=654FF0" alt="npm wasm"></a>
+  <a href="https://pub.dev/packages/naina"><img src="https://img.shields.io/pub/v/naina?label=pub.dev&color=0175C2" alt="pub.dev"></a>
 </p>
 
-> **Pre-release.** naina is not published to PyPI or npm yet, and there is no
-> browser build. Build from source with the instructions below. What works
-> today is listed in [Status](#status), and what does not is listed there too.
+<h3 align="center">Read any document. One C++ core, everywhere.</h3>
+
+<p align="center">
+  <a href="https://jvoltci.github.io/naina/"><b>Try it online</b></a> ·
+  <a href="https://jvoltci.github.io/naina/doc/"><b>Documentation</b></a> ·
+  <a href="docs/ARCHITECTURE.md"><b>Architecture</b></a> ·
+  <a href="docs/ROADMAP.md"><b>Roadmap</b></a> ·
+  <a href="https://github.com/jvoltci/naina/releases/tag/models-v1"><b>Model weights</b></a>
+</p>
+
+**[Use it in your browser now →](https://jvoltci.github.io/naina/)** No install, no
+upload, no account. PDFs and images, Latin/CJK and Devanagari.
+
+> **Publishing status.** The web app and docs are live. The Python, Node and
+> Flutter packages are built and tested but not yet on PyPI, npm or pub.dev — the
+> version badges above go green when they are. There is **no Rust crate**; that is
+> [v0.5 on the roadmap](docs/ROADMAP.md) and nothing has been published to
+> crates.io. Build from source meanwhile; see [Install](#install).
+
+## Packages
+
+| Package | Registry | What it does | State |
+|---|---|---|---|
+| `naina` | [PyPI](https://pypi.org/project/naina/) | Python, self-contained wheels | built, unpublished |
+| `@jvoltci/naina` | [npm](https://www.npmjs.com/package/@jvoltci/naina) | Node, inference off the event loop | built, unpublished |
+| `@jvoltci/naina-wasm` | [npm](https://www.npmjs.com/package/@jvoltci/naina-wasm) | Browser, 143 KB brotli | built, unpublished |
+| `naina` | [pub.dev](https://pub.dev/packages/naina) | Flutter, FFI, Android + iOS | built; Android verified on-device, iOS unproven |
+| `naina` | crates.io | Rust over the C ABI | **not started** |
+| — | — | [MCP server](mcp/) for LLM tools | works, in-repo |
 
 ```python
 import naina
