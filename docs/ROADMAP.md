@@ -96,13 +96,31 @@ Turn a bag of lines into a document.
       in-charset glyph". This is a correctness-of-contract problem, not a model
       gap: naina should say it cannot read a script rather than guess.
 
-## v0.4 — Browser
+## v0.4 — Browser  *(binding shipped)*
 
-- [ ] `bindings/wasm` via Emscripten, code budget < 5 MB compressed
+- [x] `bindings/wasm` via Emscripten. **143 KB brotli** for `naina.wasm` plus
+      24 KB for the JS glue, against a 5 MB budget — the no-OpenCV rule is what
+      makes that possible, since OpenCV alone would have exceeded it.
+- [x] `wasmjs_backend` — the only thing crossing into JS is
+      `ISession::run`, i.e. "execute this graph on these tensors". All of
+      naina's own arithmetic (preprocessing, DB decode, rectification, CTC,
+      layout, doc_assemble) runs the same C++ compiled to WASM. Uses ASYNCIFY
+      because ort-web's `run()` is a Promise while `ISession::run` is
+      synchronous; the alternative (SharedArrayBuffer + `Atomics.wait`) needs
+      COOP/COEP headers that GitHub Pages cannot set.
+- [x] Model staging: JS fetches through the Cache API, writes into Emscripten's
+      virtual FS, and the shared C++ core sha256-verifies every file — so the
+      browser gets the same integrity check as every other platform, not a
+      weaker one. The staging plan (URLs *and* cache paths) is computed by C++
+      via `stagingPlan()`, so the cache layout has one definition.
+- [x] Verified reading a real A4 page: 33 lines, mean confidence 0.99,
+      correct `#`/`##` structure, deterministic across runs.
 - [ ] PWA at `jvoltci.github.io/naina/` — client-side only, no upload, offline
       after first visit via service worker + Cache API keyed on model sha256
 - [ ] mkdocs-material documentation at `jvoltci.github.io/naina/doc/`
-- [ ] WebGPU execution provider where available
+- [ ] WebGPU execution provider where available. The bridge already requests
+      `['webgpu','wasm']` by default and ort falls back silently, but WebGPU has
+      not been measured — the numbers above are WASM SIMD.
 
 ## v0.5 — Rust
 
@@ -111,11 +129,22 @@ Turn a bag of lines into a document.
 
 ## v1.0 — Guarantees
 
-- [ ] **Cross-binding parity enforced in CI.** Python, Node, Rust and WASM must
-      produce byte-identical output for a fixed (backend, device, tier) on the
-      golden corpus. Scoped honestly: identical *across bindings*,
-      tolerance-bounded *across backends*, because ONNX Runtime and NCNN differ
-      in floating-point behaviour.
+- [ ] **Cross-binding parity enforced in CI.** Python, Node and Rust must produce
+      byte-identical output for a fixed (backend, device, tier) on the golden
+      corpus — they run the same compiled core against the same kernels, so
+      anything less is a bug.
+
+      **WASM is explicitly outside that set, and this is measured, not assumed.**
+      onnxruntime-web is a different *build* of ONNX Runtime — WASM SIMD kernels
+      rather than native NEON/AVX — so its probability maps differ in the last
+      few float bits. On the A4 fixture at tiny tier that moved one marginal blob
+      across DBNet's 0.3 binarize threshold: native macOS arm64 produced 35 text
+      lines, WASM 33, with 33 character-identical. Because a split fragment takes
+      its own reading-order slot, word order can shift with it too. An earlier
+      draft of this file listed WASM in the byte-identical group; that was wrong.
+      What WASM does guarantee is determinism within itself (same input, same
+      output — asserted in `bindings/wasm/test/read.test.mjs`) and the same
+      *algorithms*, since it runs the same C++.
 - [ ] Full benchmark matrix: accuracy and latency per device, harness in-repo,
       reproducible from a clean clone
 - [x] MCP server — `mcp/`, two tools (`read_document`,

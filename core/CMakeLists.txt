@@ -66,7 +66,14 @@ else()
     message(STATUS "  yaml-cpp:          system")
 endif()
 
-find_package(CURL REQUIRED)
+# Emscripten has no sockets layer to hand libcurl, and the host page fetches
+# models itself (see the __EMSCRIPTEN__ branch in model_loader.cc). sha256
+# verification still runs in the shared core, so integrity is not weakened.
+if(EMSCRIPTEN)
+    message(STATUS "  libcurl:           skipped (Emscripten; JS stages models)")
+else()
+    find_package(CURL REQUIRED)
+endif()
 
 # Backends are added conditionally; each backend file is gated on its option
 # and Find* result, so a build without ONNX Runtime / NCNN still produces a
@@ -80,6 +87,13 @@ endif()
 if(NAINA_WITH_NCNN)
     find_package(NCNN REQUIRED)
     list(APPEND NAINA_SOURCES src/backends/ncnn_backend.cc)
+endif()
+
+if(NAINA_WITH_WASMJS)
+    if(NOT EMSCRIPTEN)
+        message(FATAL_ERROR "NAINA_WITH_WASMJS requires an Emscripten toolchain")
+    endif()
+    list(APPEND NAINA_SOURCES src/backends/wasmjs_backend.cc)
 endif()
 
 target_sources(naina-core PRIVATE ${NAINA_SOURCES})
@@ -102,8 +116,10 @@ target_link_libraries(naina-core
     PRIVATE
         $<BUILD_INTERFACE:naina_warnings>
         yaml-cpp::yaml-cpp
-        CURL::libcurl
 )
+if(NOT EMSCRIPTEN)
+    target_link_libraries(naina-core PRIVATE CURL::libcurl)
+endif()
 
 # Export symbols on Windows, hide on Unix (visibility is set at project level).
 set_target_properties(naina-core PROPERTIES

@@ -4,7 +4,9 @@
 
 #include "sha256.hpp"
 
+#ifndef __EMSCRIPTEN__
 #include <curl/curl.h>
+#endif
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
@@ -102,6 +104,23 @@ std::string lower(std::string s) {
     return s;
 }
 
+#ifdef __EMSCRIPTEN__
+
+// Under Emscripten there is no sockets layer to hand libcurl, and the host page
+// already owns fetching: JS pulls each model through the Cache API and writes
+// the bytes into the virtual filesystem at exactly the path cache_path_for()
+// produces. ensure_local then finds the file present and runs the SAME sha256
+// verification as every other platform, so the browser gets the same integrity
+// guarantee rather than a weaker one.
+//
+// Reaching here means JS did not stage the file, which is a caller error, not a
+// network condition — so report it as a missing model.
+naina_status download_atomic(const std::string&, const fs::path&) {
+    return NAINA_E_MODEL_NOT_FOUND;
+}
+
+#else
+
 // One-time libcurl global init. Thread-safe via std::call_once.
 void curl_global_init_once() {
     static std::once_flag flag;
@@ -161,6 +180,8 @@ naina_status download_atomic(const std::string& url, const fs::path& dest) {
     }
     return NAINA_OK;
 }
+
+#endif  // __EMSCRIPTEN__
 
 }  // namespace
 

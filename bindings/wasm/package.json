@@ -1,0 +1,40 @@
+{
+  "name": "@jvoltci/naina-wasm",
+  "version": "0.2.0",
+  "description": "naina in the browser — OCR from the same C++ core, compiled to WebAssembly",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./runtime": "./src/runtime.mjs",
+    "./naina.wasm": "./dist/naina.wasm"
+  },
+  "files": [
+    "src/",
+    "dist/naina.mjs",
+    "dist/naina.wasm",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test/read.test.mjs"
+  },
+  "peerDependencies": {
+    "onnxruntime-web": "^1.27.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jvoltci/naina.git"
+  },
+  "keywords": [
+    "ocr",
+    "wasm",
+    "webassembly",
+    "document",
+    "paddleocr",
+    "offline"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}
