@@ -28,3 +28,6 @@ target_include_directories(test_ctc_decode PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
 set_tests_properties(test_model_loader test_engine_lifecycle PROPERTIES
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+
+naina_add_test(test_page)
+target_include_directories(test_page PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
