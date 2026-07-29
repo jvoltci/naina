@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/bindings/flutter/docs/assets/hero.svg" alt="naina" width="620">
+  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/bindings/flutter/doc/assets/hero.svg" alt="naina" width="620">
 </p>
 
 <p align="center">
