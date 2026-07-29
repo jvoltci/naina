@@ -57,8 +57,8 @@ three.
 > measures certainty *within* the model's own alphabet and cannot express "wrong
 > alphabet". An unrecognised `language` value **does** raise.
 
-> **v0.2.0 is out on PyPI and crates.io.** The web app and docs are live. npm and
-> pub.dev are blocked on account setup rather than on code — see the table below.
+> **v0.2.1 is out on all five registries** — PyPI, npm ×2, crates.io and pub.dev.
+> The web app and docs are live.
 
 ## Packages
 
@@ -66,21 +66,18 @@ three.
 |---|---|---|---|
 | `naina` | [PyPI](https://pypi.org/project/naina/) | Python, self-contained wheels | ✅ **published** |
 | `naina` | [crates.io](https://crates.io/crates/naina) | Rust over the C ABI | ✅ **published** |
-| `@jvoltci/naina` | npm | Node, inference off the event loop | built; publish blocked, see below |
-| `@jvoltci/naina-wasm` | npm | Browser, 143 KB brotli | built; publish blocked |
-| `naina` | pub.dev | Flutter, FFI | built; Android verified on a device, iOS unproven |
+| `@jvoltci/naina` | [npm](https://www.npmjs.com/package/@jvoltci/naina) | Node, inference off the event loop | ✅ **published** |
+| `@jvoltci/naina-wasm` | [npm](https://www.npmjs.com/package/@jvoltci/naina-wasm) | Browser, 143 KB brotli | ✅ **published** |
+| `naina` | [pub.dev](https://pub.dev/packages/naina) | Flutter, FFI | ✅ **published** — Android verified on a device, iOS unproven |
 | — | — | [MCP server](mcp/) for LLM tools | works, in-repo |
 
-**npm is not published yet.** The publish fails with `E404` on
-`PUT @jvoltci/naina`. Unscoped `naina` on npm is taken by another package, so the
-scope is not optional. Resolving it needs an npm token with write access to the
-`@jvoltci` scope — or better, npm's Trusted Publishing (OIDC), which the release
-workflow is already wired for: both npm jobs request `id-token: write`, so
-enabling it is a matter of dropping the `NODE_AUTH_TOKEN` line.
+Packages are scoped because unscoped `naina` on npm belongs to another project.
 
-Trusted Publishing is worth preferring here, and not only on principle: npm
-granular tokens with write access expire in **90 days at most**, so a
-token-based release breaks on a timer.
+> **npm tokens expire.** A granular token with write access lasts **90 days at
+> most**, so a token-based release breaks on a timer. Both npm jobs already
+> request `id-token: write`, so switching these packages to npm's Trusted
+> Publishing is a matter of configuring it on each package and deleting the
+> `NODE_AUTH_TOKEN` lines. Worth doing before the current token lapses.
 
 ```python
 import naina
@@ -150,8 +147,8 @@ browser build could not describe document structure. See
 | Python | ✅ published | `pip install naina` |
 | Rust | ✅ published | `cargo add naina` |
 | Flutter | ✅ published | `flutter pub add naina` — Android verified on device, iOS unproven |
-| WASM / browser | ✅ built | [use it online](https://jvoltci.github.io/naina/); npm publish pending |
-| Node / TypeScript | ✅ built | npm publish pending — needs a local toolchain to install |
+| WASM / browser | ✅ published | `npm i @jvoltci/naina-wasm` — or [use it online](https://jvoltci.github.io/naina/) |
+| Node / TypeScript | ✅ published | `npm i @jvoltci/naina` — needs a local toolchain to build on install |
 | MCP (for LLM tools) | ✅ | [`mcp/`](mcp/) — two tools, ten scripts, verified over stdio |
 
 **Weights are mirrored, not borrowed.** naina fetches from

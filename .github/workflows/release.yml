@@ -184,7 +184,21 @@ jobs:
         working-directory: bindings/node
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          # Tolerate a version that is already on the registry, the way the PyPI
+          # step does with skip-existing. npm has no such flag, so match on its
+          # error: 0.2.1 was published from a laptop while CI was mid-run, and
+          # the job failed with E403 "cannot publish over the previously
+          # published versions" -- which looks like a broken release when
+          # nothing is broken.
+          if npm publish --access public 2>publish.log; then
+            cat publish.log
+          else
+            cat publish.log
+            grep -q "cannot publish over the previously published versions" publish.log \
+              || grep -q "EPUBLISHCONFLICT" publish.log
+            echo "already published at this version; treating as success"
+          fi
 
   # The browser package is separate because it needs Emscripten rather than a
   # native toolchain, and it has no ONNX Runtime dependency at build time --
@@ -241,4 +255,18 @@ jobs:
         working-directory: bindings/wasm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          # Tolerate a version that is already on the registry, the way the PyPI
+          # step does with skip-existing. npm has no such flag, so match on its
+          # error: 0.2.1 was published from a laptop while CI was mid-run, and
+          # the job failed with E403 "cannot publish over the previously
+          # published versions" -- which looks like a broken release when
+          # nothing is broken.
+          if npm publish --access public 2>publish.log; then
+            cat publish.log
+          else
+            cat publish.log
+            grep -q "cannot publish over the previously published versions" publish.log \
+              || grep -q "EPUBLISHCONFLICT" publish.log
+            echo "already published at this version; treating as success"
+          fi
