@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(naina
-    VERSION 0.2.0
+    VERSION 0.2.1
     DESCRIPTION "Embeddable document-reading runtime. OCR from one C++ core."
     LANGUAGES CXX C
 )

@@ -1,6 +1,6 @@
 [package]
 name = "naina"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 rust-version = "1.75"
 description = "Read documents. OCR from one C++ core — text, layout and markdown, with no Python and no OpenCV."

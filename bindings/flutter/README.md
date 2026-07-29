@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/bindings/flutter/doc/assets/hero.svg" alt="naina" width="620">
+  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/bindings/flutter/doc/assets/hero.png" alt="naina — read text from images, on the device" width="620">
 </p>
 
 <p align="center">

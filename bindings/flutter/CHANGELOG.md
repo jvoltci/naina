@@ -1,3 +1,12 @@
+## 0.2.1
+
+- README hero renders on pub.dev. GitHub raw serves SVG as text/plain with
+  nosniff, so browsers refuse to render it as an image; the hero is now a PNG.
+- Renamed the package doc directory to doc/ per the pub layout convention, and
+  added LICENSE to the package root, both required by pub.dev.
+- Eight further scripts: arabic, cyrillic, el, eslav, korean, ta, te, th.
+  Use NainaLanguage constants; NainaLanguage.all lists them.
+
 # Changelog
 
 ## 0.2.0

@@ -4,7 +4,7 @@ homepage: https://jvoltci.github.io/naina/
 repository: https://github.com/jvoltci/naina
 issue_tracker: https://github.com/jvoltci/naina/issues
 documentation: https://jvoltci.github.io/naina/doc/
-version: 0.2.0
+version: 0.2.1
 
 topics:
   - ocr

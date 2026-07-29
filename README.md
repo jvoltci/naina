@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/hero.svg" alt="naina hero banner" width="100%">
+  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/docs/assets/hero.png" alt="naina — reads any document, one C++ core, every language" width="100%">
 </p>
 
 <p align="center">
