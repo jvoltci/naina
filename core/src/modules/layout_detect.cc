@@ -86,6 +86,69 @@ naina_region_kind kind_from_class_id(int32_t class_id) {
     return NAINA_REGION_UNKNOWN;
 }
 
+void dedupe_overlapping(float iou_thresh, std::vector<naina_region>* regions) {
+    if (regions == nullptr || regions->size() < 2) {
+        return;
+    }
+
+    // Visit in descending score so the label that survives for a box is the
+    // best-scoring one. Suppress into a mask rather than reordering: the output
+    // keeps input order, which keeps the pipeline's output reproducible.
+    std::vector<size_t> by_score(regions->size());
+    for (size_t i = 0; i < by_score.size(); ++i) {
+        by_score[i] = i;
+    }
+    std::stable_sort(by_score.begin(), by_score.end(), [&](size_t a, size_t b) {
+        return (*regions)[a].bbox.score > (*regions)[b].bbox.score;
+    });
+
+    // IoU, not containment. A small region fully inside a big one — a title in a
+    // text block, a formula in a paragraph — has containment 1.0 but low IoU,
+    // and both are real regions that must survive.
+    const auto iou = [](const naina_bbox& a, const naina_bbox& b) -> float {
+        const float x1 = std::max(a.x, b.x);
+        const float y1 = std::max(a.y, b.y);
+        const float x2 = std::min(a.x + a.w, b.x + b.w);
+        const float y2 = std::min(a.y + a.h, b.y + b.h);
+        const float iw = x2 - x1;
+        const float ih = y2 - y1;
+        if (iw <= 0.0F || ih <= 0.0F) {
+            return 0.0F;
+        }
+        const float inter = iw * ih;
+        const float uni = a.w * a.h + b.w * b.h - inter;
+        return uni <= 0.0F ? 0.0F : inter / uni;
+    };
+
+    std::vector<bool> dropped(regions->size(), false);
+    std::vector<size_t> kept;
+    kept.reserve(regions->size());
+
+    for (const size_t idx : by_score) {
+        bool duplicate = false;
+        for (const size_t k : kept) {
+            if (iou((*regions)[idx].bbox, (*regions)[k].bbox) > iou_thresh) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (duplicate) {
+            dropped[idx] = true;
+        } else {
+            kept.push_back(idx);
+        }
+    }
+
+    std::vector<naina_region> out;
+    out.reserve(kept.size());
+    for (size_t i = 0; i < regions->size(); ++i) {
+        if (!dropped[i]) {
+            out.push_back((*regions)[i]);
+        }
+    }
+    *regions = std::move(out);
+}
+
 naina_status detect(backend::ISession* session,
                     const ImageView& src,
                     const Config& cfg,
@@ -211,6 +274,11 @@ naina_status detect(backend::ISession* session,
         r.order = -1;  // doc_assemble assigns reading order
         out_regions->push_back(r);
     }
+
+    // PaddleDetection's NMS is per class, so the same physical box arrives once
+    // per plausible label. Drop the extras before doc_assemble sees them —
+    // otherwise one box competes with itself for line assignment.
+    dedupe_overlapping(cfg.dedupe_iou, out_regions);
 
     return NAINA_OK;
 }
