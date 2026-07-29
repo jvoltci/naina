@@ -29,7 +29,7 @@ Detect text, recognise it, return lines with geometry and confidences, from
 Python and Node.
 
 - [x] Retier the registry by device (`tiny` / `small` / `medium`) instead of licence
-- [x] Registry: PP-OCRv6 det + rec at three tiers, PP-DocLayoutV3, every sha256 verified
+- [x] Registry: PP-OCRv6 det + rec at three tiers, every sha256 verified
 - [x] Mirror all weights into naina's own release; upstream URLs kept as provenance
 - [x] `image_ops` — detection resize geometry, quad rectification to 48px strips
 - [x] `geometry` — convex hull, minimum-area rectangle, convex polygon offset
@@ -48,22 +48,32 @@ Python and Node.
   Runtime backend is exercised in practice.
 - Recognition runs one strip per session call. Correct, but batching needs a
   uniform width per batch and would be meaningfully faster on dense pages.
-- Layout weights exist only at `medium`, so `tiny` and `small` are
-  text-spotting tiers.
 
-## v0.3 — Layout and markdown
+## v0.3 — Layout and markdown  *(mostly shipped)*
 
 Turn a bag of lines into a document.
 
-- [ ] `tools/paddle2onnx_layout.py` — export PP-DocLayout-S/-M, verify numerical
-      equivalence. **Load-bearing:** without it, layout stays medium-only and
-      the 6 MB browser tier cannot claim structure.
-- [ ] `layout_detect` module — region boxes with class labels
-- [ ] `doc_assemble` — assign lines to regions, establish reading order, emit
-      structured markdown (headings, lists, tables)
+- [x] `tools/paddle2onnx_layout.py` — exports PP-DocLayout-S/-M, which PaddleOCR
+      ships only in Paddle format. Byte-deterministic, and verified per-column
+      against the Paddle original (classes exact, scores to 5e-7, box
+      coordinates to 3e-4 px). This was the design's biggest open risk: without
+      it layout would exist only at the 269 MB tier and the 11 MB tier could not
+      describe structure at all.
+- [x] Layout at every tier — 11.1 / 54.5 / 268.0 MB totals
+- [x] `layout_detect` — region boxes with class labels from each model's own
+      23-entry `label_list`, inputs fed BY NAME since the variants disagree on
+      signature
+- [x] `doc_assemble` — line-to-region assignment, column-aware reading order,
+      structured markdown. Pure logic, 16 tests from hand-built inputs.
+- [x] MCP server (see v1.0 list)
 - [ ] Golden corpus: committed images with expected markdown
 - [ ] Recognition batching by padded width
 - [ ] Fix `FindNCNN.cmake`
+- [ ] Improve small-tier layout recall. Measured on a synthetic report page,
+      PP-DocLayout-S at 480x480 found 4 of 7 regions, all scoring barely over
+      the 0.5 threshold upstream itself defaults to; section titles and captions
+      were missed and fell through to the unstructured tail. The larger tiers
+      should be compared before tuning the threshold.
 
 ## v0.4 — Browser
 
