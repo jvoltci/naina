@@ -5,7 +5,7 @@ Working end-to-end examples for each binding.
 **Status:** the face-verification examples that lived here moved to the
 `face-stack` branch along with the face modules. OCR examples land with
 v0.2 (text spotting) — see
-`docs/superpowers/plans/2026-07-29-naina-ocr-core.md`.
+`docs/design/plans/2026-07-29-naina-ocr-core.md`.
 
 ## Model cache
 

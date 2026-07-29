@@ -10,7 +10,7 @@ docs_dir: docs
 # The planning records are kept in-repo deliberately (they explain why the
 # design is what it is) but they are working documents, not documentation.
 exclude_docs: |
-  superpowers/
+  design/
 
 theme:
   name: material
