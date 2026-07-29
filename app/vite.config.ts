@@ -24,6 +24,23 @@ export default defineConfig({
     },
   ],
 
+  resolve: {
+    alias: {
+      // @jvoltci/naina-wasm is a `file:` dependency, so npm symlinks it and Node
+      // resolves that package's own imports starting from bindings/wasm/ — which
+      // walks up to the repo root and never reaches app/node_modules. So
+      // `import 'onnxruntime-web'` inside runtime.mjs cannot resolve unless
+      // bindings/wasm has its own node_modules. It does locally (left there by
+      // the Node test) and does not in CI, which is exactly how this passed here
+      // and failed there.
+      //
+      // Pointing at the app's copy also guarantees a SINGLE ort instance. Two
+      // would mean two WebAssembly runtimes in one bundle.
+      'onnxruntime-web': resolve(__dirname, 'node_modules/onnxruntime-web'),
+    },
+    dedupe: ['onnxruntime-web'],
+  },
+
   optimizeDeps: {
     // The Emscripten glue is already an ES module and pre-bundling it breaks
     // its import.meta.url resolution of naina.wasm.
