@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 380" width="100%" height="100%" role="img" aria-label="naina — reads any document, anywhere">
   <defs>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap');
+    <style><![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
       text {
         font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -9,157 +9,250 @@
       }
       .mono { font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; }
 
-      /* The scan sweep: a soft band travelling down the page, as if being read. */
+      .glow-cyan { filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.45)); }
+      .glow-purple { filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.45)); }
+
       .scan {
-        animation: sweep 4.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        animation: sweep 4.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
       @keyframes sweep {
         0%        { transform: translateY(0px);   opacity: 0; }
-        8%        { opacity: 0.95; }
-        70%       { transform: translateY(132px); opacity: 0.95; }
-        88%, 100% { transform: translateY(132px); opacity: 0; }
+        10%       { opacity: 1; }
+        72%       { transform: translateY(132px); opacity: 1; }
+        86%, 100% { transform: translateY(132px); opacity: 0; }
       }
 
-      /* Source glyph rows fade as the scan passes; recognised rows resolve. */
-      .src { opacity: 0.30; animation: dim 4.5s ease-in-out infinite; }
-      .src-1 { animation-delay: 0.30s; }
-      .src-2 { animation-delay: 0.85s; }
-      .src-3 { animation-delay: 1.40s; }
-      .src-4 { animation-delay: 1.95s; }
+      .src { opacity: 0.35; animation: dim 4.2s ease-in-out infinite; }
+      .src-1 { animation-delay: 0.25s; }
+      .src-2 { animation-delay: 0.75s; }
+      .src-3 { animation-delay: 1.25s; }
+      .src-4 { animation-delay: 1.75s; }
       @keyframes dim {
-        0%, 100% { opacity: 0.30; }
-        22%, 62% { opacity: 0.72; }
+        0%, 100% { opacity: 0.35; }
+        25%, 65% { opacity: 0.85; filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.5)); }
       }
 
-      .out { opacity: 0; animation: resolve 4.5s ease-out infinite; }
-      .out-1 { animation-delay: 0.55s; }
-      .out-2 { animation-delay: 1.10s; }
-      .out-3 { animation-delay: 1.65s; }
-      .out-4 { animation-delay: 2.20s; }
+      .out { opacity: 0; animation: resolve 4.2s ease-out infinite; }
+      .out-1 { animation-delay: 0.45s; }
+      .out-2 { animation-delay: 0.95s; }
+      .out-3 { animation-delay: 1.45s; }
+      .out-4 { animation-delay: 1.95s; }
       @keyframes resolve {
-        0%       { opacity: 0; transform: translateX(-5px); }
+        0%       { opacity: 0; transform: translateX(-6px); }
         14%      { opacity: 1; transform: translateX(0); }
         80%      { opacity: 1; transform: translateX(0); }
         94%,100% { opacity: 0; transform: translateX(0); }
       }
 
-      /* The iris ring — naina means "eyes". */
-      .iris { transform-origin: center; animation: breathe 4.5s ease-in-out infinite; }
-      @keyframes breathe {
-        0%, 100% { transform: scale(1);    opacity: 0.55; }
-        50%      { transform: scale(1.06); opacity: 0.9; }
+      .iris {
+        transform-origin: 0px 0px;
+        animation: rotateIris 18s linear infinite;
       }
-      .pupil { transform-origin: center; animation: contract 4.5s ease-in-out infinite; }
+      @keyframes rotateIris {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+
+      .pupil {
+        transform-origin: 0px 0px;
+        animation: contract 4.2s ease-in-out infinite alternate;
+      }
       @keyframes contract {
-        0%, 100% { transform: scale(1); }
-        50%      { transform: scale(0.82); }
+        0%   { transform: scale(0.9); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
+        100% { transform: scale(1.1); filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.9)); }
+      }
+
+      .stream-line {
+        stroke-dasharray: 6 6;
+        animation: streamDash 1.2s linear infinite;
+      }
+      @keyframes streamDash {
+        to { stroke-dashoffset: -12; }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .scan, .src, .out, .iris, .pupil { animation: none; }
-        .out { opacity: 1; }
+        .scan, .src, .out, .iris, .pupil, .stream-line { animation: none !important; }
+        .out { opacity: 1 !important; }
       }
-    </style>
+    ]]></style>
 
-    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#7dd3fc"/>
-      <stop offset="52%"  stop-color="#c084fc"/>
-      <stop offset="100%" stop-color="#fb923c"/>
+    <linearGradient id="bgCanvas" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0e17"/>
+      <stop offset="50%" stop-color="#111625"/>
+      <stop offset="100%" stop-color="#0a0c13"/>
     </linearGradient>
 
-    <linearGradient id="sweepBand" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%"   stop-color="#7dd3fc" stop-opacity="0"/>
-      <stop offset="18%"  stop-color="#7dd3fc" stop-opacity="0.85"/>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.8"/>
+      <stop offset="40%" stop-color="#38bdf8" stop-opacity="0.5"/>
+      <stop offset="70%" stop-color="#a855f7" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#1e293b" stop-opacity="0.8"/>
+    </linearGradient>
+
+    <linearGradient id="brandInk" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#38bdf8"/>
+      <stop offset="45%"  stop-color="#818cf8"/>
+      <stop offset="80%"  stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+
+    <linearGradient id="sweepBand" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#38bdf8" stop-opacity="0"/>
+      <stop offset="18%"  stop-color="#38bdf8" stop-opacity="0.95"/>
       <stop offset="50%"  stop-color="#c084fc" stop-opacity="1"/>
-      <stop offset="82%"  stop-color="#fb923c" stop-opacity="0.85"/>
+      <stop offset="82%"  stop-color="#fb923c" stop-opacity="0.95"/>
       <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
     </linearGradient>
 
+    <linearGradient id="sweepLaser" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="75%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="panelBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#131826" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0d111a" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <radialGradient id="glowCyanOrb" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="glowPurpleOrb" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4"/>
+    </pattern>
+
     <clipPath id="pageClip">
-      <rect x="72" y="150" width="252" height="156" rx="6"/>
+      <rect x="72" y="150" width="252" height="156" rx="8"/>
     </clipPath>
   </defs>
 
-  <!-- ── Wordmark ─────────────────────────────────────────────────── -->
+  <rect x="2" y="2" width="846" height="376" rx="14" fill="url(#bgCanvas)" stroke="url(#borderGrad)" stroke-width="1.2"/>
+  <rect x="2" y="2" width="846" height="376" rx="14" fill="url(#grid)"/>
+
+  <circle cx="80" cy="70" r="120" fill="url(#glowCyanOrb)"/>
+  <circle cx="600" cy="220" r="140" fill="url(#glowPurpleOrb)"/>
+
   <g transform="translate(72, 78)">
-    <!-- iris mark -->
-    <g transform="translate(14, -6)">
-      <circle class="iris" cx="0" cy="0" r="17" fill="none" stroke="url(#ink)" stroke-width="2.4"/>
-      <circle class="pupil" cx="0" cy="0" r="7" fill="url(#ink)"/>
+    <g transform="translate(16, -6)">
+      <circle class="iris" cx="0" cy="0" r="18" fill="none" stroke="url(#brandInk)" stroke-width="2.2" stroke-dasharray="5 3"/>
+      <circle class="pupil glow-cyan" cx="0" cy="0" r="8" fill="url(#brandInk)"/>
+      <circle cx="0" cy="0" r="3" fill="#ffffff"/>
     </g>
-    <text x="46" y="6" font-size="47" font-weight="600" fill="#e8eaf0" letter-spacing="-1.2">naina</text>
-    <text x="187" y="6" class="mono" font-size="14" font-weight="500" fill="#8b93a7">v0.2</text>
+    
+    <text x="50" y="6" font-size="46" font-weight="800" fill="#f8fafc" letter-spacing="-1.2">naina</text>
+    
+    <rect x="188" y="-14" width="44" height="20" rx="10" fill="#38bdf8" fill-opacity="0.15" stroke="#38bdf8" stroke-opacity="0.4" stroke-width="1"/>
+    <text x="210" y="0" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#38bdf8">v0.2</text>
   </g>
 
-  <text x="72" y="122" font-size="20" font-weight="400" fill="#a8b0c4">Reads any document. One core, every language, everywhere.</text>
+  <text x="72" y="122" font-size="19" font-weight="400" fill="#94a3b8">Reads any document. One C++ core, every language, everywhere.</text>
 
-  <!-- ── Left panel: the source page ──────────────────────────────── -->
   <g>
-    <rect x="72" y="150" width="252" height="156" rx="6" fill="#12141c" stroke="#262a38" stroke-width="1.2"/>
+    <rect x="72" y="150" width="252" height="156" rx="8" fill="url(#panelBg)" stroke="#262d42" stroke-width="1.2"/>
+    
+    <rect x="72" y="150" width="252" height="24" rx="8" fill="#171c2b"/>
+    <circle cx="86" cy="162" r="3.5" fill="#ef4444" opacity="0.8"/>
+    <circle cx="97" cy="162" r="3.5" fill="#eab308" opacity="0.8"/>
+    <circle cx="108" cy="162" r="3.5" fill="#22c55e" opacity="0.8"/>
+    <text x="122" y="166" class="mono" font-size="9.5" fill="#64748b">document.png</text>
 
-    <!-- glyph rows, standing in for scanned text -->
     <g clip-path="url(#pageClip)">
       <g class="src src-1">
-        <rect x="90" y="170" width="118" height="9"  rx="2.5" fill="#5b6478"/>
-        <rect x="90" y="185" width="176" height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="90" y="186" width="118" height="9"  rx="2.5" fill="#38bdf8"/>
+        <rect x="90" y="200" width="176" height="6"  rx="2"   fill="#475569"/>
       </g>
       <g class="src src-2">
-        <rect x="90" y="205" width="196" height="6"  rx="2"   fill="#3d4456"/>
-        <rect x="90" y="217" width="152" height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="90" y="218" width="196" height="6"  rx="2"   fill="#818cf8"/>
+        <rect x="90" y="230" width="152" height="6"  rx="2"   fill="#475569"/>
       </g>
       <g class="src src-3">
-        <rect x="90" y="239" width="72"  height="6"  rx="2"   fill="#3d4456"/>
-        <rect x="176" y="239" width="46" height="6"  rx="2"   fill="#4a5266"/>
-        <rect x="90" y="251" width="132" height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="90" y="248" width="72"  height="6"  rx="2"   fill="#475569"/>
+        <rect x="170" y="248" width="52" height="6"  rx="2"   fill="#c084fc"/>
+        <rect x="90" y="260" width="132" height="6"  rx="2"   fill="#475569"/>
       </g>
       <g class="src src-4">
-        <rect x="90" y="273" width="86"  height="6"  rx="2"   fill="#3d4456"/>
-        <rect x="90" y="285" width="164" height="6"  rx="2"   fill="#3d4456"/>
+        <rect x="90" y="278" width="86"  height="6"  rx="2"   fill="#475569"/>
+        <rect x="90" y="290" width="164" height="6"  rx="2"   fill="#fbbf24"/>
       </g>
 
-      <!-- the reading sweep -->
       <g class="scan">
-        <rect x="76" y="164" width="244" height="2.4" fill="url(#sweepBand)"/>
-        <rect x="76" y="167" width="244" height="16" fill="url(#sweepBand)" opacity="0.10"/>
+        <rect x="72" y="174" width="252" height="18" fill="url(#sweepBand)" opacity="0.25"/>
+        <rect x="72" y="182" width="252" height="2" stroke="none" fill="url(#sweepLaser)" class="glow-cyan"/>
       </g>
     </g>
 
-    <text x="72" y="326" class="mono" font-size="11.5" fill="#6b7488">image · pdf · photo</text>
+    <text x="72" y="326" class="mono" font-size="11.5" font-weight="500" fill="#64748b">image · pdf · photo</text>
   </g>
 
-  <!-- ── Arrow ────────────────────────────────────────────────────── -->
-  <g transform="translate(342, 228)">
-    <path d="M0 0 H44" stroke="#3d4456" stroke-width="1.6"/>
-    <path d="M38 -5 L46 0 L38 5 Z" fill="#3d4456"/>
-    <text x="4" y="-12" class="mono" font-size="10.5" fill="#6b7488">read()</text>
+  <g transform="translate(340, 228)">
+    <path class="stream-line" d="M 0 0 H 44" stroke="#818cf8" stroke-width="2"/>
+    <path d="M 38 -5 L 48 0 L 38 5 Z" fill="#818cf8" class="glow-purple"/>
+    <rect x="2" y="-20" width="42" height="15" rx="3" fill="#181e2e" stroke="#313b54" stroke-width="0.8"/>
+    <text x="23" y="-9" text-anchor="middle" class="mono" font-size="10" font-weight="600" fill="#38bdf8">read()</text>
   </g>
 
-  <!-- ── Right panel: recognised markdown ─────────────────────────── -->
   <g>
-    <rect x="404" y="150" width="374" height="156" rx="6" fill="#12141c" stroke="#262a38" stroke-width="1.2"/>
+    <rect x="404" y="150" width="374" height="156" rx="8" fill="url(#panelBg)" stroke="#262d42" stroke-width="1.2"/>
+    
+    <rect x="404" y="150" width="374" height="24" rx="8" fill="#171c2b"/>
+    <circle cx="418" cy="162" r="3.5" fill="#ef4444" opacity="0.8"/>
+    <circle cx="429" cy="162" r="3.5" fill="#eab308" opacity="0.8"/>
+    <circle cx="440" cy="162" r="3.5" fill="#22c55e" opacity="0.8"/>
+    <text x="454" y="166" class="mono" font-size="9.5" fill="#64748b">output.md</text>
+    <rect x="712" y="154" width="56" height="16" rx="4" fill="#38bdf8" fill-opacity="0.15"/>
+    <text x="740" y="165" text-anchor="middle" class="mono" font-size="8.5" font-weight="600" fill="#38bdf8">MARKDOWN</text>
 
     <g class="mono" font-size="12.5">
-      <text class="out out-1" x="424" y="180" fill="#7dd3fc"># Invoice 4417</text>
-      <text class="out out-2" x="424" y="206" fill="#d6dae6">Issued 2026-07-29</text>
-      <text class="out out-3" x="424" y="232" fill="#d6dae6">| Item   | Qty | Price |</text>
-      <text class="out out-3" x="424" y="250" fill="#5b6478">|--------|-----|-------|</text>
-      <text class="out out-4" x="424" y="268" fill="#d6dae6">| Widget |  2  | 40.00 |</text>
-      <text class="out out-4" x="424" y="292" fill="#fb923c">Total 80.00 USD</text>
+      <text class="out out-1" x="424" y="190" font-weight="700" fill="#38bdf8"># Invoice 4417</text>
+      <text class="out out-2" x="424" y="214" fill="#94a3b8">Issued <tspan fill="#e2e8f0">2026-07-29</tspan> · Conf: <tspan fill="#34d399">0.998</tspan></text>
+      <text class="out out-3" x="424" y="238" fill="#818cf8">| Item   | Qty | Price |</text>
+      <text class="out out-3" x="424" y="254" fill="#475569">|--------|-----|-------|</text>
+      <text class="out out-4" x="424" y="272" fill="#f1f5f9">| Widget |  2  | 40.00 |</text>
+
+      <g class="out out-4">
+        <rect x="420" y="280" width="138" height="18" rx="4" fill="#fbbf24" fill-opacity="0.12"/>
+        <text x="424" y="293" font-weight="600" fill="#fbbf24">Total 80.00 USD</text>
+      </g>
     </g>
 
-    <text x="404" y="326" class="mono" font-size="11.5" fill="#6b7488">markdown · json · boxes</text>
+    <text x="404" y="326" class="mono" font-size="11.5" font-weight="500" fill="#64748b">markdown · json · boxes</text>
   </g>
 
-  <!-- ── Footer chips ─────────────────────────────────────────────── -->
-  <g class="mono" font-size="11.5" fill="#8b93a7">
-    <text x="72"  y="356">Apache-2.0</text>
-    <text x="176" y="356" fill="#4a5266">·</text>
-    <text x="192" y="356">11 MB tier</text>
-    <text x="286" y="356" fill="#4a5266">·</text>
-    <text x="302" y="356">C++ core</text>
-    <text x="386" y="356" fill="#4a5266">·</text>
-    <text x="402" y="356">Python · Node · Rust · WASM</text>
-    <text x="622" y="356" fill="#4a5266">·</text>
-    <text x="638" y="356">CPU · GPU · NPU</text>
+  <g class="mono" font-size="11.5" font-weight="500">
+    <rect x="72" y="343" width="76" height="22" rx="11" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="0.8"/>
+    <text x="110" y="358" text-anchor="middle" fill="#cbd5e1">Apache-2.0</text>
+
+    <text x="160" y="358" fill="#475569">·</text>
+
+    <rect x="174" y="343" width="82" height="22" rx="11" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="0.8"/>
+    <circle cx="184" cy="354" r="2.5" fill="#38bdf8"/>
+    <text x="219" y="358" text-anchor="middle" fill="#38bdf8">11 MB tier</text>
+
+    <text x="268" y="358" fill="#475569">·</text>
+
+    <rect x="282" y="343" width="76" height="22" rx="11" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="0.8"/>
+    <circle cx="292" cy="354" r="2.5" fill="#818cf8"/>
+    <text x="324" y="358" text-anchor="middle" fill="#cbd5e1">C++ core</text>
+
+    <text x="370" y="358" fill="#475569">·</text>
+
+    <rect x="384" y="343" width="220" height="22" rx="11" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="0.8"/>
+    <text x="494" y="358" text-anchor="middle" fill="#cbd5e1">Python · Node · Rust · WASM</text>
+
+    <text x="616" y="358" fill="#475569">·</text>
+
+    <rect x="630" y="343" width="112" height="22" rx="11" fill="#1e293b" fill-opacity="0.5" stroke="#334155" stroke-width="0.8"/>
+    <circle cx="640" cy="354" r="2.5" fill="#34d399"/>
+    <text x="690" y="358" text-anchor="middle" fill="#cbd5e1">CPU · GPU · NPU</text>
   </g>
 </svg>

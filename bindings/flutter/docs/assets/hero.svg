@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 300" width="850" height="300" role="img" aria-label="naina — read text from images, on the device">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap');
+      .bg   { fill: #0d1117; }
+      .word { font-family: Outfit, sans-serif; font-weight: 700; font-size: 62px; fill: #e6edf3; letter-spacing: -0.03em; }
+      .tag  { font-family: Outfit, sans-serif; font-weight: 300; font-size: 21px; fill: #9aa7b4; }
+      .mono { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: #6b7785; }
+      .iris { fill: #4ea1ff; }
+      .lid  { fill: none; stroke: #4ea1ff; stroke-width: 3.5; stroke-linejoin: round; }
+      .scan { fill: none; stroke: #4ea1ff; stroke-width: 2; opacity: 0.55; }
+      .glyph { fill: #303a48; }
+      .glyph-lit { fill: #4ea1ff; }
+
+      /* The scan line sweeps down the page of text, and glyphs light up as it
+         passes — the whole idea of the library in one motion. */
+      .sweep { animation: sweep 3.4s cubic-bezier(.4,0,.6,1) infinite; }
+      @keyframes sweep { 0%,8% { transform: translateY(0); } 92%,100% { transform: translateY(96px); } }
+      .blink { animation: blink 3.4s ease-in-out infinite; transform-origin: 108px 150px; }
+      @keyframes blink { 0%,44%,56%,100% { transform: scaleY(1); } 50% { transform: scaleY(0.08); } }
+      .lit1 { animation: lit 3.4s linear infinite; }
+      .lit2 { animation: lit 3.4s linear infinite .5s; }
+      .lit3 { animation: lit 3.4s linear infinite 1s; }
+      .lit4 { animation: lit 3.4s linear infinite 1.5s; }
+      @keyframes lit { 0%,18% { fill: #303a48; } 26%,44% { fill: #4ea1ff; } 60%,100% { fill: #303a48; } }
+      @media (prefers-reduced-motion: reduce) {
+        .sweep, .blink, .lit1, .lit2, .lit3, .lit4 { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <rect class="bg" width="850" height="300" rx="16"/>
+
+  <!-- the eye -->
+  <g class="blink">
+    <path class="lid" d="M56 150c26-42 52-62 78-62s52 20 78 62c-26 42-52 62-78 62s-52-20-78-62z"/>
+    <circle class="iris" cx="134" cy="150" r="22"/>
+    <circle cx="141" cy="142" r="7" fill="#0d1117" opacity=".55"/>
+  </g>
+
+  <!-- a page being read -->
+  <g transform="translate(258 96)">
+    <rect x="0" y="0" width="196" height="118" rx="6" fill="#151b23" stroke="#232b36"/>
+    <g transform="translate(16 18)">
+      <rect class="glyph lit1" x="0"  y="0"  width="86" height="9" rx="2"/>
+      <rect class="glyph lit2" x="0"  y="22" width="150" height="7" rx="2"/>
+      <rect class="glyph lit2" x="0"  y="38" width="132" height="7" rx="2"/>
+      <rect class="glyph lit3" x="0"  y="54" width="146" height="7" rx="2"/>
+      <rect class="glyph lit3" x="0"  y="70" width="104" height="7" rx="2"/>
+      <rect class="glyph lit4" x="0"  y="86" width="64"  height="7" rx="2"/>
+    </g>
+    <g class="sweep">
+      <line class="scan" x1="6" y1="12" x2="190" y2="12"/>
+    </g>
+  </g>
+
+  <text class="word" x="500" y="132">naina</text>
+  <text class="tag"  x="502" y="166">Read text from images, on the device.</text>
+  <text class="mono" x="502" y="200">flutter pub add naina</text>
+  <text class="mono" x="502" y="224" fill="#4a5563">no upload · no API key · no per-page cost</text>
+</svg>

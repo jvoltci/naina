@@ -1,0 +1,76 @@
+// Android build for the naina FFI plugin.
+//
+// Compiles naina's C++ core for each ABI with the NDK and links ONNX Runtime
+// from Microsoft's official Android AAR. The AAR ships headers and per-ABI
+// libonnxruntime.so, which is what makes an on-device inference backend possible
+// without vendoring a build here.
+
+group 'com.jvoltci.naina'
+version '0.2.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.0'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.jvoltci.naina'
+    compileSdk 35
+    ndkVersion '27.0.12077973'
+
+    defaultConfig {
+        // 24 is ONNX Runtime's floor for its Android builds.
+        minSdk 24
+
+        externalNativeBuild {
+            cmake {
+                arguments '-DNAINA_BUILD_TESTS=OFF',
+                          '-DNAINA_BUILD_SHARED=ON',
+                          '-DNAINA_VENDOR_YAMLCPP=ON',
+                          '-DNAINA_WITH_ONNXRUNTIME=ON',
+                          '-DNAINA_RELEASE=ON',
+                          '-DCMAKE_BUILD_TYPE=Release'
+            }
+        }
+
+        ndk {
+            // 32-bit ABIs are omitted deliberately: a 269 MB tier plus ORT does
+            // not fit a 32-bit address space comfortably, and armeabi-v7a is
+            // vanishingly rare on devices new enough to run this usefully.
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+            version '3.22.1+'
+        }
+    }
+
+    // The ORT AAR carries the prebuilt .so per ABI; packaging it here puts it
+    // beside libnaina.so in the APK.
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging false
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.20.0'
+}

@@ -1,0 +1,41 @@
+name: naina
+description: Read text from images on-device. OCR from naina's C++ core over FFI, with no network calls and no cloud API.
+homepage: https://jvoltci.github.io/naina/
+repository: https://github.com/jvoltci/naina
+issue_tracker: https://github.com/jvoltci/naina/issues
+documentation: https://jvoltci.github.io/naina/doc/
+version: 0.2.0
+
+topics:
+  - ocr
+  - text-recognition
+  - document
+  - ffi
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^2.1.0
+  plugin_platform_interface: ^2.1.8
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  ffigen: ^13.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.jvoltci.naina
+        pluginClass: NainaPlugin
+        ffiPlugin: true
+      ios:
+        pluginClass: NainaPlugin
+        ffiPlugin: true

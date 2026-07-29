@@ -1,0 +1,6 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # FFI bindings are mechanical and intentionally verbose.
+    public_member_api_docs: ignore
