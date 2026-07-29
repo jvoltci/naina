@@ -1,7 +1,11 @@
 # naina — Architecture
 
-> A high-performance, embeddable computer-vision runtime for face and person
-> understanding. C++ core, thin bindings, runs on edge → server, one API.
+> A high-performance, embeddable document-reading runtime. C++ core, thin
+> bindings, runs on edge → server, one API.
+>
+> naina began as a face and person understanding runtime. The engine described
+> below is that work; v0.2 repurposed it for OCR, which the name always suited
+> (*naina* means eyes). The face modules live on the `face-stack` branch.
 
 ## North star
 
@@ -31,8 +35,8 @@
 │  └──────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │  Task modules  (independently shippable)             │   │
-│  │  FaceDetect · FaceAlign · FaceEmbed · Liveness       │   │
-│  │  PersonDetect · Track · ReID                         │   │
+│  │  TextDetect · TextRectify · TextRecognize            │   │
+│  │  LayoutDetect · DocAssemble                          │   │
 │  └──────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │  Backend abstraction  (IBackend / ISession)          │   │
@@ -60,35 +64,56 @@
 Each task module is independently shippable:
 
 ```
-v1.0  — Face stack solid:  detect + align + embed + verify
-v1.1  — Person stack:      detect + track
-v1.2  — Re-ID:             cross-camera matching
-v1.3  — Liveness:          anti-spoofing (depth, RGB, motion)
+v0.2  — Text spotting:  detect + rectify + recognise        (shipped)
+v0.3  — Structure:      layout + reading order + markdown
+v0.4  — Browser:        WASM target + client-side PWA
+v1.0  — Guarantees:     cross-binding parity, benchmarks, MCP
 ```
 
 Same API. Modules light up over time. No big-bang release.
 
+Two of the five modules — `TextRectify` and `DocAssemble` — touch no model at
+all. They are deterministic pure functions. That is deliberate: it makes the
+cross-binding identity guarantee provable with plain equality assertions rather
+than float-tolerance comparisons.
+
 ## The model registry pattern
 
-Two-tier weights for every task:
+Weights are tiered by **device**, not by licence. Every model naina ships is
+Apache-2.0, so a permissive-vs-research split would carry no information; what
+actually varies is size and the hardware it suits.
 
 ```yaml
-- id: face_embed.default
-  arch: edgeface
-  license: Apache-2.0     # ships in repo, commercial-safe
-  embed_dim: 512
-  benchmark: { ijbc_tar_at_1e-4: 0.945, latency_ms_pi5: 4.2 }
-
-- id: face_embed.research
-  arch: transface_vit_l
-  license: non-commercial # opt-in download
-  embed_dim: 512
-  benchmark: { ijbc_tar_at_1e-4: 0.973, latency_ms_pi5: 38.1 }
+- id: text_recognize.tiny
+  task: text_recognize
+  tier: tiny              # ~6 MB with det — browser, phone, Pi Zero
+  arch: pp_ocrv6_rec
+  license: Apache-2.0
+  files:
+    onnx:
+      url:        "${release_base}/ppocrv6_tiny_rec.onnx"
+      source_url: "${hf}/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
+      sha256:     "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
+      bytes:      4462639
+  output:
+    type: ctc_logits
+    postprocess: { blank_index: 0, num_classes: 6906 }
 ```
 
-Users pick at init time via `config.enable_research_models`. README benchmark
-table shows both columns side-by-side. We claim "SOTA accuracy" honestly
-*and* the default path is permissive.
+Three properties of this that matter:
+
+**`url` points at naina's own release, not upstream.** The sha256 already meant
+an upstream swap failed closed rather than corrupting output — but it would
+still have broken. Mirroring removes the third-party runtime dependency
+entirely. `source_url` records provenance and is never fetched.
+
+**A request for a tier that lacks a task falls back to a larger one** rather
+than failing. `layout_detect` exists only at `medium` today, so `tiny` and
+`small` layout requests resolve there.
+
+**Per-tier postprocessing is data, not code.** `num_classes` is 6906 for
+`tiny` and 18710 for `small`/`medium`, because their charsets genuinely differ.
+Hardcoding one value shifts every decoded character.
 
 ## Hot-path discipline (the engineering moat)
 

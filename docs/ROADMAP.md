@@ -1,96 +1,107 @@
 # Roadmap
 
-Versioned, contributor-facing. The library ships **vertically** —
-each release is a fully usable surface, not a half-built layer.
+Versioned, contributor-facing. naina ships **vertically** — each release is a
+fully usable surface, not a half-built layer.
 
-## v0.1 — Architecture spike  *(in progress)*
+> **History.** v0.1 was a face and person understanding runtime. It produced the
+> engine naina still runs on: the C ABI, the backend abstraction, and the
+> manifest-driven model loader. v0.2 repurposed that engine for document
+> reading, which is what the name always suited — *naina* means eyes. The face
+> modules are preserved on the
+> [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack) branch. See
+> [the design spec](superpowers/specs/2026-07-28-naina-ocr-design.md) for why.
 
-Locked: C ABI, C++ wrapper, backend interface, tensor types, model
-registry schema, browser-side preview demo. No native inference yet.
+## v0.1 — Engine  *(shipped)*
 
-- [x] `core/include/naina/naina.h`
-- [x] `core/include/naina/naina.hpp`
-- [x] `core/include/naina/backend.hpp`
-- [x] `core/include/naina/tensor.hpp`
-- [x] `models/registry.yaml` + JSON schema
-- [x] `docs/ARCHITECTURE.md`
-- [ ] Web demo + GH Pages deploy
+C ABI, backend abstraction, tensor and arena types, model registry with
+sha256-verified downloads, Python and Node bindings, CI matrix.
 
-## v0.2 — Build system & toolchain
+- [x] `core/include/naina/{naina.h,naina.hpp,backend.hpp,tensor.hpp,model_loader.hpp}`
+- [x] `IBackend` / `ISession` for ONNX Runtime and NCNN, runtime probe + fallback
+- [x] `model_loader` — manifest parse, HTTP download, sha256 verify, cache
+- [x] Python binding (pybind11 + scikit-build-core)
+- [x] Node binding (cmake-js + N-API, inference off the event loop)
+- [x] CI: Linux gcc + clang, macOS arm64
 
-CMake + presets, CI matrix, dep pinning. No real ML yet; just
-"`libnaina.so` compiles on five targets."
+## v0.2 — Text spotting  *(shipped)*
 
-- [ ] CMake root + presets (`macos-arm64`, `linux-x86_64`, `linux-arm64`,
-      `android-arm64`, `ios-arm64`)
-- [ ] vcpkg / Conan dep manifest
-- [ ] GitHub Actions: build + smoke test matrix
-- [ ] clang-format / clang-tidy gates
-- [x] License switch MIT → Apache-2.0
+Detect text, recognise it, return lines with geometry and confidences, from
+Python and Node.
 
-## v0.3 — Backend layer
+- [x] Retier the registry by device (`tiny` / `small` / `medium`) instead of licence
+- [x] Registry: PP-OCRv6 det + rec at three tiers, PP-DocLayoutV3, every sha256 verified
+- [x] Mirror all weights into naina's own release; upstream URLs kept as provenance
+- [x] `image_ops` — detection resize geometry, quad rectification to 48px strips
+- [x] `geometry` — convex hull, minimum-area rectangle, convex polygon offset
+- [x] `db_postprocess` — binarize, 8-connected blob borders, box scoring, DBNet decode
+- [x] `charset` — parse `PostProcess.character_dict`, per-tier class counts
+- [x] `ctc_decode` — greedy decode, repeat collapse, blank handling, confidence
+- [x] `text_detect` + `text_recognize` module wiring
+- [x] `page` — pointer-stable storage, markdown + JSON serialisation
+- [x] `naina_read` end to end, verified against real weights
+- [x] Python + Node OCR surface
+- [x] No OpenCV, no pyclipper, no PaddlePaddle dependency
 
-One model loads, runs, returns a tensor. Through two backends.
+**Known gaps carried into v0.3:**
 
-- [ ] `IBackend` / `ISession` impls for ONNX Runtime
-- [ ] `IBackend` / `ISession` impls for NCNN
-- [ ] `backend_registry` with runtime probe + fallback chain
-- [ ] `model_loader` (manifest parse, download, sha256 verify, cache)
-- [ ] `tools/onnx2ncnn.py` conversion wrapper
-- [ ] Identity-model round-trip unit test
+- `FindNCNN.cmake` does not locate a Homebrew NCNN install, so only the ONNX
+  Runtime backend is exercised in practice.
+- Recognition runs one strip per session call. Correct, but batching needs a
+  uniform width per batch and would be meaningfully faster on dense pages.
+- Layout weights exist only at `medium`, so `tiny` and `small` are
+  text-spotting tiers.
 
-## v1.0 — Face stack solid
+## v0.3 — Layout and markdown
 
-Face detect + align + embed + verify + liveness, both backends, Python
-+ Node prebuilt binaries.
+Turn a bag of lines into a document.
 
-- [ ] `face_detect` (YuNet default, SCRFD research)
-- [ ] `face_align` (5-pt similarity transform, SIMD)
-- [ ] `face_embed` (EdgeFace default, TransFace research)
-- [x] `face_liveness` module implemented (MiniFASNet-compatible; model URL pending upload)
-- [ ] Python wheels: `pip install naina`
-- [ ] Node prebuilds: `npm install naina`
-- [ ] Eval harness: WIDERFACE, IJB-C, LFW
-- [ ] Latency benchmarks: Pi5, Jetson Orin Nano, M3, x86
+- [ ] `tools/paddle2onnx_layout.py` — export PP-DocLayout-S/-M, verify numerical
+      equivalence. **Load-bearing:** without it, layout stays medium-only and
+      the 6 MB browser tier cannot claim structure.
+- [ ] `layout_detect` module — region boxes with class labels
+- [ ] `doc_assemble` — assign lines to regions, establish reading order, emit
+      structured markdown (headings, lists, tables)
+- [ ] Golden corpus: committed images with expected markdown
+- [ ] Recognition batching by padded width
+- [ ] Fix `FindNCNN.cmake`
 
-## v1.1 — Person stack
+## v0.4 — Browser
 
-- [ ] `person_detect` (YOLOv10-N default, YOLOv10-X research)
-- [ ] `tracker` (ByteTrack / BoT-SORT)
-- [ ] `examples/multistream_cpp`
-- [ ] Hailo backend (edge accelerator)
+- [ ] `bindings/wasm` via Emscripten, code budget < 5 MB compressed
+- [ ] PWA at `jvoltci.github.io/naina/` — client-side only, no upload, offline
+      after first visit via service worker + Cache API keyed on model sha256
+- [ ] mkdocs-material documentation at `jvoltci.github.io/naina/doc/`
+- [ ] WebGPU execution provider where available
 
-## v1.2 — Person re-identification
+## v0.5 — Rust
 
-- [ ] `person_reid` (OSNet default, CLIP-ReID research)
-- [ ] Cross-camera benchmark on MOT17 / DanceTrack
-- [ ] Embedding-store reference integration (Faiss, hnswlib examples)
+- [ ] `bindings/rust` over the C ABI, published to crates.io
+- [ ] Golden corpus passes from Rust
 
-## v1.3 — Liveness hardening + extra bindings
+## v1.0 — Guarantees
 
-- [ ] Rigorous liveness eval (CASIA-SURF, OULU-NPU)
-- [ ] Rust binding (`cxx`)
-- [ ] Swift binding (Apple ecosystem)
-- [ ] Kotlin binding (Android)
+- [ ] **Cross-binding parity enforced in CI.** Python, Node, Rust and WASM must
+      produce byte-identical output for a fixed (backend, device, tier) on the
+      golden corpus. Scoped honestly: identical *across bindings*,
+      tolerance-bounded *across backends*, because ONNX Runtime and NCNN differ
+      in floating-point behaviour.
+- [ ] Full benchmark matrix: accuracy and latency per device, harness in-repo,
+      reproducible from a clean clone
+- [ ] MCP server targeting the **stateless MCP 2026-07-28 spec** — reading a
+      page carries no session state, so it deploys to serverless or edge
+      unchanged
+- [ ] Prebuilt binaries: macOS arm64/x64, Linux x64/arm64, Windows x64, cp39–cp313
+- [ ] Vendored ONNX Runtime in published wheels (delocate / auditwheel)
 
-## v1.4 — WASM target
+## Non-goals
 
-- [ ] `naina-wasm` build via Emscripten
-- [ ] Drop-in replacement for the demo's `onnxruntime-web` path
-- [ ] WebGPU EP where available
-- [ ] Bundle size budget: < 5 MB compressed
-
-## v2.0 — Own training pipeline
-
-- [ ] Training scripts (face recognition: ArcFace / AdaFace loss)
-- [ ] Datasets: WebFace42M, Glint360K, MS1MV3 — license-aware
-- [ ] Distilled student models for edge tiers
-- [ ] Reproducible model cards in `models/`
-
-## Non-goals (forever)
-
-- Vector store / identity database (use Faiss / Milvus / hnswlib)
-- UI / dashboards / web app builder
-- Crime prediction / risk scoring (out of scope, ethically and legally)
-- Government-ID matching (integrator concern, requires legal review)
-- Authentication / authorization (above the library)
+- **Training or fine-tuning.** naina is inference only.
+- **Autoregressive VLM parsing** (PaddleOCR-VL, DeepSeek-OCR). These need a
+  tokenizer, KV cache and sampling loop — a different engine, not a module.
+  Revisit only as an explicit v2 decision, never as drift.
+- **Handwriting.** PP-OCRv6 is weak at it; claiming support would be dishonest.
+- **Chart and formula semantics.** Regions get detected and labelled; their
+  contents are not interpreted.
+- **Face and person understanding.** Parked on `face-stack`, not deleted.
+- Vector stores, dashboards, UI frameworks.
+- Crime prediction, risk scoring, government-ID matching.
