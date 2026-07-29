@@ -1,0 +1,170 @@
+name: release
+
+# Publishes naina to PyPI and npm.
+#
+# Triggered by pushing a tag like v0.2.0, or manually with dry_run to build and
+# verify artifacts without publishing anything.
+#
+# PyPI uses Trusted Publishing (OIDC): there is NO API token anywhere in this
+# repository or in its secrets. GitHub proves the workflow's identity to PyPI
+# directly. Configure it once at
+# https://pypi.org/manage/project/naina/settings/publishing/ with
+#   owner: jvoltci   repo: naina   workflow: release.yml   environment: pypi
+#
+# npm has no OIDC equivalent, so it needs an automation token in the repo
+# secret NPM_TOKEN. Use an *automation* token (not a publish token with 2FA),
+# scoped to this package.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and verify only; do not publish"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Fail fast on things that make a release wrong rather than broken.
+  preflight:
+    name: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Versions agree across all four declarations
+        run: python tools/check_versions.py
+
+      - name: Tag matches the declared version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/v}"
+          declared=$(python -c "
+          import re,pathlib
+          t=pathlib.Path('pyproject.toml').read_text()
+          print(re.search(r'^version\s*=\s*\"([^\"]+)\"', t, re.M).group(1))
+          ")
+          echo "tag=$tag declared=$declared"
+          test "$tag" = "$declared" || {
+            echo "::error::tag v$tag does not match declared version $declared"
+            exit 1
+          }
+
+      - name: Registry validates against its schema
+        run: |
+          pip install --quiet pyyaml jsonschema
+          python -c "
+          import json, yaml, jsonschema
+          jsonschema.validate(yaml.safe_load(open('models/registry.yaml')),
+                              json.load(open('models/manifest.schema.json')))
+          print('registry.yaml valid')
+          "
+
+      - name: Every model artifact is reachable and hash-correct
+        # A release that points at missing or altered weights installs fine and
+        # then fails at first use, which is the worst possible failure mode.
+        run: python tools/mirror_models.py verify
+
+  wheels:
+    name: wheels ${{ matrix.os }}
+    needs: preflight
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  archs: "x86_64" }
+          - { os: ubuntu-24.04-arm, archs: "aarch64" }
+          - { os: macos-14,       archs: "arm64" }
+          - { os: macos-13,       archs: "x86_64" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21
+        env:
+          CIBW_ARCHS: ${{ matrix.archs }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.archs }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    name: sdist
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install build
+      - run: python -m build --sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish-pypi:
+    name: publish to PyPI
+    needs: [wheels, sdist]
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/naina
+    permissions:
+      id-token: write # required for Trusted Publishing; no token needed
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -la dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-npm:
+    name: publish to npm
+    needs: preflight
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake libcurl4-openssl-dev
+          bash tools/ci/install_onnxruntime.sh
+
+      - name: Build addon
+        working-directory: bindings/node
+        env:
+          ONNXRUNTIME_ROOT: /tmp/onnxruntime
+        run: |
+          npm ci
+          npm run build
+
+      - name: Test
+        working-directory: bindings/node
+        run: npx vitest run
+
+      # NOTE: this publishes a source/addon package that builds locally on
+      # install. Per-platform prebuilds are a separate piece of work; until
+      # they exist, consumers need a toolchain and ONNX Runtime present.
+      - name: Publish
+        working-directory: bindings/node
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
