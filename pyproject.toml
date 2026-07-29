@@ -118,8 +118,8 @@ NAINA_WITH_ONNXRUNTIME = "ON"
 # Fetch the official ORT release rather than relying on Homebrew, so the build
 # does not depend on the runner's package manager or CPU architecture.
 before-all = "bash {project}/tools/ci/install_onnxruntime.sh"
-environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "11.0" }
+environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "11.0", DYLD_LIBRARY_PATH = "/tmp/onnxruntime/lib" }
 
 [tool.cibuildwheel.linux]
-before-all = "bash {project}/tools/ci/install_onnxruntime.sh && (yum install -y libcurl-devel || apt-get update && apt-get install -y libcurl4-openssl-dev)"
+before-all = "bash {project}/tools/ci/install_build_deps.sh"
 environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime" }
