@@ -144,6 +144,32 @@ void assign_lines_to_regions(const std::vector<naina_region>& regions,
                 best = static_cast<int32_t>(i);
             }
         }
+
+        // Fallback, applied only when nothing matched by line area. A region
+        // smaller than the text quad can never reach min_overlap that way — a
+        // page number's box is a few pixels wider than its digit, while DBNet
+        // unclips the quad outward. Scoring by region area instead lets such a
+        // region claim its line, so page furniture stays furniture rather than
+        // orphaning into the unstructured tail.
+        //
+        // Deliberately a fallback and not a change to the primary metric: a
+        // sliver region inside a long line scores 1.0 by region area, and must
+        // not outrank the line's true home.
+        if (best < 0) {
+            float best_covered = cfg.min_overlap;
+            for (size_t i = 0; i < regions.size(); ++i) {
+                const Rect rr = rect_of(regions[i].bbox);
+                const float ra = area(rr);
+                if (ra <= 0.0F) {
+                    continue;
+                }
+                const float covered = intersect_area(lr, rr) / ra;
+                if (covered > best_covered) {
+                    best_covered = covered;
+                    best = static_cast<int32_t>(i);
+                }
+            }
+        }
         line.region_id = best;
     }
 }
