@@ -1,11 +1,24 @@
-name: Deploy web demo to GitHub Pages
+name: Deploy web app to GitHub Pages
+
+# Publishes two things to one Pages site:
+#
+#   jvoltci.github.io/naina/       the OCR tool
+#   jvoltci.github.io/naina/doc/   the documentation
+#
+# Pages serves a single artifact, so the docs are built into the app's dist/doc
+# and the whole tree is uploaded together.
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, ocr-pivot]
     paths:
-      - 'demo/web/**'
-      - '.github/workflows/deploy-demo.yml'
+      - 'app/**'
+      - 'bindings/wasm/**'
+      - 'core/**'
+      - 'models/registry.yaml'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 permissions:
@@ -20,30 +33,80 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: demo/web
     steps:
       - uses: actions/checkout@v4
 
+      # ── the WASM core ───────────────────────────────────────────────
+      #
+      # No ONNX Runtime install step: the browser backend delegates execution to
+      # onnxruntime-web at runtime, so the native library is not a build
+      # dependency here. yaml-cpp is vendored through FetchContent.
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.0
+          actions-cache-folder: emsdk-cache
+
+      - name: Build naina.wasm
+        run: |
+          emcmake cmake -S . -B build/wasm \
+            -DNAINA_BUILD_WASM=ON \
+            -DNAINA_WITH_WASMJS=ON \
+            -DNAINA_BUILD_TESTS=OFF \
+            -DNAINA_BUILD_SHARED=OFF \
+            -DNAINA_VENDOR_YAMLCPP=ON \
+            -DNAINA_RELEASE=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/wasm
+
+      - name: Report wasm size
+        run: |
+          ls -la bindings/wasm/dist/
+          echo "naina.wasm brotli: $(brotli -q 11 -c bindings/wasm/dist/naina.wasm | wc -c) bytes"
+
+      # ── the app ─────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: demo/web/package-lock.json
+          node-version: '22'
 
-      - name: Install
-        run: npm ci || npm install
+      - name: Install app dependencies
+        working-directory: app
+        run: npm install
 
-      - name: Build
+      # Weights are served same-origin because GitHub release assets send no
+      # Access-Control-Allow-Origin, so a browser cannot fetch them. This step
+      # reads the file list from the C++ registry through the WASM module, so it
+      # cannot drift from what the core expects.
+      - name: Stage model weights into the site
+        working-directory: app
+        run: node scripts/stage-models.mjs tiny small
+
+      - name: Build app
+        working-directory: app
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
         run: npm run build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      # ── docs, into /doc ─────────────────────────────────────────────
+      - uses: actions/setup-python@v5
         with:
-          path: demo/web/dist
+          python-version: '3.12'
+
+      - name: Build docs
+        run: |
+          pip install --quiet mkdocs-material
+          mkdocs build --strict --site-dir app/dist/doc
+
+      - name: Finalise artifact
+        run: |
+          # Pages no longer runs Jekyll for artifact uploads, but .nojekyll is
+          # still the documented way to keep underscore-prefixed directories.
+          touch app/dist/.nojekyll
+          echo "total:  $(du -sh app/dist | cut -f1)"
+          echo "models: $(du -sh app/dist/models | cut -f1)"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
 
   deploy:
     needs: build
