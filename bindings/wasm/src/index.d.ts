@@ -49,12 +49,22 @@ export interface CreateReaderOptions {
   /** Defaults to 'tiny' — 11 MB of weights, the right choice for a browser. */
   tier?: TierName;
   /** ONNX Runtime execution providers, in preference order.
-   *  Defaults to ['webgpu', 'wasm']; ort falls back silently. */
+   *  Defaults to ['wasm'] — WebGPU (JSEP) currently fails a MatMul kernel in
+   *  Chrome and is opt-in until measured. */
   executionProviders?: string[];
   /** Called once per weight file as it is staged. */
   onProgress?: (done: number, total: number, path: string) => void;
   /** Set false to skip staging and call stageTier yourself later. */
   stage?: boolean;
+  /**
+   * Serve weights from this origin instead of the registry's GitHub release URLs.
+   *
+   * A browser almost always needs this. GitHub release downloads redirect to
+   * release-assets.githubusercontent.com and neither hop sends an
+   * `Access-Control-Allow-Origin` header, so cross-origin `fetch` of them fails.
+   * Host the files yourself (same-origin is simplest) and point here.
+   */
+  modelBaseUrl?: string;
 }
 
 export interface NainaReader {
@@ -98,7 +108,11 @@ export declare function installBridge(
 export declare function stageTier(
   module: unknown,
   tier: number,
-  onProgress?: (done: number, total: number, path: string) => void,
+  opts?: {
+    onProgress?: (done: number, total: number, path: string) => void;
+    /** Serve weights from here instead of the registry host. */
+    baseUrl?: string;
+  },
 ): Promise<void>;
 
 /** Stage an explicit file list. Prefer stageTier. */
