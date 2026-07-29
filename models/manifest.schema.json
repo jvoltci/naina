@@ -32,6 +32,11 @@
         "id":      { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
         "task":    { "enum": ["text_detect", "text_recognize", "layout_detect"] },
         "tier":    { "enum": ["tiny", "small", "medium"] },
+        "lang": {
+          "description": "Recognition alphabet. Absent means the default (Latin + CJK). Only text_recognize entries carry this: detection and layout are script-agnostic and shared across languages.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
         "arch":    { "type": "string" },
         "license": { "type": "string" },
         "paper":   { "type": "string" },

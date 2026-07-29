@@ -1,0 +1,48 @@
+[package]
+name = "naina"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Read documents. OCR from one C++ core — text, layout and markdown, with no Python and no OpenCV."
+license = "Apache-2.0"
+repository = "https://github.com/jvoltci/naina"
+homepage = "https://jvoltci.github.io/naina/"
+documentation = "https://docs.rs/naina"
+readme = "README.md"
+keywords = ["ocr", "document", "text-recognition", "paddleocr", "onnx"]
+categories = ["computer-vision", "api-bindings", "multimedia::images"]
+
+# The C++ core is vendored so `cargo add naina` needs nothing but a compiler and
+# ONNX Runtime. Without these includes the published crate cannot build at all,
+# since build.rs compiles the core from source.
+include = [
+    "src/**/*.rs",
+    "build.rs",
+    "Cargo.toml",
+    "README.md",
+    "vendor/**",
+]
+
+[dependencies]
+
+[build-dependencies]
+cmake = "0.1"
+
+[dev-dependencies]
+
+# Declares the cfg build.rs sets, so rustc's check-cfg lint (1.80+) does not warn
+# 16 times about a name it cannot know about.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(naina_no_native)'] }
+
+[package.metadata.docs.rs]
+# docs.rs has no ONNX Runtime and cannot run cmake against it, so document the
+# API without building the native core.
+no-default-features = true
+features = ["docsrs"]
+
+[features]
+default = []
+# Skip the native build entirely. Used by docs.rs, and by anyone who only wants
+# the type documentation. Every call returns Err(Error::NotBuilt).
+docsrs = []
