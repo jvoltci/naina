@@ -144,6 +144,11 @@ jobs:
     needs: preflight
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # For npm Trusted Publishing (OIDC) once configured on the package; npm
+      # now supports it, and it removes the token expiry problem entirely.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -175,8 +180,65 @@ jobs:
       # NOTE: this publishes a source/addon package that builds locally on
       # install. Per-platform prebuilds are a separate piece of work; until
       # they exist, consumers need a toolchain and ONNX Runtime present.
-      - name: Publish
+      - name: Publish @jvoltci/naina
         working-directory: bindings/node
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+  # The browser package is separate because it needs Emscripten rather than a
+  # native toolchain, and it has no ONNX Runtime dependency at build time --
+  # onnxruntime-web is a peer dependency resolved by the consumer.
+  #
+  # This job did not exist until 0.2.1: the WASM package was built, tested and
+  # documented but never actually published by a release, so a working npm token
+  # would still have shipped only the Node package.
+  publish-npm-wasm:
+    name: publish naina-wasm to npm
+    needs: preflight
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # For npm Trusted Publishing (OIDC), once configured on the package. Until
+      # then NODE_AUTH_TOKEN is used; having this here means switching is a
+      # matter of deleting the env line.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.0
+          actions-cache-folder: emsdk-cache-release
+
+      - name: Build naina.wasm
+        run: |
+          emcmake cmake -S . -B build/wasm \
+            -DNAINA_BUILD_WASM=ON \
+            -DNAINA_WITH_WASMJS=ON \
+            -DNAINA_BUILD_TESTS=OFF \
+            -DNAINA_BUILD_SHARED=OFF \
+            -DNAINA_VENDOR_YAMLCPP=ON \
+            -DNAINA_RELEASE=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/wasm
+
+      # dist/ is gitignored, so assert it exists rather than publishing an empty
+      # package -- npm would accept a tarball with no wasm in it.
+      - name: Assert the artifacts exist
+        run: |
+          test -f bindings/wasm/dist/naina.mjs
+          test -f bindings/wasm/dist/naina.wasm
+          ls -la bindings/wasm/dist/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish @jvoltci/naina-wasm
+        working-directory: bindings/wasm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public

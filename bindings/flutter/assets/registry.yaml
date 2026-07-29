@@ -148,23 +148,92 @@ models:
   # tiny's charset is far smaller — mostly CJK and Latin — so the
   # "50 languages" claim applies to small and medium only.
 
-  # ── Devanagari ────────────────────────────────────────────────────
+  # ── Additional scripts ────────────────────────────────────────────
   #
-  # A separate recognition alphabet, selected by `lang`. Detection and layout
-  # are script-agnostic and are NOT duplicated — measured on a real Devanagari
-  # page, DBNet found and located 82 lines correctly; only recognition was
-  # wrong.
+  # One recognition model per script, selected by `lang`. Detection and layout
+  # are script-agnostic and shared: measured on a Devanagari page, DBNet located
+  # all 82 lines correctly even while the wrong recogniser produced garbage. So
+  # adding a script costs one model, not three.
   #
-  # PP-OCRv5 rather than v6 because that is what upstream ships for this
-  # script, and only in a "mobile" size — so all three tiers share one model.
-  # That is honest rather than lazy: there is no larger Devanagari recogniser to
-  # offer.
+  # All PP-OCRv5 mobile, because that is what upstream ships per script and only
+  # in one size — every tier therefore shares one model per language. Each was
+  # verified against naina's existing recognition path before being added:
+  # [N,3,48,W] input, CTCLabelDecode, and num_classes == dict + 2 once charset.cc
+  # prepends blank and appends space.
   #
-  # Verified compatible with naina's existing recognition path: input
-  # [N,3,48,W] (the same 48px strip height), CTCLabelDecode (the decoder
-  # ctc_decode.cc already implements), 568-char dict -> 570 classes once
-  # charset.cc prepends blank and appends space.
+  # NOT a licence axis: every model here is Apache-2.0.
 
+  # Arabic, Persian, Urdu
+  - id: text_recognize.arabic
+    task: text_recognize
+    tier: tiny
+    lang: arabic
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_arabic_rec.onnx"
+        source_url: "${hf}/arabic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "799113ebf267fbe742deb99eb36e8d42c9ddc5291ceacf92add41b4d52a59110"
+        bytes:      7998947
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_arabic_rec.yml"
+        source_url: "${hf}/arabic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "21368419e6c016c31db55d316d59e11c128e1913e6e6fe10287084710043d3a6"
+        bytes:      6165
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 749
+
+  # Russian, Bulgarian, Serbian, Mongolian
+  - id: text_recognize.cyrillic
+    task: text_recognize
+    tier: tiny
+    lang: cyrillic
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_cyrillic_rec.onnx"
+        source_url: "${hf}/cyrillic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "5371ee1ddaa7983cc62d0818d99e982b6804638c85e4f960d59a574094e172e5"
+        bytes:      8048799
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_cyrillic_rec.yml"
+        source_url: "${hf}/cyrillic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "5c76cc91fa98410178a09f498db10050d0ec1634a660053d3005ab7be581f501"
+        bytes:      6991
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 852
+
+  # Hindi, Marathi, Nepali, Sanskrit
   - id: text_recognize.devanagari
     task: text_recognize
     tier: tiny
@@ -199,6 +268,287 @@ models:
         blank_index: 0
         num_classes: 570
 
+  # Greek
+  - id: text_recognize.el
+    task: text_recognize
+    tier: tiny
+    lang: el
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_el_rec.onnx"
+        source_url: "${hf}/el_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "2acf17fcaea2bc81b878e311e6263b8885f48bb03796f75f9f30ed3242bbaa6d"
+        bytes:      7808735
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_el_rec.yml"
+        source_url: "${hf}/el_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "17d85b2fe2d2f24cd4ab07bcbc33e0c126859b956ced36e281dc65e2d0c1f0bf"
+        bytes:      3317
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 356
+
+  # East Slavic: Russian, Ukrainian, Belarusian
+  - id: text_recognize.eslav
+    task: text_recognize
+    tier: tiny
+    lang: eslav
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_eslav_rec.onnx"
+        source_url: "${hf}/eslav_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "b3018ef2b09a0250b6e0c8e871c927098363e5fd4df890cc68e8358eb0aaf1bd"
+        bytes:      7887627
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_eslav_rec.yml"
+        source_url: "${hf}/eslav_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "025039bac23eb4a308efcefa4d58eab3af440767815c6ba6938468bf6353ee5a"
+        bytes:      4538
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 519
+
+  # Korean
+  - id: text_recognize.korean
+    task: text_recognize
+    tier: tiny
+    lang: korean
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_korean_rec.onnx"
+        source_url: "${hf}/korean_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08"
+        bytes:      13418787
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_korean_rec.yml"
+        source_url: "${hf}/korean_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "f757fa1c40e99edcf27e9cce879b93eb2a51fa46f5ef39095689b8c37dd75998"
+        bytes:      96039
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 11947
+
+  # Tamil
+  - id: text_recognize.ta
+    task: text_recognize
+    tier: tiny
+    lang: ta
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_ta_rec.onnx"
+        source_url: "${hf}/ta_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "c6d2b682d2a0ea4cb1fccdba295976f93fd439964d16cdc666cadef531accbee"
+        bytes:      7885691
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_ta_rec.yml"
+        source_url: "${hf}/ta_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "88a28f5a1bb30cabe38a0985cb5e6619fa4f0c7c78e57a08274674228c5219a6"
+        bytes:      4579
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 515
+
+  # Telugu
+  - id: text_recognize.te
+    task: text_recognize
+    tier: tiny
+    lang: te
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_te_rec.onnx"
+        source_url: "${hf}/te_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "8238bfc46d4cffe720ed6706e3842802467343497428693ff2bfb4e6b3caa36b"
+        bytes:      7898759
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_te_rec.yml"
+        source_url: "${hf}/te_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "acebbe53f1831bf28ddfed75aedf58225d7aa5d09100c1d5a9140a2a53b137ce"
+        bytes:      4795
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 542
+
+  # Thai
+  - id: text_recognize.th
+    task: text_recognize
+    tier: tiny
+    lang: th
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_th_rec.onnx"
+        source_url: "${hf}/th_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "27618be66018f8598ac0a526a593f9f1cebf794e7eded93428e8fb016e537f5f"
+        bytes:      7891015
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_th_rec.yml"
+        source_url: "${hf}/th_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "f6ba7fefc38ca1ff398ddafa75d67d16e0b3757c4e6c833adffee98a981766c9"
+        bytes:      4667
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 526
+
+  # Arabic, Persian, Urdu
+  - id: text_recognize.arabic_small
+    task: text_recognize
+    tier: small
+    lang: arabic
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_arabic_rec.onnx"
+        source_url: "${hf}/arabic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "799113ebf267fbe742deb99eb36e8d42c9ddc5291ceacf92add41b4d52a59110"
+        bytes:      7998947
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_arabic_rec.yml"
+        source_url: "${hf}/arabic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "21368419e6c016c31db55d316d59e11c128e1913e6e6fe10287084710043d3a6"
+        bytes:      6165
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 749
+
+  # Russian, Bulgarian, Serbian, Mongolian
+  - id: text_recognize.cyrillic_small
+    task: text_recognize
+    tier: small
+    lang: cyrillic
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_cyrillic_rec.onnx"
+        source_url: "${hf}/cyrillic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "5371ee1ddaa7983cc62d0818d99e982b6804638c85e4f960d59a574094e172e5"
+        bytes:      8048799
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_cyrillic_rec.yml"
+        source_url: "${hf}/cyrillic_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "5c76cc91fa98410178a09f498db10050d0ec1634a660053d3005ab7be581f501"
+        bytes:      6991
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 852
+
+  # Hindi, Marathi, Nepali, Sanskrit
   - id: text_recognize.devanagari_small
     task: text_recognize
     tier: small
@@ -232,6 +582,216 @@ models:
       postprocess:
         blank_index: 0
         num_classes: 570
+
+  # Greek
+  - id: text_recognize.el_small
+    task: text_recognize
+    tier: small
+    lang: el
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_el_rec.onnx"
+        source_url: "${hf}/el_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "2acf17fcaea2bc81b878e311e6263b8885f48bb03796f75f9f30ed3242bbaa6d"
+        bytes:      7808735
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_el_rec.yml"
+        source_url: "${hf}/el_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "17d85b2fe2d2f24cd4ab07bcbc33e0c126859b956ced36e281dc65e2d0c1f0bf"
+        bytes:      3317
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 356
+
+  # East Slavic: Russian, Ukrainian, Belarusian
+  - id: text_recognize.eslav_small
+    task: text_recognize
+    tier: small
+    lang: eslav
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_eslav_rec.onnx"
+        source_url: "${hf}/eslav_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "b3018ef2b09a0250b6e0c8e871c927098363e5fd4df890cc68e8358eb0aaf1bd"
+        bytes:      7887627
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_eslav_rec.yml"
+        source_url: "${hf}/eslav_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "025039bac23eb4a308efcefa4d58eab3af440767815c6ba6938468bf6353ee5a"
+        bytes:      4538
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 519
+
+  # Korean
+  - id: text_recognize.korean_small
+    task: text_recognize
+    tier: small
+    lang: korean
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_korean_rec.onnx"
+        source_url: "${hf}/korean_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08"
+        bytes:      13418787
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_korean_rec.yml"
+        source_url: "${hf}/korean_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "f757fa1c40e99edcf27e9cce879b93eb2a51fa46f5ef39095689b8c37dd75998"
+        bytes:      96039
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 11947
+
+  # Tamil
+  - id: text_recognize.ta_small
+    task: text_recognize
+    tier: small
+    lang: ta
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_ta_rec.onnx"
+        source_url: "${hf}/ta_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "c6d2b682d2a0ea4cb1fccdba295976f93fd439964d16cdc666cadef531accbee"
+        bytes:      7885691
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_ta_rec.yml"
+        source_url: "${hf}/ta_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "88a28f5a1bb30cabe38a0985cb5e6619fa4f0c7c78e57a08274674228c5219a6"
+        bytes:      4579
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 515
+
+  # Telugu
+  - id: text_recognize.te_small
+    task: text_recognize
+    tier: small
+    lang: te
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_te_rec.onnx"
+        source_url: "${hf}/te_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "8238bfc46d4cffe720ed6706e3842802467343497428693ff2bfb4e6b3caa36b"
+        bytes:      7898759
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_te_rec.yml"
+        source_url: "${hf}/te_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "acebbe53f1831bf28ddfed75aedf58225d7aa5d09100c1d5a9140a2a53b137ce"
+        bytes:      4795
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 542
+
+  # Thai
+  - id: text_recognize.th_small
+    task: text_recognize
+    tier: small
+    lang: th
+    arch: pp_ocrv5_rec
+    license: Apache-2.0
+    paper: "PP-OCRv5"
+    files:
+      onnx:
+        url:        "${release_base}/ppocrv5_th_rec.onnx"
+        source_url: "${hf}/th_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.onnx"
+        sha256:     "27618be66018f8598ac0a526a593f9f1cebf794e7eded93428e8fb016e537f5f"
+        bytes:      7891015
+      charset_yaml:
+        url:        "${release_base}/ppocrv5_th_rec.yml"
+        source_url: "${hf}/th_PP-OCRv5_mobile_rec_onnx/resolve/main/inference.yml"
+        sha256:     "f6ba7fefc38ca1ff398ddafa75d67d16e0b3757c4e6c833adffee98a981766c9"
+        bytes:      4667
+    input:
+      shape:  [-1, 3, 48, -1]
+      pixfmt: bgr
+      dtype:  f32
+      preprocess:
+        height:    48
+        max_width: 1200
+        scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
+        mean:  [0.5, 0.5, 0.5]
+        std:   [0.5, 0.5, 0.5]
+    output:
+      type: ctc_logits
+      postprocess:
+        blank_index: 0
+        num_classes: 526
 
   - id: text_recognize.tiny
     task: text_recognize
