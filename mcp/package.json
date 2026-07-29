@@ -1,0 +1,40 @@
+{
+    "name": "@jvoltci/naina-mcp",
+    "version": "0.1.0",
+    "description": "MCP server exposing naina (OCR) document reading to AI agents",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/jvoltci/naina",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jvoltci/naina.git",
+        "directory": "mcp"
+    },
+    "bugs": {
+        "url": "https://github.com/jvoltci/naina/issues"
+    },
+    "type": "commonjs",
+    "engines": {
+        "node": ">=20.9.0"
+    },
+    "bin": {
+        "naina-mcp": "dist/cli.js"
+    },
+    "files": [
+        "dist/"
+    ],
+    "main": "dist/server.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/cli.js"
+    },
+    "dependencies": {
+        "@jvoltci/naina": "file:../bindings/node",
+        "@modelcontextprotocol/sdk": "^1.30.0",
+        "sharp": "^0.35.3",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^5.5.0"
+    }
+}

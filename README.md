@@ -138,7 +138,7 @@ Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 | WASM + browser app | ❌ v0.4 |
 | Rust binding | ❌ v0.5 |
 | Cross-binding parity enforced in CI | ❌ v1.0 |
-| MCP server (targets the stateless MCP 2026-07-28 spec) | ❌ v1.0 |
+| MCP server (`mcp/`, 2 tools, verified over stdio) | ✅ |
 
 13 C++ tests, 6 Python tests, 6 Node tests. CI builds on Linux (gcc + clang) and
 macOS arm64.
@@ -169,6 +169,26 @@ OpenCV, `sharp`, or anything else that hands you a buffer.
 | `NAINA_CACHE` | Where weights are cached. Default `~/.cache/naina/models` |
 | `NAINA_OFFLINE=1` | Disable network; use only what is already cached |
 | `NAINA_REGISTRY` | Path to `registry.yaml`. Both bindings set this automatically |
+
+## MCP server
+
+An agent can read documents through naina directly:
+
+```json
+{
+  "mcpServers": {
+    "naina": { "command": "npx", "args": ["-y", "@jvoltci/naina-mcp"] }
+  }
+}
+```
+
+Two tools: `read_document` (markdown) and `read_document_detailed` (per-line
+text, confidence, quads). See [`mcp/README.md`](mcp/README.md).
+
+Reading a page carries no session state, so the server is written stateless —
+which is what MCP spec revision 2026-07-28 formalised. Note that the current
+SDK (`1.30.0`) only negotiates up to `2025-11-25`; the newer revision is a
+dependency bump away, not a rewrite.
 
 ## Documentation
 

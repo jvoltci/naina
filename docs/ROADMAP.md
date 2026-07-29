@@ -87,9 +87,13 @@ Turn a bag of lines into a document.
       in floating-point behaviour.
 - [ ] Full benchmark matrix: accuracy and latency per device, harness in-repo,
       reproducible from a clean clone
-- [ ] MCP server targeting the **stateless MCP 2026-07-28 spec** — reading a
-      page carries no session state, so it deploys to serverless or edge
-      unchanged
+- [x] MCP server — `mcp/`, two tools (`read_document`,
+      `read_document_detailed`), verified end to end over stdio
+- [ ] Move the MCP server to spec revision **2026-07-28**, whose stateless
+      request/response model suits naina exactly. Blocked on the SDK:
+      `@modelcontextprotocol/sdk@1.30.0` tops out at `2025-11-25`, and a client
+      asking for 2026-07-28 negotiates down. The server already holds no
+      session state, so this should be a dependency bump, not a rewrite.
 - [ ] Prebuilt binaries: macOS arm64/x64, Linux x64/arm64, Windows x64, cp39–cp313
 - [ ] Vendored ONNX Runtime in published wheels (delocate / auditwheel)
 
