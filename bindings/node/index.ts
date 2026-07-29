@@ -1,22 +1,31 @@
 /**
- * naina — embeddable face & person CV runtime (Node binding).
+ * naina — embeddable document-reading (OCR) runtime (Node binding).
  *
  * Quickstart:
  *
- *   import { Engine, similarity } from 'naina';
+ *   import { Engine, read } from '@jvoltci/naina';
  *
- *   const engine = new Engine();
- *   const img = { data: rgbBuffer, width: 1280, height: 720, channels: 3 };
- *   const faces = await engine.detectFaces(img);
- *   const emb   = await engine.embedFace(img, faces[0]);
+ *   const img = { data: rgbBuffer, width: 640, height: 200 };
+ *
+ *   // One-liner: image -> markdown
+ *   const markdown = await read(img);
+ *
+ *   // Or keep an Engine around for repeated calls
+ *   const engine = new Engine({ tier: 'tiny' });
+ *   const page = await engine.read(img);
+ *   console.log(page.markdown);
+ *   for (const line of page.lines) console.log(line.confidence, line.text);
  *
  * Image data must be a raw pixel buffer (Uint8Array or Buffer). Use `sharp`
  * or another decoder to load files; this package intentionally doesn't
  * pull in an image decoder.
  *
- * Models are fetched from GitHub Releases the first time each task runs,
- * and cached under $NAINA_CACHE (default ~/.cache/naina/models). Set
- * NAINA_OFFLINE=1 to disable network and use only the local cache.
+ * Tiers select model size, not licence. Every model naina ships is
+ * Apache-2.0: tiny (~11 MB), small (~54 MB), medium (~269 MB).
+ *
+ * Weights are fetched on first use and cached under $NAINA_CACHE (default
+ * ~/.cache/naina/models). Set NAINA_OFFLINE=1 to disable network and use
+ * only the local cache.
  */
 
 import * as path from 'node:path';
@@ -46,27 +55,31 @@ const native = require('../build/Release/naina-node.node') as NativeModule;
 
 // ── Types ────────────────────────────────────────────────────────────
 
-export type Backend = 'auto' | 'onnxruntime' | 'ncnn' | 'coreml' | 'tensorrt';
+export type Backend = 'auto' | 'onnxruntime' | 'openvino' | 'ncnn' | 'coreml' | 'tensorrt';
+export type Tier = 'auto' | 'tiny' | 'small' | 'medium';
 export type PixelFormat = 'rgb' | 'bgr' | 'gray';
-
-export interface BBox {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    score: number;
-}
 
 export interface Point {
     x: number;
     y: number;
 }
 
-export interface Face {
-    bbox: BBox;
-    landmarks: [Point, Point, Point, Point, Point];
-    quality: number;
-    trackId: number;
+/** One recognised line of text. */
+export interface Line {
+    text: string;
+    /** Recognition confidence. */
+    confidence: number;
+    /** Detection confidence for the quad. */
+    score: number;
+    /** Clockwise from top-left, in source image coordinates. */
+    quad: [Point, Point, Point, Point];
+}
+
+/** A read page, resolved eagerly to a plain object — no handle to release. */
+export interface Page {
+    markdown: string;
+    json: string;
+    lines: Line[];
 }
 
 export interface ImageInput {
@@ -82,34 +95,26 @@ export interface ImageInput {
 
 export interface EngineOptions {
     backend?: Backend;
+    tier?: Tier;
     modelsRoot?: string;
     numThreads?: number;
-    enableResearchModels?: boolean;
 }
 
 // ── Native module surface ────────────────────────────────────────────
 
 interface NativeEngine {
-    detectFaces(image: ImageInput): Promise<Face[]>;
-    embedFace(image: ImageInput, face: Face): Promise<Float32Array>;
-    faceLiveness(image: ImageInput, face: Face): Promise<number>;
-    faceEmbedDim(): number;
+    read(image: ImageInput): Promise<Page>;
+    detectText(image: ImageInput): Promise<Array<[Point, Point, Point, Point]>>;
 }
 
 interface NativeModule {
     Engine: new (options?: EngineOptions) => NativeEngine;
-    similarity: (a: Float32Array, b: Float32Array) => number;
     version: string;
 }
 
 // ── Public API ───────────────────────────────────────────────────────
 
 export const version: string = native.version;
-
-/** Cosine similarity of two L2-normalised embedding vectors. */
-export function similarity(a: Float32Array, b: Float32Array): number {
-    return native.similarity(a, b);
-}
 
 export class Engine {
     private readonly inner: NativeEngine;
@@ -118,20 +123,23 @@ export class Engine {
         this.inner = new native.Engine(options);
     }
 
-    detectFaces(image: ImageInput): Promise<Face[]> {
-        return this.inner.detectFaces(image);
+    /** Read a document: detect text, recognise it, return the page. */
+    read(image: ImageInput): Promise<Page> {
+        return this.inner.read(image);
     }
 
-    embedFace(image: ImageInput, face: Face): Promise<Float32Array> {
-        return this.inner.embedFace(image, face);
+    /** Detection only, for callers that want geometry without recognition. */
+    detectText(image: ImageInput): Promise<Array<[Point, Point, Point, Point]>> {
+        return this.inner.detectText(image);
     }
+}
 
-    /** Liveness probability in [0, 1]; pick a threshold (~0.5 to start). */
-    faceLiveness(image: ImageInput, face: Face): Promise<number> {
-        return this.inner.faceLiveness(image, face);
-    }
-
-    faceEmbedDim(): number {
-        return this.inner.faceEmbedDim();
-    }
+/**
+ * Read an image and return markdown. Constructs a throwaway Engine, so
+ * prefer `Engine.read` for repeated calls.
+ */
+export async function read(image: ImageInput, options: EngineOptions = {}): Promise<string> {
+    const engine = new Engine(options);
+    const page = await engine.read(image);
+    return page.markdown;
 }

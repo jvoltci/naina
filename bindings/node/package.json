@@ -1,7 +1,7 @@
 {
     "name": "@jvoltci/naina",
-    "version": "0.1.0",
-    "description": "Embeddable computer-vision runtime for face & person understanding",
+    "version": "0.2.0",
+    "description": "Embeddable document-reading (OCR) runtime",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "type": "commonjs",
@@ -38,7 +38,8 @@
         "cmake-js": "^7.3.0",
         "typescript": "^5.4.0",
         "vitest": "^1.6.0",
-        "@types/node": "^20.11.0"
+        "@types/node": "^20.11.0",
+        "@napi-rs/canvas": "^1.0.3"
     },
     "binary": {
         "module_name": "naina-node",
