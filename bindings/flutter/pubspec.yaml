@@ -30,6 +30,9 @@ dev_dependencies:
   ffigen: ^13.0.0
 
 flutter:
+  assets:
+    - assets/registry.yaml
+
   plugin:
     platforms:
       # ffiPlugin with NO pluginClass. Dart calls the C ABI directly, so there is

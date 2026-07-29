@@ -11,14 +11,20 @@ First release of the Flutter binding.
   `arm64-v8a` and `x86_64`
 - iOS: podspec against `onnxruntime-c`
 
-Verified: Dart analysis clean; FFI struct layout confirmed to match the C
-compiler's (`naina_config` is 40 bytes on both sides); every C symbol resolves;
-image wrapping, context lifecycle and ABI v1 compatibility exercised against a
-real `libnaina`.
+- `NainaModels.stage()` fetches weights on the device. The Android core has no
+  libcurl, so Dart downloads; the C core still decides the paths and verifies the
+  hashes.
+- `language:` selects the recognition alphabet — `'devanagari'` reads Hindi,
+  Marathi, Nepali and Sanskrit. An unknown value throws.
+- Requires Android API 28+ (`std::aligned_alloc`).
 
-Not yet verified: the Android NDK build and the iOS podspec have not been run on
-a device. Treat on-device use as a preview until they have.
+Verified on an arm64 Android emulator: weights staged, then a real A4 page read as
+33 lines at 0.992 mean confidence, matching the native build. Three on-device
+integration tests pass, plus 11 host FFI tests including a struct-layout check
+against the C compiler.
 
-Known limits carried from the core: no Devanagari (and unsupported scripts return
-confident nonsense rather than an error), weak handwriting, text only — no layout
-or markdown in this binding yet.
+**iOS is not verified**: the podspec is written but has never been built or run.
+
+Known limits from the core: weak handwriting; Arabic, Tamil, Telugu, Thai, Korean
+and Cyrillic unsupported (and wrong-alphabet reads return plausible wrong text
+rather than an error); text only — no layout or markdown in this binding yet.

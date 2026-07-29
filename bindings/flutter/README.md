@@ -17,11 +17,15 @@
 </p>
 
 ```dart
-final naina = await Naina.open();
+final dir  = await getApplicationSupportDirectory();
+final root = '${dir.path}/naina';
 
+// Fetches ~11 MB once. Returns immediately afterwards.
+await NainaModels.stage(modelsRoot: root);
+
+final naina = await Naina.open(modelsRoot: root);
 final page = naina.readRgbSync(rgb, width: w, height: h);
 print(page.text);
-
 naina.close();
 ```
 
@@ -36,18 +40,29 @@ dependencies:
   naina: ^0.2.0
 ```
 
-Model weights (about 11 MB for the default tier) download once on first use and
-are cached. On mobile, pass a writable directory:
+## Model weights
+
+Call `NainaModels.stage` once before `Naina.open`. It downloads ~11 MB for the
+default tier and is a no-op once the files are present.
 
 ```dart
-import 'package:path_provider/path_provider.dart';
-
-final dir = await getApplicationSupportDirectory();
-final naina = await Naina.open(modelsRoot: '${dir.path}/naina');
+await NainaModels.stage(
+  modelsRoot: root,
+  language: 'devanagari',                      // optional
+  onProgress: (p) => print('${(p.fraction * 100).round()}%'),
+);
 ```
 
-Required on iOS and Android: the app sandbox cannot write to the default
-`~/.cache` location.
+Dart does the fetching because the Android core has no libcurl — the NDK ships
+none — exactly as JavaScript fetches for the browser. It does **not** decide
+where files go: `naina_staging_plan` in the C core returns both the URLs and the
+paths, so the cache layout has one definition and the core still sha256-verifies
+every file.
+
+`modelsRoot` is required on mobile: the app sandbox cannot write to the default
+`~/.cache`, where `~` does not even expand because there is no `HOME`.
+
+Needs `INTERNET` permission on Android for the first run.
 
 ## Getting RGB bytes
 
@@ -117,13 +132,20 @@ Full list: [jvoltci.github.io/naina/doc/limits](https://jvoltci.github.io/naina/
 
 ## Status
 
-Verified: Dart analysis clean, every C symbol resolves, FFI struct layout matches
-the C compiler's (`naina_config` is 40 bytes on both sides), and image wrapping,
-context lifecycle and ABI v1 compatibility all exercised against a real
-`libnaina`.
+**Android is verified on a device.** On an arm64 emulator: 4 weight files staged,
+then a real A4 page read as **33 lines at 0.992 mean confidence** — the same
+result the native build gives. `libnaina.so` (1.4 MB) and `libonnxruntime.so`
+ship in the APK. Three on-device integration tests pass.
 
-Not yet verified: the Android NDK build and the iOS podspec have not been run on a
-device. Treat on-device use as a preview until they have.
+Also verified on the host: analysis clean, every C symbol resolves, and the FFI
+struct layout matches the C compiler's (`naina_config` is 48 bytes on both sides),
+with image wrapping, context lifecycle and ABI v1 compatibility exercised against
+a real `libnaina`.
+
+**iOS is not verified.** The podspec is written but has never been built or run.
+
+Requires **Android API 28+**: the core allocates with `std::aligned_alloc`, which
+Android's libc only declares from 28.
 
 ## The name
 
