@@ -38,16 +38,16 @@ static naina_region reg(float x, float y, float w, float h, float score, naina_r
 static void test_class_ids_map_to_expected_kinds() {
     // Spot-checks against PP-DocLayout's own 23-entry label_list, read from the
     // model config. A shifted table mislabels every region on every page.
-    EXPECT(kind_from_class_id(11) == NAINA_REGION_TITLE);    // doc_title
-    EXPECT(kind_from_class_id(0) == NAINA_REGION_TITLE);     // paragraph_title
-    EXPECT(kind_from_class_id(2) == NAINA_REGION_TEXT);      // text
-    EXPECT(kind_from_class_id(8) == NAINA_REGION_TABLE);     // table
-    EXPECT(kind_from_class_id(1) == NAINA_REGION_FIGURE);    // image
-    EXPECT(kind_from_class_id(6) == NAINA_REGION_CAPTION);   // figure_title
-    EXPECT(kind_from_class_id(7) == NAINA_REGION_FORMULA);   // formula
-    EXPECT(kind_from_class_id(13) == NAINA_REGION_HEADER);   // header
-    EXPECT(kind_from_class_id(15) == NAINA_REGION_FOOTER);   // footer
-    EXPECT(kind_from_class_id(3) == NAINA_REGION_PAGENUM);   // number
+    EXPECT(kind_from_class_id(11) == NAINA_REGION_TITLE);   // doc_title
+    EXPECT(kind_from_class_id(0) == NAINA_REGION_TITLE);    // paragraph_title
+    EXPECT(kind_from_class_id(2) == NAINA_REGION_TEXT);     // text
+    EXPECT(kind_from_class_id(8) == NAINA_REGION_TABLE);    // table
+    EXPECT(kind_from_class_id(1) == NAINA_REGION_FIGURE);   // image
+    EXPECT(kind_from_class_id(6) == NAINA_REGION_CAPTION);  // figure_title
+    EXPECT(kind_from_class_id(7) == NAINA_REGION_FORMULA);  // formula
+    EXPECT(kind_from_class_id(13) == NAINA_REGION_HEADER);  // header
+    EXPECT(kind_from_class_id(15) == NAINA_REGION_FOOTER);  // footer
+    EXPECT(kind_from_class_id(3) == NAINA_REGION_PAGENUM);  // number
 }
 
 static void test_out_of_range_class_is_unknown() {

@@ -60,7 +60,22 @@ if(NAINA_VENDOR_YAMLCPP)
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(yaml-cpp)
-    message(STATUS "  yaml-cpp:          vendored (static, 0.8.0)")
+
+    # yaml-cpp 0.8.0's own headers shadow names in namespace YAML, which trips
+    # naina's -Wshadow -Werror the moment they are included. Third-party code
+    # should not be held to our warning flags: re-export its include directories
+    # as SYSTEM so the compiler suppresses diagnostics from them.
+    #
+    # Only shows up when yaml-cpp is VENDORED -- a system copy is already found
+    # via find_package, which marks its includes SYSTEM for us. That is why this
+    # surfaced in the wheel build and nowhere else.
+    get_target_property(NAINA_YAMLCPP_INC yaml-cpp INTERFACE_INCLUDE_DIRECTORIES)
+    if(NAINA_YAMLCPP_INC)
+        set_target_properties(yaml-cpp PROPERTIES
+            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${NAINA_YAMLCPP_INC}")
+    endif()
+
+    message(STATUS "  yaml-cpp:          vendored (static, 0.8.0, headers SYSTEM)")
 else()
     find_package(yaml-cpp REQUIRED)
     message(STATUS "  yaml-cpp:          system")

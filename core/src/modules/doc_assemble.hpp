@@ -59,8 +59,7 @@ void order_regions(const Config& cfg, std::vector<naina_region>* regions);
 //   FORMULA  -> "$$ ... $$"
 //   TEXT     -> paragraph, lines joined with a space
 //   HEADER / FOOTER / PAGENUM -> omitted; they are furniture, not content
-std::string to_markdown(const std::vector<naina_region>& regions,
-                        const std::vector<Line>& lines);
+std::string to_markdown(const std::vector<naina_region>& regions, const std::vector<Line>& lines);
 
 }  // namespace naina::internal::doc_assemble
 

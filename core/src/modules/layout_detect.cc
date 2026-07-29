@@ -193,10 +193,10 @@ naina_status detect(backend::ISession* session,
     ins.reserve(in_descs.size());
     for (const auto& d : in_descs) {
         if (d.name == "image") {
-            ins.push_back(Tensor::view(
-                chw.data(),
-                {1, 3, static_cast<int64_t>(side), static_cast<int64_t>(side)},
-                DType::F32));
+            ins.push_back(
+                Tensor::view(chw.data(),
+                             {1, 3, static_cast<int64_t>(side), static_cast<int64_t>(side)},
+                             DType::F32));
         } else if (d.name == "scale_factor") {
             ins.push_back(Tensor::view(scale_factor.data(), {1, 2}, DType::F32));
         } else if (d.name == "im_shape") {
