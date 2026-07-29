@@ -32,7 +32,38 @@ set(NAINA_SOURCES
 )
 
 # yaml-cpp parses models/registry.yaml; libcurl fetches model weights.
-find_package(yaml-cpp REQUIRED)
+#
+# yaml-cpp is vendored as a STATIC library when NAINA_VENDOR_YAMLCPP is ON,
+# which is the default for redistributable builds (wheels, npm addons). A
+# system yaml-cpp leaves the extension linked against e.g.
+# /opt/homebrew/opt/yaml-cpp/lib/libyaml-cpp.0.9.dylib, so anyone without that
+# exact install — including every Intel Mac, where the Homebrew prefix
+# differs — gets an ImportError. Static linking removes the runtime dependency
+# outright rather than bundling another shared object.
+if(NAINA_VENDOR_YAMLCPP)
+    include(FetchContent)
+    set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_INSTALL OFF CACHE BOOL "" FORCE)
+    set(YAML_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    # yaml-cpp 0.8.0 declares cmake_minimum_required(VERSION 3.4), which CMake
+    # 4.x refuses outright. This is the documented escape hatch for consuming a
+    # dependency that predates the 3.5 floor; it applies only to the fetched
+    # subproject, not to naina.
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+    FetchContent_Declare(yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG        0.8.0
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(yaml-cpp)
+    message(STATUS "  yaml-cpp:          vendored (static, 0.8.0)")
+else()
+    find_package(yaml-cpp REQUIRED)
+    message(STATUS "  yaml-cpp:          system")
+endif()
+
 find_package(CURL REQUIRED)
 
 # Backends are added conditionally; each backend file is gated on its option
@@ -84,6 +115,12 @@ set_target_properties(naina-core PROPERTIES
 # (or dllimport on Windows), automatically.
 if(NAINA_BUILD_SHARED)
     target_compile_definitions(naina-core PRIVATE NAINA_BUILDING_SHARED=1)
+endif()
+
+# Drop the "-dev" suffix from naina_version_string() so a published artifact
+# does not disagree with its own package metadata.
+if(NAINA_RELEASE)
+    target_compile_definitions(naina-core PRIVATE NAINA_RELEASE=1)
 endif()
 
 if(NAINA_WITH_ONNXRUNTIME)

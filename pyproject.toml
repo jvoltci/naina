@@ -4,8 +4,8 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "naina"
-version = "0.1.0"
-description = "Embeddable computer-vision runtime for face & person understanding"
+version = "0.2.0"
+description = "Embeddable document-reading runtime. OCR from one C++ core, no OpenCV."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "JAI", email = "jvoltci@gmail.com" }]
@@ -19,7 +19,9 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Text Processing",
 ]
+keywords = ["ocr", "document", "text-recognition", "paddleocr", "onnx", "layout"]
 dependencies = [
     "numpy>=1.20",
 ]
@@ -27,7 +29,9 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/jvoltci/naina"
 Source = "https://github.com/jvoltci/naina"
+Documentation = "https://jvoltci.github.io/naina/doc/"
 Demo = "https://jvoltci.github.io/naina/"
+Changelog = "https://github.com/jvoltci/naina/blob/master/CHANGELOG.md"
 
 [tool.scikit-build]
 cmake.version = ">=3.24"
@@ -73,3 +77,49 @@ NAINA_BUILD_SHARED = "OFF"
 # note: this links the SYSTEM onnxruntime, so publishable wheels need it
 # vendored (delocate on macOS, auditwheel on Linux) rather than assumed.
 NAINA_WITH_ONNXRUNTIME = "ON"
+# Static-link yaml-cpp so the extension carries no absolute path to a
+# system copy. This is a CMake option, so it must be a cmake.define —
+# scikit-build-core does not promote environment variables to CMake defines,
+# which is exactly the mistake that left the first vendored build still
+# pointing at /opt/homebrew/opt/yaml-cpp.
+NAINA_VENDOR_YAMLCPP = "ON"
+# A wheel is a distributable artifact with a pinned version, so
+# naina.__version__ must match the wheel METADATA exactly.
+NAINA_RELEASE = "ON"
+
+
+# ── Redistributable wheels ────────────────────────────────────────────
+#
+# The problem this solves: a wheel built against a system ONNX Runtime and
+# yaml-cpp links absolute paths like
+# /opt/homebrew/opt/onnxruntime/lib/libonnxruntime.1.dylib. Anyone without that
+# exact install — including every Intel Mac, where the Homebrew prefix differs —
+# gets an ImportError on `import naina`. Verified, not hypothetical.
+#
+# Two dependencies, two treatments:
+#   yaml-cpp     vendored STATICALLY, so the runtime dependency disappears
+#   onnxruntime  too large to static-link; the shared library is bundled INTO
+#                the wheel by delocate (macOS) / auditwheel (Linux), which
+#                rewrite the load paths to point inside the wheel
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = "*-musllinux_*"
+build-frontend = "build"
+# Prove the wheel is self-contained: import it in a clean environment and
+# assert the extension carries no absolute path to a build-machine library.
+test-requires = ["numpy", "pytest"]
+test-command = "python {project}/tools/check_wheel_selfcontained.py && python -m pytest {project}/bindings/python/tests -q"
+
+[tool.cibuildwheel.environment]
+NAINA_VENDOR_YAMLCPP = "ON"
+NAINA_WITH_ONNXRUNTIME = "ON"
+
+[tool.cibuildwheel.macos]
+# Fetch the official ORT release rather than relying on Homebrew, so the build
+# does not depend on the runner's package manager or CPU architecture.
+before-all = "bash {project}/tools/ci/install_onnxruntime.sh"
+environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime", MACOSX_DEPLOYMENT_TARGET = "11.0" }
+
+[tool.cibuildwheel.linux]
+before-all = "bash {project}/tools/ci/install_onnxruntime.sh && (yum install -y libcurl-devel || apt-get update && apt-get install -y libcurl4-openssl-dev)"
+environment = { NAINA_VENDOR_YAMLCPP = "ON", NAINA_WITH_ONNXRUNTIME = "ON", ONNXRUNTIME_ROOT = "/tmp/onnxruntime" }
