@@ -9,6 +9,10 @@
 #include "naina/tensor.hpp"
 
 #include "image_ops.hpp"
+#include "modules/charset.hpp"
+#include "modules/text_detect.hpp"
+#include "modules/text_recognize.hpp"
+#include "page.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -32,6 +36,10 @@ struct naina_image {
 };
 
 namespace {
+
+naina::internal::ImageView view_of(const naina_image_t* img) {
+    return naina::internal::ImageView{img->data, img->width, img->height, img->stride, img->fmt};
+}
 
 // File-kind → backend-id mapping for session selection.
 naina_backend backend_for_kind(const std::string& kind) {
@@ -74,6 +82,43 @@ struct naina_ctx {
 
     std::mutex sess_mu;
     std::unordered_map<std::string, std::unique_ptr<naina::backend::ISession>> sessions;
+
+    // The recognition charset, loaded once from the manifest's charset_yaml
+    // artifact. Guarded by the same mutex as the session cache.
+    naina::internal::charset::Charset rec_charset;
+    bool rec_charset_loaded = false;
+
+    // Resolve and parse the charset that belongs to the recognition model for
+    // the active tier. Returns nullptr with a status on failure — without a
+    // charset, decoding cannot map class indices to characters at all.
+    const naina::internal::charset::Charset* charset_for_recognize(naina_status* out_status) {
+        std::lock_guard<std::mutex> lk(sess_mu);
+        if (rec_charset_loaded) {
+            *out_status = NAINA_OK;
+            return &rec_charset;
+        }
+        auto entry = registry.resolve("text_recognize", tier);
+        if (!entry && tier != naina::Tier::Medium) {
+            entry = registry.resolve("text_recognize", naina::Tier::Medium);
+        }
+        if (!entry || entry->files.find("charset_yaml") == entry->files.end()) {
+            *out_status = NAINA_E_MODEL_NOT_FOUND;
+            return nullptr;
+        }
+        std::filesystem::path path;
+        const naina_status ls = registry.ensure_local(*entry, "charset_yaml", &path);
+        if (ls != NAINA_OK) {
+            *out_status = ls;
+            return nullptr;
+        }
+        if (!naina::internal::charset::load_from_yaml(path, &rec_charset)) {
+            *out_status = NAINA_E_IO;
+            return nullptr;
+        }
+        rec_charset_loaded = true;
+        *out_status = NAINA_OK;
+        return &rec_charset;
+    }
 
     naina::backend::ISession* session_for(const std::string& task, naina_status* out_status) {
         std::lock_guard<std::mutex> lk(sess_mu);
@@ -239,6 +284,10 @@ extern "C" void naina_image_release(naina_image_t* image) {
 // argument-validation contracts are real from day one so bindings can be
 // written and tested against them now.
 
+// naina_page_t is naina::internal::Page. The opaque struct exists so the
+// header need not expose the C++ type.
+struct naina_page : naina::internal::Page {};
+
 extern "C" naina_status naina_read(naina_ctx_t* ctx,
                                    const naina_image_t* image,
                                    naina_page_t** out_page) {
@@ -246,10 +295,46 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
         return NAINA_E_INVALID_ARG;
     }
     *out_page = nullptr;
-    return NAINA_E_UNSUPPORTED;
+
+    naina_status s = NAINA_OK;
+    auto* det = ctx->session_for("text_detect", &s);
+    if (det == nullptr) {
+        return s;
+    }
+    auto* rec = ctx->session_for("text_recognize", &s);
+    if (rec == nullptr) {
+        return s;
+    }
+    const auto* cs = ctx->charset_for_recognize(&s);
+    if (cs == nullptr) {
+        return s;
+    }
+
+    const auto view = view_of(image);
+
+    std::vector<naina_textbox> boxes;
+    s = naina::internal::text_detect::detect(det, view, {}, &boxes);
+    if (s != NAINA_OK) {
+        return s;
+    }
+
+    std::vector<naina::internal::text_recognize::Line> lines;
+    s = naina::internal::text_recognize::recognize(rec, view, boxes, *cs, {}, &lines);
+    if (s != NAINA_OK) {
+        return s;
+    }
+
+    auto page = std::make_unique<naina_page>();
+    for (auto& line : lines) {
+        page->add_line(line.box, line.text, line.confidence);
+    }
+    *out_page = page.release();
+    return NAINA_OK;
 }
 
-extern "C" void naina_page_release(naina_page_t*) {}
+extern "C" void naina_page_release(naina_page_t* page) {
+    delete page;
+}
 
 extern "C" naina_status naina_page_lines(const naina_page_t* page,
                                          const naina_textline** out_lines,
@@ -257,9 +342,10 @@ extern "C" naina_status naina_page_lines(const naina_page_t* page,
     if (page == nullptr || out_lines == nullptr || out_count == nullptr) {
         return NAINA_E_INVALID_ARG;
     }
-    *out_lines = nullptr;
-    *out_count = 0;
-    return NAINA_E_UNSUPPORTED;
+    const auto& lines = page->lines();
+    *out_lines = lines.empty() ? nullptr : lines.data();
+    *out_count = static_cast<int32_t>(lines.size());
+    return NAINA_OK;
 }
 
 extern "C" naina_status naina_page_regions(const naina_page_t* page,
@@ -268,17 +354,18 @@ extern "C" naina_status naina_page_regions(const naina_page_t* page,
     if (page == nullptr || out_regions == nullptr || out_count == nullptr) {
         return NAINA_E_INVALID_ARG;
     }
-    *out_regions = nullptr;
-    *out_count = 0;
-    return NAINA_E_UNSUPPORTED;
+    const auto& regions = page->regions();
+    *out_regions = regions.empty() ? nullptr : regions.data();
+    *out_count = static_cast<int32_t>(regions.size());
+    return NAINA_OK;
 }
 
-extern "C" const char* naina_page_markdown(const naina_page_t*) {
-    return "";
+extern "C" const char* naina_page_markdown(const naina_page_t* page) {
+    return page == nullptr ? "" : page->markdown();
 }
 
-extern "C" const char* naina_page_json(const naina_page_t*) {
-    return "";
+extern "C" const char* naina_page_json(const naina_page_t* page) {
+    return page == nullptr ? "" : page->json();
 }
 
 extern "C" naina_status naina_text_detect(naina_ctx_t* ctx,
@@ -290,7 +377,30 @@ extern "C" naina_status naina_text_detect(naina_ctx_t* ctx,
     }
     *out_boxes = nullptr;
     *out_count = 0;
-    return NAINA_E_UNSUPPORTED;
+
+    naina_status s = NAINA_OK;
+    auto* session = ctx->session_for("text_detect", &s);
+    if (session == nullptr) {
+        return s;
+    }
+
+    std::vector<naina_textbox> boxes;
+    s = naina::internal::text_detect::detect(session, view_of(image), {}, &boxes);
+    if (s != NAINA_OK) {
+        return s;
+    }
+    if (boxes.empty()) {
+        return NAINA_OK;
+    }
+
+    auto* buf = static_cast<naina_textbox*>(std::malloc(sizeof(naina_textbox) * boxes.size()));
+    if (buf == nullptr) {
+        return NAINA_E_OOM;
+    }
+    std::memcpy(buf, boxes.data(), sizeof(naina_textbox) * boxes.size());
+    *out_boxes = buf;
+    *out_count = static_cast<int32_t>(boxes.size());
+    return NAINA_OK;
 }
 
 extern "C" void naina_free_textboxes(naina_textbox* boxes, int32_t /*count*/) {

@@ -1,6 +1,7 @@
 #include "geometry.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace naina::internal {
@@ -146,6 +147,32 @@ bool min_area_quad(const std::vector<naina_point>& pts, naina_point out[4]) {
     out[2] = to_world(best_max_u, best_max_v);
     out[3] = to_world(best_min_u, best_max_v);
     return true;
+}
+
+void order_quad_clockwise(naina_point q[4]) {
+    if (q == nullptr) {
+        return;
+    }
+    // Sort by x: the first two are the left pair, the last two the right pair.
+    std::array<naina_point, 4> p = {q[0], q[1], q[2], q[3]};
+    std::sort(p.begin(), p.end(), [](const naina_point& a, const naina_point& b) {
+        return a.x < b.x || (a.x == b.x && a.y < b.y);
+    });
+    // Within each pair the smaller y is the upper corner.
+    naina_point tl = p[0];
+    naina_point bl = p[1];
+    if (bl.y < tl.y) {
+        std::swap(tl, bl);
+    }
+    naina_point tr = p[2];
+    naina_point br = p[3];
+    if (br.y < tr.y) {
+        std::swap(tr, br);
+    }
+    q[0] = tl;
+    q[1] = tr;
+    q[2] = br;
+    q[3] = bl;
 }
 
 std::vector<naina_point> offset_convex_polygon(const std::vector<naina_point>& poly,

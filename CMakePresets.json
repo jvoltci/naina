@@ -22,7 +22,8 @@
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_OSX_ARCHITECTURES": "arm64"
+                "CMAKE_OSX_ARCHITECTURES": "arm64",
+                "NAINA_WITH_ONNXRUNTIME": "ON"
             }
         },
         {

@@ -180,6 +180,11 @@ std::vector<naina_textbox> decode(const float* prob,
         if (!min_area_quad(border, quad)) {
             continue;
         }
+        // min_area_quad works in its own rotating-calipers frame, so corner[0]
+        // is not reliably top-left. Canonicalise before anything downstream
+        // warps the quad: a mis-ordered quad reads the text strip mirrored or
+        // upside down and produces plausible garbage rather than an error.
+        order_quad_clockwise(quad);
 
         // Reject slivers before the expensive scoring pass.
         const float side_a = std::hypot(quad[1].x - quad[0].x, quad[1].y - quad[0].y);

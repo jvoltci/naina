@@ -8,6 +8,7 @@
 using naina::internal::convex_hull;
 using naina::internal::min_area_quad;
 using naina::internal::offset_convex_polygon;
+using naina::internal::order_quad_clockwise;
 using naina::internal::polygon_area;
 using naina::internal::polygon_perimeter;
 
@@ -163,7 +164,51 @@ static void test_db_unclip_distance_formula() {
     EXPECT(std::fabs(polygon_area(grown) - 112.0F) < 1.0F);
 }
 
+static void test_order_quad_clockwise_canonicalises_any_rotation() {
+    // min_area_quad emits corners in its own (u,v) caliper frame, whose u axis
+    // is whichever hull edge won. That can point left or up, so corner[0] is
+    // NOT necessarily top-left. The recognition warp assumes it is, and a
+    // mis-ordered quad silently reads the text strip mirrored or upside down.
+    // Canonicalise to [top-left, top-right, bottom-right, bottom-left].
+    const naina_point tl{10.0F, 20.0F};
+    const naina_point tr{50.0F, 20.0F};
+    const naina_point br{50.0F, 35.0F};
+    const naina_point bl{10.0F, 35.0F};
+
+    // Every cyclic rotation and both windings must land on the same order.
+    const naina_point inputs[][4] = {
+        {tl, tr, br, bl},  // already correct
+        {tr, br, bl, tl},  // rotated once
+        {br, bl, tl, tr},  // rotated twice
+        {bl, tl, tr, br},  // rotated three times
+        {bl, br, tr, tl},  // reversed winding
+        {br, tr, tl, bl},  // reversed + rotated
+    };
+    for (const auto& in : inputs) {
+        naina_point q[4] = {in[0], in[1], in[2], in[3]};
+        order_quad_clockwise(q);
+        EXPECT(std::fabs(q[0].x - tl.x) < 1e-3F && std::fabs(q[0].y - tl.y) < 1e-3F);
+        EXPECT(std::fabs(q[1].x - tr.x) < 1e-3F && std::fabs(q[1].y - tr.y) < 1e-3F);
+        EXPECT(std::fabs(q[2].x - br.x) < 1e-3F && std::fabs(q[2].y - br.y) < 1e-3F);
+        EXPECT(std::fabs(q[3].x - bl.x) < 1e-3F && std::fabs(q[3].y - bl.y) < 1e-3F);
+    }
+}
+
+static void test_order_quad_clockwise_on_a_rotated_box() {
+    // A tilted box. The left pair by x is (25,30) and (30,10); of those the
+    // smaller y is top-left. The right pair is (55,40) and (60,20).
+    naina_point q[4] = {{30.0F, 10.0F}, {60.0F, 20.0F}, {55.0F, 40.0F}, {25.0F, 30.0F}};
+    order_quad_clockwise(q);
+    EXPECT(std::fabs(q[0].x - 30.0F) < 1e-3F);
+    EXPECT(std::fabs(q[0].y - 10.0F) < 1e-3F);
+    EXPECT(std::fabs(q[3].x - 25.0F) < 1e-3F);
+    EXPECT(std::fabs(q[1].y - 20.0F) < 1e-3F);
+    EXPECT(std::fabs(q[2].y - 40.0F) < 1e-3F);
+}
+
 int main() {
+    test_order_quad_clockwise_canonicalises_any_rotation();
+    test_order_quad_clockwise_on_a_rotated_box();
     test_hull_of_a_square_with_interior_points();
     test_hull_handles_collinear_and_duplicate_points();
     test_hull_degenerate_inputs();

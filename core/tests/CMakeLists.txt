@@ -31,3 +31,21 @@ set_tests_properties(test_model_loader test_engine_lifecycle PROPERTIES
 
 naina_add_test(test_page)
 target_include_directories(test_page PRIVATE ${CMAKE_SOURCE_DIR}/core/src)
+
+naina_add_test(test_ocr_e2e)
+# Runs against real PP-OCRv6 weights. Skips cleanly when they are not in the
+# cache, so an offline checkout still passes; set NAINA_OFFLINE=0 and run once
+# to populate the cache.
+set_tests_properties(test_ocr_e2e PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    ENVIRONMENT "NAINA_E2E_FIXTURE=${CMAKE_SOURCE_DIR}/core/tests/fixtures/hello_world.rgb"
+)
+
+# A build with no inference backend cannot exercise the inference path, and a
+# silent skip once hid a clean rebuild that had dropped ONNX Runtime entirely
+# while every test still reported green. Make that state fail loudly.
+if(NAINA_WITH_ONNXRUNTIME OR NAINA_WITH_NCNN)
+    set_tests_properties(test_engine_lifecycle PROPERTIES
+        ENVIRONMENT "NAINA_REQUIRE_BACKEND=1"
+    )
+endif()
