@@ -131,14 +131,35 @@ tuning mistake. So each semantic gets three tokens with three different jobs:
 | | `-text` (≥4.5:1) | `-line` (≥3:1) | `-bg` (subtle fill) |
 |---|---|---|---|
 | **danger** light | `oklch(0.50 0.19 27)` | `oklch(0.62 0.17 27)` | `oklch(0.965 0.015 27)` |
-| **danger** dark | `oklch(0.72 0.16 25)` | `oklch(0.50 0.15 27)` | `oklch(0.240 0.045 27)` |
-| **warn** light | `oklch(0.50 0.11 75)` | `oklch(0.66 0.13 78)` | `oklch(0.968 0.022 85)` |
+| **danger** dark | `oklch(0.72 0.16 25)` | `oklch(0.53 0.15 27)` | `oklch(0.240 0.045 27)` |
+| **warn** light | `oklch(0.48 0.10 75)` | `oklch(0.62 0.12 78)` | `oklch(0.968 0.022 85)` |
 | **warn** dark | `oklch(0.82 0.13 82)` | `oklch(0.55 0.11 78)` | `oklch(0.240 0.040 80)` |
 | **ok** light | `oklch(0.48 0.12 150)` | `oklch(0.58 0.12 150)` | `oklch(0.965 0.018 150)` |
 | **ok** dark | `oklch(0.78 0.13 155)` | `oklch(0.52 0.11 152)` | `oklch(0.230 0.040 152)` |
 
-These are hand-computed estimates. The script in "Verification" is the authority;
-whatever misses its target gets retuned before ship.
+**Measured, not estimated.** Every one of these 18 was run through the conversion
+and clears its threshold with margin — light `-text` at 5.9–6.4:1, dark `-text` at
+7.2–10.9:1, every `-line` at 3.4–3.9:1. Three of the drafted values did not
+survive that check and were replaced:
+
+| Drafted | Problem | Now |
+|---|---|---|
+| `--warn-text` light `oklch(0.50 0.11 75)` | **outside the sRGB gamut** — blue channel −0.004 | `oklch(0.48 0.10 75)` |
+| `--warn-line` light `oklch(0.66 0.13 78)` | 3.03:1 against a 3.0 target — no margin | `oklch(0.62 0.12 78)` |
+| `--danger-line` dark `oklch(0.50 0.15 27)` | **2.95:1 — failed** | `oklch(0.53 0.15 27)` |
+
+### Out-of-gamut colours report ratios they cannot paint
+
+The gamut failure above is worth stating as a rule, because it fails in the
+dangerous direction. A colour outside sRGB gets clamped on its way to a
+luminance, and **the clamped value can report a better contrast ratio than the
+colour a browser will actually render.** `oklch(0.62 0.30 75)` is the worked
+example: its blue channel is −0.1252, clamping lifts it to `Y = 0.2256`, and it
+claims 3.65:1 where the in-gamut colour manages 3.57:1.
+
+So the contrast script asserts gamut *before* it trusts any chromatic ratio. The
+neutral ramp cannot hit this — chroma `0` with `L` in `[0,1]` always lands in
+gamut — which is why the check is scoped to the tokens that carry hue.
 
 ## The rule that keeps this honest
 
@@ -287,8 +308,9 @@ no-heavy-deps rule) and asserts, in **both** modes:
 | `--fg-faint` on `--bg` | ≥ 3:1, non-text and large text only | light **3.5:1** |
 | `--hairline` on `--bg` | ≥ 1.15:1 — a subtle divider | light **1.21:1** |
 | `--rule` on `--bg` | ≥ 1.4:1 — the visible editorial rules | light **1.57:1** |
-| every `*-text` on `--bg` and on its own `*-bg` | ≥ 4.5:1 | danger light **6.3:1**, warn light **5.9:1** |
-| every `*-line` on `--bg` | ≥ 3:1 | — |
+| every `*-text` on `--bg` and on its own `*-bg` | ≥ 4.5:1 | light **5.9–6.4:1** · dark **7.2–10.9:1** |
+| every `*-line` on `--bg` | ≥ 3:1 | **3.4–3.9:1** across both modes |
+| every chromatic token | inside the sRGB gamut | all 18 pass |
 
 Because chroma is `0` on every neutral, the OKLCH→luminance chain collapses to
 `Y = L³` for the whole ramp, which is why those figures can be checked by hand.

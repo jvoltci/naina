@@ -446,22 +446,29 @@ This runs before `achroma.css` exists, so it fails for the right reason first.
 ```js
 // Asserts the things about achroma.css that cannot be seen by reading it.
 //
-// Four classes of check, in order of how quietly they would otherwise fail:
+// Five classes of check, in order of how quietly they would otherwise fail:
 //
 //   1. chroma-zero    a stray 0.01 in the ramp is invisible by eye and would
 //                     propagate to every site that installs this
 //   2. block parity   the dark values are written twice (media query + class)
 //                     and drift between the copies is undetectable by hand
 //   3. monotonicity   a ramp step out of order makes "one step darker" a lie
-//   4. contrast       computed, never assumed
+//   4. gamut          an out-of-gamut hue reports a better ratio than it paints
+//   5. contrast       computed, never assumed
 //
 // Prints every ratio whether it passes or not. A pass/fail line tells you less
 // than the numbers do.
+//
+// Note on skips: parseOklch returns null only for values that are not oklch()
+// literals at all, and throws for an oklch() it cannot measure (alpha, or a
+// percentage lightness). So `if (!c) continue` below skips var() aliases and
+// nothing else — an unmeasurable colour crashes the run rather than silently
+// dropping out of the report.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { parseOklch, contrast } from './oklch.mjs';
+import { parseOklch, contrast, oklchToLinearSrgb } from './oklch.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const css = readFileSync(join(root, 'achroma.css'), 'utf8');
@@ -578,7 +585,35 @@ for (const alias of COLOUR_ALIASES) {
   check(light.has(alias), `light block is missing ${alias}`);
 }
 
-// ── 4. contrast ───────────────────────────────────────────────────────
+// ── 4. the semantics are inside the sRGB gamut ────────────────────────
+//
+// An out-of-gamut colour gets clamped on its way to a luminance, and the
+// clamped value can report a BETTER contrast ratio than the colour a browser
+// will actually paint. oklch(0.62 0.30 75) is the worked example: its blue
+// channel is -0.1252, clamping lifts it to Y = 0.2256, and it claims 3.65:1
+// where the in-gamut colour manages 3.57:1.
+//
+// So a chromatic token that passes its threshold while out of gamut is a false
+// pass — precisely the shape this file exists to prevent. The ramp cannot hit
+// this (chroma 0 and L in [0,1] always lands in gamut), which is why the check
+// is scoped to tokens that actually carry hue.
+const CHROMATIC = COLOUR_ALIASES.filter((n) => /^--(danger|warn|ok)-/.test(n));
+for (const [mode, table] of [['light', light], ['dark', new Map([...light, ...dark])]]) {
+  for (const name of CHROMATIC) {
+    const c = resolve(table.get(name) ?? '', ramp);
+    if (!c) continue;
+    const { r, g, b } = oklchToLinearSrgb(c);
+    const worst = Math.min(r, g, b);
+    const over = Math.max(r, g, b);
+    check(
+      worst >= -0.001 && over <= 1.001,
+      `${mode}: ${name} is outside the sRGB gamut (linear rgb ${r.toFixed(3)}, ${g.toFixed(3)}, ${b.toFixed(3)}) — ` +
+        `its measured ratio is not what a browser will paint. Reduce chroma.`,
+    );
+  }
+}
+
+// ── 5. contrast ───────────────────────────────────────────────────────
 for (const [mode, table] of [['light', light], ['dark', new Map([...light, ...dark])]]) {
   console.log(`\n${mode}`);
   for (const [fg, bg, min] of TARGETS) {
@@ -838,8 +873,8 @@ git commit -m "chore: vendor Geist and Geist Mono subsets (OFL-1.1)"
   --danger-text: oklch(0.50 0.19 27);
   --danger-line: oklch(0.62 0.17 27);
   --danger-bg: oklch(0.965 0.015 27);
-  --warn-text: oklch(0.50 0.11 75);
-  --warn-line: oklch(0.66 0.13 78);
+  --warn-text: oklch(0.48 0.10 75);
+  --warn-line: oklch(0.62 0.12 78);
   --warn-bg: oklch(0.968 0.022 85);
   --ok-text: oklch(0.48 0.12 150);
   --ok-line: oklch(0.58 0.12 150);
@@ -919,7 +954,7 @@ git commit -m "chore: vendor Geist and Geist Mono subsets (OFL-1.1)"
     --hairline: var(--n-800);
     --rule: var(--n-700);
     --danger-text: oklch(0.72 0.16 25);
-    --danger-line: oklch(0.50 0.15 27);
+    --danger-line: oklch(0.53 0.15 27);
     --danger-bg: oklch(0.240 0.045 27);
     --warn-text: oklch(0.82 0.13 82);
     --warn-line: oklch(0.55 0.11 78);
@@ -948,7 +983,7 @@ git commit -m "chore: vendor Geist and Geist Mono subsets (OFL-1.1)"
   --hairline: var(--n-800);
   --rule: var(--n-700);
   --danger-text: oklch(0.72 0.16 25);
-  --danger-line: oklch(0.50 0.15 27);
+  --danger-line: oklch(0.53 0.15 27);
   --danger-bg: oklch(0.240 0.045 27);
   --warn-text: oklch(0.82 0.13 82);
   --warn-line: oklch(0.55 0.11 78);
