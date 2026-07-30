@@ -96,6 +96,10 @@ body {
   color: var(--fg);
 }
 
+/* --info-*, which is achromatic, and NOT --ok-*. "offline ready" is a statement
+   of capability, not the outcome of an operation: nothing happened and nothing is
+   wrong. Green claimed a success that never occurred, and it was also the loudest
+   colour on the page at load — a status hue outshouting the brand one. */
 .badge {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -104,9 +108,9 @@ body {
   text-transform: uppercase;
   padding: var(--s-1) var(--s-2);
   border-radius: var(--r-sm);
-  border: 1px solid var(--ok-line);
-  background: var(--ok-bg);
-  color: var(--ok-text);
+  border: 1px solid var(--info-line);
+  background: var(--info-bg);
+  color: var(--info-text);
 }
 
 /* ── layout ─────────────────────────────────────────────────────────── */
@@ -151,8 +155,14 @@ main {
 
 /* ── drop zone ──────────────────────────────────────────────────────── */
 
+/* Accent AT REST, not on hover, and that is a correction. Applying
+   "accent marks affordance" strictly gave a first paint with no brand hue on it
+   at all — every accent use needed a hover, a drag or a loaded document, so the
+   only colour a visitor saw on arrival was the green offline badge. This zone is
+   not one affordance among several, it is the entire product. It gets the hue
+   before anyone touches anything. */
 .drop {
-  border: 1px dashed var(--rule);
+  border: 1px dashed var(--accent-line);
   border-radius: var(--r-md);
   background: var(--bg-raised);
   padding: var(--s-16) var(--s-6);
@@ -163,21 +173,26 @@ main {
     background var(--dur-2) var(--ease-out),
     transform var(--dur-2) var(--ease-spring);
 }
+/* Hover intensifies rather than introduces: the border goes solid and the fill
+   picks up --accent-bg, so the escalation reads as "yes, this one" instead of
+   "oh, this was interactive after all". */
 .drop:hover,
 .drop:focus-visible {
-  border-color: var(--accent-line);
+  border-style: solid;
+  background: var(--accent-bg);
 }
 .drop.is-over {
-  border-color: var(--accent-line);
   border-style: solid;
-  background: var(--bg-sunken);
+  background: var(--accent-bg);
   transform: translateY(-2px);
 }
 
+/* The svg strokes with currentColor, so this one declaration tints the arrow.
+   It is the focal point of the page and the first indigo a visitor sees. */
 .drop-icon {
   width: 32px;
   height: 32px;
-  color: var(--fg-dim);
+  color: var(--accent-text);
   margin-bottom: var(--s-3);
 }
 
