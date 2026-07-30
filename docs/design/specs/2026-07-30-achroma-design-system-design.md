@@ -1,8 +1,42 @@
 # Achroma — an achromatic design system
 
-**Status:** designed, not implemented.
+**Status:** implemented and shipped, 2026-07-30. `jvoltci/achroma` is public with
+CI green; `jvoltci.github.io/achroma/` serves `proof.html` and `/doc/`. naina's app
+is restyled and approved.
+
+**Two things remain open.** `npm publish` is blocked on 2FA and must be run by
+hand. Until `achroma@0.1.0` resolves from the registry, naina's `styles.css`
+imports it by relative path — that **must not merge to master**, because naina's
+CI checks out only naina, so the path works on a laptop and fails in Actions.
+And naina's e2e read is unverified for want of a fixture image; `main.ts`,
+`pages.ts`, `ocr.worker.ts` and `sw.js` are byte-identical so the OCR path cannot
+have changed, but that is an argument rather than a test run.
+
 **Scope of this spec:** the token package, and naina's web app adopting it.
 The sibling `tool` repo is a separate cycle — see "Out of scope".
+
+## What the implementation changed about the design
+
+Nine claims in this document did not survive contact with measurement. They are
+recorded here because the pattern is the point: every one of them was plausible,
+and none would have raised an error.
+
+| Claim | What measurement showed |
+|---|---|
+| `--hairline` ≥ 1.4:1 | `oklch(0.922 0 0)` on paper is **1.21:1**; the token split into `--hairline` and `--rule` by job |
+| `--warn` ≥ 4.5:1 as one token | Amber on white **cannot** clear AA at display saturation, so every semantic became three tokens |
+| `--warn-text` light | **Outside the sRGB gamut** — blue channel −0.004 |
+| `--warn-line` light | 3.03:1 against a 3.0 target — no margin |
+| `--danger-line` dark | **2.95:1 — failing** |
+| `--grain-opacity: 0.025` | Completely invisible. Raised to 0.10/0.07 — and 0.18 would have **breached AA** at 4.487:1, because the overlay compresses every ratio and `contrast.mjs` cannot see it |
+| Mode switching by specificity | A consumer's `.dark` override **silently reverted under OS-dark only**. Four alias blocks now held at 0,1,0 |
+| Unlayered base rules | Defeated **every** Tailwind utility on `<body>`. Now `@layer base` |
+| `[hidden]` works | Author `display` beats it: naina had been painting two empty result panes on every load |
+
+Two further findings came from the surrounding machinery rather than the design:
+`parseOklch` returning `null` for an unparseable `oklch()` would have let a token
+go silently unmeasured, and a 93%-truncated grain data URI passed the suite green
+before an assertion covered it.
 
 ## The problem
 
