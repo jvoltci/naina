@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@jvoltci/naina-wasm": "file:../bindings/wasm",
+    "achroma": "^0.2.0",
     "onnxruntime-web": "^1.27.0",
     "pdfjs-dist": "^6.2.108"
   },

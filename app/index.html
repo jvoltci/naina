@@ -57,7 +57,7 @@
 
     <main>
       <section class="hero">
-        <p class="label">In-browser OCR · nothing uploaded</p>
+        <p class="ac-label">In-browser OCR · nothing uploaded</p>
         <h1>Extract text from any document.</h1>
         <p class="sub">
           PDFs and images, in your browser, free and without limits.
@@ -93,14 +93,14 @@
 
       <div class="controls">
         <label class="field">
-          <span class="label">Model size</span>
+          <span class="ac-label">Model size</span>
           <select id="tier">
             <option value="tiny" selected>Tiny — 11 MB, fastest</option>
             <option value="small">Small — 54 MB, more accurate</option>
           </select>
         </label>
         <label class="field">
-          <span class="label">Script</span>
+          <span class="ac-label">Script</span>
           <select id="language">
             <option value="auto" selected>Auto — detect the script</option>
             <option value="">Latin, Chinese, Japanese</option>
@@ -143,7 +143,7 @@
       <section id="results" class="results" hidden>
         <div class="pane">
           <div class="pane-head">
-            <h2 class="label">Page</h2>
+            <h2 class="ac-label">Page</h2>
             <span id="meta" class="meta"></span>
           </div>
           <div class="canvas-wrap">
@@ -153,7 +153,7 @@
 
         <div class="pane">
           <div class="pane-head">
-            <h2 class="label">Extracted</h2>
+            <h2 class="ac-label">Extracted</h2>
             <div class="pane-actions">
               <button id="tab-md" class="tab is-active" type="button">Markdown</button>
               <button id="tab-txt" class="tab" type="button">Text</button>
@@ -214,7 +214,7 @@
       </p>
     </footer>
 
-    <div class="grain" aria-hidden="true"></div>
+    <div class="ac-grain" aria-hidden="true"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

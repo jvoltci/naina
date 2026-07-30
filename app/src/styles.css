@@ -10,12 +10,17 @@
  * lines to distrust. Same carve-out that lets a highlighter be yellow.
  */
 
-/* Local preview wiring. Once achroma is published this becomes
- *   @import 'achroma/achroma.css';
- * with "achroma": "^0.1.0" in package.json. A relative path is used for now so
- * that no file: dependency can be committed by accident — naina's CI checks out
- * only naina, so a file: path resolves on a laptop and fails in Actions. */
-@import '../../achroma/achroma.css';
+/* achroma is published, so this is the real package import now, with
+ * "achroma": "^0.2.0" in package.json. The relative `../../achroma/achroma.css`
+ * that stood here could only ever resolve on a laptop: naina's CI checks out
+ * naina alone, which is why this branch was never merged to master.
+ *
+ * The components layer is imported too. naina's own .tab, .btn, .page-chip and
+ * .pane are keeping their bespoke rules — they are load-bearing for the OCR
+ * flow and predate the component set — but .ac-note and the layout primitives
+ * are worth having, and importing the file costs nothing that is unused. */
+@import 'achroma/achroma.css';
+@import 'achroma/achroma.components.css';
 
 :root {
   --maxw: 1240px;
@@ -29,16 +34,11 @@ body {
   background-repeat: no-repeat;
 }
 
-a {
-  color: var(--fg);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 0.2em;
-  transition: text-decoration-color var(--dur-1) var(--ease-out);
-}
-a:hover {
-  text-decoration-color: var(--fg);
-}
+/* No `a` rule here. achroma 0.2.0 styles every <a> achromatic-and-underlined in
+ * @layer base, which is exactly what naina was reimplementing. Removing the
+ * duplicate keeps links identical on every site that installs the package.
+ * `.caveat a` below still works: achroma sets `color: inherit`, so a link inside
+ * a warn callout picks up --warn-text on its own. */
 
 /* ── header ─────────────────────────────────────────────────────────── */
 
@@ -122,7 +122,7 @@ main {
   max-width: 46rem;
 }
 
-.hero .label {
+.hero .ac-label {
   display: block;
   margin: 0 0 var(--s-4);
 }
@@ -165,10 +165,10 @@ main {
 }
 .drop:hover,
 .drop:focus-visible {
-  border-color: var(--fg);
+  border-color: var(--accent-line);
 }
 .drop.is-over {
-  border-color: var(--fg);
+  border-color: var(--accent-line);
   border-style: solid;
   background: var(--bg-sunken);
   transform: translateY(-2px);
@@ -272,10 +272,12 @@ main {
   overflow: hidden;
 }
 
+/* Accent, not ink: a bar that is moving is the one thing on screen telling you
+   the app is working. That is affordance, which is what --accent-* marks. */
 .bar-fill {
   height: 100%;
   width: 0;
-  background: var(--fg);
+  background: var(--accent-fill);
   transition: width var(--dur-3) var(--ease-out);
 }
 
@@ -339,7 +341,7 @@ main {
   background: var(--bg-sunken);
 }
 
-/* The pane heads use .label, which achroma already styles. Reset the heading
+/* The pane heads use .ac-label, which achroma already styles. Reset the heading
    rule so h2 does not fight it. */
 .pane-head h2 {
   margin: 0;
@@ -381,11 +383,11 @@ main {
 /* A filled ink tab: the focus ring must invert or it is invisible against the
    element. --ring is a token precisely so this is one declaration. */
 .tab.is-active {
-  color: var(--bg);
-  background: var(--fg);
-  border-color: var(--fg);
+  color: var(--accent-on-fill);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
   font-weight: var(--w-medium);
-  --ring: var(--bg);
+  --ring: var(--accent-on-fill);
 }
 
 /* A neutral checkerboard, so a transparent PNG is legible without introducing
@@ -466,11 +468,11 @@ canvas {
   border-color: var(--fg);
 }
 .page-chip.is-active {
-  background: var(--fg);
-  border-color: var(--fg);
-  color: var(--bg);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-on-fill);
   font-weight: var(--w-medium);
-  --ring: var(--bg);
+  --ring: var(--accent-on-fill);
 }
 /* A page that failed still gets a chip — silently dropping it would leave the
    user counting pages to work out which one is missing. */
