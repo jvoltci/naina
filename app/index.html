@@ -11,6 +11,33 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <meta name="theme-color" content="#0d1117" />
+    <!-- Link previews. Absolute URLs on purpose: unfurlers do not resolve relative
+         paths, and the card must be a PNG because most of them will not render
+         SVG (and GitHub raw serves .svg as text/plain regardless). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="naina" />
+    <meta property="og:url" content="https://jvoltci.github.io/naina/" />
+    <meta property="og:title" content="naina — free OCR that runs in your browser" />
+    <meta
+      property="og:description"
+      content="Read text out of PDFs and images entirely on your device. No upload, no account, no limits. Ten scripts including Devanagari. Works offline after the first visit."
+    />
+    <meta property="og:image" content="https://jvoltci.github.io/naina/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="naina: a scanned PDF turning into structured markdown, with pip, npm and cargo install lines"
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="naina — free OCR that runs in your browser" />
+    <meta
+      name="twitter:description"
+      content="PDFs and images, read on your device. No upload, no account, no limits. Ten scripts. Works offline."
+    />
+    <meta name="twitter:image" content="https://jvoltci.github.io/naina/og.png" />
+
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap"

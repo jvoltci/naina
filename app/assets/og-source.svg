@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+      .h1   { font-family: Outfit, sans-serif; font-weight: 800; font-size: 78px; fill: #f0f6fc; letter-spacing: -0.035em; }
+      .sub  { font-family: Outfit, sans-serif; font-weight: 300; font-size: 31px; fill: #9aa7b4; }
+      .mono { font-family: 'JetBrains Mono', monospace; font-size: 17px; }
+      .pill { font-family: Outfit, sans-serif; font-weight: 600; font-size: 19px; fill: #cbd5e1; }
+      .lbl  { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: #6b7785; }
+    </style>
+
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="55%" stop-color="#111a24"/>
+      <stop offset="100%" stop-color="#0a0e14"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="18%" cy="12%" r="55%">
+      <stop offset="0%" stop-color="#1d3b5c" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4ea1ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- the eye: naina means eyes -->
+  <g transform="translate(74 72)">
+    <path d="M0 26c14-23 28-34 42-34s28 11 42 34c-14 23-28 34-42 34S14 49 0 26z"
+          fill="none" stroke="#4ea1ff" stroke-width="3.4" stroke-linejoin="round"/>
+    <circle cx="42" cy="26" r="12" fill="#4ea1ff"/>
+    <circle cx="46" cy="21" r="4" fill="#0d1117" opacity=".5"/>
+  </g>
+
+  <text class="h1" x="74" y="212">naina</text>
+  <rect x="74" y="238" width="108" height="5" rx="2.5" fill="url(#rule)"/>
+
+  <text class="sub" x="74" y="300">Free OCR that runs in your browser.</text>
+  <text class="sub" x="74" y="344" fill="#6b7785">Nothing is uploaded. Ten scripts. Works offline.</text>
+
+  <!-- input page -->
+  <g transform="translate(74 396)">
+    <rect width="222" height="150" rx="9" fill="#151b23" stroke="#232b36"/>
+    <text class="lbl" x="14" y="26">scan.pdf</text>
+    <rect x="14" y="42" width="150" height="9" rx="3" fill="#3a4552"/>
+    <rect x="14" y="62" width="192" height="7" rx="3" fill="#2a333e"/>
+    <rect x="14" y="79" width="176" height="7" rx="3" fill="#2a333e"/>
+    <rect x="14" y="96" width="186" height="7" rx="3" fill="#2a333e"/>
+    <rect x="14" y="113" width="118" height="7" rx="3" fill="#2a333e"/>
+  </g>
+
+  <!-- arrow -->
+  <g transform="translate(316 470)">
+    <line x1="0" y1="0" x2="44" y2="0" stroke="#4ea1ff" stroke-width="2.6" stroke-dasharray="7 6"/>
+    <path d="M44 -7 L58 0 L44 7 Z" fill="#4ea1ff"/>
+  </g>
+
+  <!-- output: markdown, and a non-Latin script to show the range -->
+  <g transform="translate(392 396)">
+    <rect width="330" height="150" rx="9" fill="#151b23" stroke="#232b36"/>
+    <text class="lbl" x="14" y="26">page.md</text>
+    <text class="mono" x="14" y="52" fill="#4ea1ff" font-weight="500"># Annual Report</text>
+    <text class="mono" x="14" y="79" fill="#e6edf3">Revenue grew 22%</text>
+    <text class="mono" x="14" y="106" fill="#e6edf3">अयोध्याकाण्डे</text>
+    <text class="mono" x="14" y="133" fill="#6ee7a0">conf 0.99</text>
+  </g>
+
+  <!-- what you can install it from -->
+  <g transform="translate(786 400)">
+    <rect width="340" height="34" rx="17" fill="#151b23" stroke="#2a333e"/>
+    <text class="mono" x="18" y="23" fill="#cbd5e1">pip install naina</text>
+
+    <rect y="46" width="340" height="34" rx="17" fill="#151b23" stroke="#2a333e"/>
+    <text class="mono" x="18" y="69" fill="#cbd5e1">npm i @jvoltci/naina</text>
+
+    <rect y="92" width="340" height="34" rx="17" fill="#151b23" stroke="#2a333e"/>
+    <text class="mono" x="18" y="115" fill="#cbd5e1">cargo add naina</text>
+
+    <text class="lbl" y="150" fill="#4a5563">also pub.dev · WASM · MCP</text>
+  </g>
+
+  <!-- facts along the bottom -->
+  <g transform="translate(74 588)">
+    <text class="pill" x="0" y="0">11 MB</text>
+    <text class="pill" x="106" y="0" fill="#4a5563">·</text>
+    <text class="pill" x="132" y="0">Apache-2.0</text>
+    <text class="pill" x="290" y="0" fill="#4a5563">·</text>
+    <text class="pill" x="316" y="0">no cloud, no API key</text>
+    <text class="pill" x="588" y="0" fill="#4a5563">·</text>
+    <text class="pill" x="614" y="0" fill="#4ea1ff">jvoltci.github.io/naina</text>
+  </g>
+</svg>
