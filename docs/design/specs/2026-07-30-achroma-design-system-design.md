@@ -40,7 +40,7 @@ not free.
 | Question | Decision |
 |---|---|
 | Hue policy | Achromatic + **semantic hue only**. Greys carry all structure, hierarchy, brand and interaction. Hue appears only where it *means* something. |
-| Where it lives | Standalone versioned package in this repo: `achroma/`. |
+| Where it lives | Its **own repo**, `jvoltci/achroma`, published to npm as `@jvoltci/achroma` with zero dependencies. Not in naina — naina is a C++ OCR library, and every future site would otherwise depend on it to get its greys. |
 | Character | Editorial/Swiss skeleton + an atmospheric layer. |
 | Type | **Geist + Geist Mono**, self-hosted, variable. |
 | Modes | Both. **Light canonical**, dark derived. |
@@ -81,46 +81,64 @@ Chroma is exactly `0` and hue exactly `0` on every neutral. That is the machine
 -checkable definition of achromatic, and the package asserts it (see
 "Verification").
 
-```css
-/* light — canonical */
---n-0:    oklch(1     0 0);   /* reserved; card tops, canvas         */
---n-25:   oklch(0.985 0 0);   /* paper — page background             */
---n-50:   oklch(0.968 0 0);   /* subtle fill                         */
---n-100:  oklch(0.945 0 0);   /* raised surface                      */
---n-150:  oklch(0.922 0 0);   /* hairline                            */
---n-200:  oklch(0.900 0 0);   /* rule                                */
---n-300:  oklch(0.840 0 0);   /* strong border                       */
---n-400:  oklch(0.720 0 0);   /* disabled                            */
---n-500:  oklch(0.620 0 0);   /* faint — non-text and large text only */
---n-600:  oklch(0.520 0 0);   /* secondary text                      */
---n-700:  oklch(0.400 0 0);
---n-800:  oklch(0.300 0 0);
---n-900:  oklch(0.220 0 0);
---n-950:  oklch(0.160 0 0);   /* ink — body text                     */
---n-1000: oklch(0.090 0 0);
-```
-
-Dark mode is **not** a naive inversion: the range is compressed and the black is
-lifted, because inverted hairlines at full contrast glare.
+**The ramp is absolute; the aliases are what flip.** Sixteen steps, chroma `0`,
+hue `0`, mode-independent. Both modes index into the same ladder — so dark mode is
+about ten lines of re-pointing rather than a second palette to keep in sync.
 
 ```css
-/* dark — derived */
---bg:        oklch(0.170 0 0);
---bg-raised: oklch(0.215 0 0);
---hairline:  oklch(0.280 0 0);
---fg:        oklch(0.960 0 0);
---fg-dim:    oklch(0.720 0 0);
+--n-0:    oklch(1.000 0 0);   --n-500:  oklch(0.620 0 0);
+--n-25:   oklch(0.985 0 0);   --n-600:  oklch(0.520 0 0);
+--n-50:   oklch(0.968 0 0);   --n-700:  oklch(0.400 0 0);
+--n-100:  oklch(0.945 0 0);   --n-800:  oklch(0.300 0 0);
+--n-150:  oklch(0.922 0 0);   --n-850:  oklch(0.220 0 0);
+--n-200:  oklch(0.900 0 0);   --n-900:  oklch(0.170 0 0);
+--n-300:  oklch(0.840 0 0);   --n-950:  oklch(0.130 0 0);
+--n-400:  oklch(0.720 0 0);   --n-1000: oklch(0.090 0 0);
 ```
+
+| Alias | Light | Dark |
+|---|---|---|
+| `--bg` | `n-25` | `n-900` |
+| `--bg-raised` | `n-0` | `n-850` |
+| `--bg-sunken` | `n-50` | `n-950` |
+| `--fg` | `n-950` | `n-50` |
+| `--fg-dim` | `n-600` | `n-400` |
+| `--fg-faint` | `n-500` | `n-500` |
+| `--hairline` | `n-150` | `n-800` |
+| `--rule` | `n-300` | `n-700` |
+
+Dark is **not** a naive inversion: the range is compressed and the black lifted to
+`n-900`, because inverted hairlines at full contrast glare.
+
+Mode switching is done twice on purpose — once under
+`@media (prefers-color-scheme: dark)` and once under `.dark, [data-theme='dark']`
+— because naina has no toggle and follows the OS, while `tool` uses next-themes,
+which sets a class. `light-dark()` would remove the duplication but couples the
+system to `color-scheme`; for a foundation this many sites inherit, ten duplicated
+lines is the cheaper trade.
 
 ### Semantic hues — the only colour
 
 Low chroma on purpose, so they read as signal rather than decoration.
 
-| Token | Light | Dark |
-|---|---|---|
-| `--danger` | `oklch(0.55 0.19 27)` | `oklch(0.70 0.17 25)` |
-| `--warn` | `oklch(0.62 0.13 75)` | `oklch(0.78 0.13 80)` |
-| `--ok` | `oklch(0.55 0.12 150)` | `oklch(0.72 0.14 155)` |
+**One token per semantic is not enough,** which the arithmetic established rather
+than taste. A single amber that is bright enough to read as a warning border
+cannot also be dark enough for body text: `oklch(0.62 0.13 75)` on paper computes
+to **3.57:1**, short of the 4.5:1 an earlier draft of this spec asserted. Amber on
+white never clears AA at display saturation — that is a property of the hue, not a
+tuning mistake. So each semantic gets three tokens with three different jobs:
+
+| | `-text` (≥4.5:1) | `-line` (≥3:1) | `-bg` (subtle fill) |
+|---|---|---|---|
+| **danger** light | `oklch(0.50 0.19 27)` | `oklch(0.62 0.17 27)` | `oklch(0.965 0.015 27)` |
+| **danger** dark | `oklch(0.72 0.16 25)` | `oklch(0.50 0.15 27)` | `oklch(0.240 0.045 27)` |
+| **warn** light | `oklch(0.50 0.11 75)` | `oklch(0.72 0.13 75)` | `oklch(0.968 0.022 85)` |
+| **warn** dark | `oklch(0.82 0.13 82)` | `oklch(0.55 0.11 78)` | `oklch(0.240 0.040 80)` |
+| **ok** light | `oklch(0.48 0.12 150)` | `oklch(0.62 0.12 150)` | `oklch(0.965 0.018 150)` |
+| **ok** dark | `oklch(0.78 0.13 155)` | `oklch(0.52 0.11 152)` | `oklch(0.230 0.040 152)` |
+
+These are hand-computed estimates. The script in "Verification" is the authority;
+whatever misses its target gets retuned before ship.
 
 ## The rule that keeps this honest
 
@@ -152,29 +170,49 @@ One file, plain CSS custom properties, no build step.
 
 ## Architecture
 
+A new repository, `jvoltci/achroma`, at `~/Documents/code/achroma`. **Private repo,
+public Pages** — the pattern already used for `studio`. Published to npm as
+unscoped **`achroma`** (verified available 2026-07-30, as was `@jvoltci/achroma`).
+
 ```
 achroma/
-  package.json          @jvoltci/achroma
-  achroma.css           tokens, both modes, base reset, .grain, .label
-  achroma.tailwind.css  @theme inline bridge → shadcn's variable names
-  proof.html            every token rendered; the visual test surface
-  test/contrast.mjs     asserts the ramp (see Verification)
-  README.md
+  package.json           name: achroma · "dependencies": {} · files: css, fonts
+  achroma.css            tokens, both modes, small base layer, .grain, .label
+  achroma.tailwind.css   @theme inline bridge → shadcn's variable names
+  fonts/                 6 vendored woff2 (Geist + Geist Mono, latin/latin-ext/cyrillic)
+  proof.html             every token rendered; the visual test surface
+  test/oklch.mjs         OKLCH → linear sRGB → relative luminance
+  test/oklch.test.mjs    that math, against known sRGB primaries
+  test/contrast.mjs      parses achroma.css and asserts the ramp
+  .github/workflows/deploy-web.yml
+  README.md  LICENSE  NOTICE
 ```
 
-Two consumers, two unrelated stacks, so the source of truth is plain CSS
-variables — the only thing both eat natively.
+**Zero dependencies, no build step, no JavaScript at runtime.** Plain CSS custom
+properties are the only thing every target stack eats natively, so React, Next,
+Vite, Astro and a bare `.html` all consume the identical file.
 
-- **naina/app** — Vite, plain CSS. Adds `"@jvoltci/achroma": "file:../achroma"`,
-  matching the existing `file:../bindings/wasm` precedent, and imports
-  `achroma.css` ahead of `styles.css`.
+- **naina/app** — Vite, plain CSS. `npm i achroma`, then `@import 'achroma/achroma.css'`
+  ahead of `styles.css`.
 - **tool** — Next 15, Tailwind v4, shadcn. Imports `achroma.css` plus the bridge,
-  which remaps `--primary`, `--border`, `--ring`, `--card` and the rest to Achroma
-  values. Radix components inherit with no edits to their files. Cycle 3.
+  which remaps `--primary`, `--border`, `--ring`, `--card` and the rest onto
+  Achroma values. Radix components inherit with no edits to their own files.
+  Cycle 3.
+- **no-tooling pages** — `unpkg.com/achroma/achroma.css`, or copy the file.
 
 `proof.html` exists because a token file cannot be reviewed by reading it. It
 renders the full ramp, every type step, both modes side by side, the grain on and
-off, and each component pattern.
+off, and each component pattern. The Pages workflow publishes it as
+`jvoltci.github.io/achroma/`, which makes it the living reference rather than a
+local scratch file.
+
+### Ordering constraint
+
+naina's CI checks out only naina ([`deploy-web.yml:37-73`](../../../.github/workflows/deploy-web.yml)),
+so a `file:` dependency on a sibling directory resolves locally and **fails in
+Actions**. Achroma must therefore be published *before* naina's `package.json`
+references it. Publishing is the last step of the Achroma cycle, gated on review
+of `proof.html` — not the first step of naina's.
 
 ## naina adopts it
 
@@ -237,16 +275,27 @@ propagate to every site.
 sRGB → relative luminance (about 30 lines, no dependency — consistent with the
 no-heavy-deps rule) and asserts, in **both** modes:
 
-| Pair | Target |
-|---|---|
-| `--fg` on `--bg` | ≥ 7:1 (AAA body) |
-| `--fg-dim` on `--bg` | ≥ 4.5:1 (AA body) |
-| `--fg-faint` on `--bg` | ≥ 3:1 — and it is documented as non-text/large-text only |
-| `--hairline` on `--bg` | ≥ 1.4:1, so rules are visible without glaring |
-| each semantic on `--bg` | ≥ 4.5:1 |
+| Pair | Target | Hand-computed |
+|---|---|---|
+| `--fg` on `--bg` | ≥ 7:1 (AAA body) | light **19.3:1** · dark **17.0:1** |
+| `--fg-dim` on `--bg` | ≥ 4.5:1 (AA body) | light **5.3:1** · dark **7.7:1** |
+| `--fg-faint` on `--bg` | ≥ 3:1, non-text and large text only | light **3.5:1** |
+| `--hairline` on `--bg` | ≥ 1.15:1 — a subtle divider | light **1.21:1** |
+| `--rule` on `--bg` | ≥ 1.4:1 — the visible editorial rules | light **1.57:1** |
+| every `*-text` on `--bg` and on its own `*-bg` | ≥ 4.5:1 | danger light **6.3:1**, warn light **5.9:1** |
+| every `*-line` on `--bg` | ≥ 3:1 | — |
 
-Ratios are **not** stated in this spec, because they have not been measured yet.
-The script computes them; whatever fails gets retuned before ship.
+Because chroma is `0` on every neutral, the OKLCH→luminance chain collapses to
+`Y = L³` for the whole ramp, which is why those figures can be checked by hand.
+The semantics cannot, and are the reason the script exists.
+
+The `--hairline` and `--rule` split, and the `≥1.15:1` figure, both came out of
+doing this arithmetic: an earlier draft asserted a single `--hairline ≥ 1.4:1`,
+which `oklch(0.922 0 0)` misses at 1.21:1. Rather than darken every divider to
+satisfy a number, the token was split by job.
+
+These are hand-computed and **the script is the authority.** Anything it reports
+below target gets retuned before ship.
 
 **3. The app still works.** Existing suites, unchanged:
 
@@ -287,34 +336,91 @@ becomes obvious.
   Inter into `--font-sans`. Tailwind's `font-sans` utilities therefore resolve to
   nothing. Fix belongs in cycle 3.
 
+## Fonts
+
+Verified from the package `LICENSE` on 2026-07-30: Geist is **SIL Open Font
+License 1.1**, which is compatible with everything this project ships. Vendored
+from `@fontsource-variable/geist@5.3.0` and `-mono@5.3.0`, taking six files —
+`latin`, `latin-ext` and `cyrillic` for each face, 29 KB per subset. Declared as:
+
+```css
+@font-face {
+  font-family: 'Geist Variable';
+  font-weight: 100 900;              /* one variable file, every weight */
+  src: url('./fonts/geist-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, /* … */;
+}
+```
+
+Self-hosted, not Google Fonts: naina claims to work offline, and a webfont fetched
+from a CDN would break that claim quietly rather than loudly.
+
+**Geist does not cover the scripts naina reads.** It ships latin, latin-ext,
+cyrillic and vietnamese. Devanagari, Arabic, Greek, Korean, Tamil, Telugu and Thai
+are absent — and all seven can appear in `#output`, because that pane displays
+recognised text. Browsers fall back per-glyph, so this works by default, but only
+if the fallback chain is deliberate:
+
+```css
+--font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+--font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+```
+
+Both family strings are verified from the packages, not guessed: the sans is
+`'Geist Variable'` and the mono is `'Geist Mono Variable'` — note the word order,
+which is easy to get backwards and would fail silently to the system monospace.
+
+Cyrillic is the one worth having: naina has a Cyrillic recognition model, so
+including that subset means Russian output renders in Geist Mono rather than
+falling back mid-document. `test/hindi-check.mjs` is what proves the Devanagari
+case still renders legibly after the font change — not an assumption.
+
 ## Steps
 
-1. `achroma/` scaffold: `package.json`, `README.md`.
-2. `achroma.css` — ramp, semantics, type, space, radius, motion, both modes,
-   `.grain`, `.label`, and a base layer that is deliberately small: `box-sizing`,
-   margin reset, `-webkit-text-size-adjust`, `:focus-visible` ring, and
-   `prefers-reduced-motion` zeroing every duration. Nothing else — an opinionated
-   reset in a shared package fights each consumer's own base styles.
-3. Self-host Geist and Geist Mono variable fonts. No Google Fonts request: the app
-   claims to work offline, and a webfont fetch would break that claim quietly
-   rather than loudly. Confirm the licence is OFL-1.1 before vendoring — this
-   project ships Apache-2.0 models on purpose and should not acquire a font with
-   unclear terms by accident.
-4. `test/contrast.mjs` — chroma assertion first, then the contrast table. Retune
-   the ramp against real numbers.
-5. `proof.html`.
-6. `achroma.tailwind.css` bridge. Written now, unused until cycle 3.
-7. naina: wire the dependency, rewrite `index.html`, rewrite `styles.css`.
-8. Run the app suites. Mutation-check `.page-chip`.
-9. Look at all four states: light, dark, 900px, 200% zoom.
+### Phase A — the Achroma repo
+
+1. `git init` at `~/Documents/code/achroma`. Scaffold `package.json`
+   (name `achroma`, `"dependencies": {}`), `README.md`, `LICENSE`, `NOTICE`
+   recording the OFL-1.1 font.
+2. `test/oklch.mjs` and `test/oklch.test.mjs` **first**. The conversion math is
+   asserted against known sRGB primaries before anything depends on it — a wrong
+   coefficient would otherwise produce contrast numbers that are confidently
+   wrong, which is this project's signature failure.
+3. `test/contrast.mjs` — the chroma-is-zero assertion, then the contrast table.
+4. `achroma.css` — ramp, aliases, semantics, type, space, radius, motion, both
+   modes, `.grain`, `.label`, and a base layer that is deliberately small:
+   `box-sizing`, margin reset, `-webkit-text-size-adjust`, `:focus-visible` ring,
+   and `prefers-reduced-motion` zeroing every duration. Nothing else — an
+   opinionated reset in a shared package fights each consumer's own base styles.
+5. Vendor the six woff2 files and declare `@font-face`.
+6. Run `test/contrast.mjs`. Retune whatever misses.
+7. `proof.html`.
+8. `achroma.tailwind.css` bridge. Written now, unused until cycle 3.
+9. `.github/workflows/deploy-web.yml` — private repo, public Pages, serving
+   `proof.html` as the site index.
+10. **Review gate:** look at `proof.html` in both modes.
+11. `npm publish` — `achroma@0.1.0`.
+
+### Phase B — naina adopts it
+
+12. `npm i achroma` in `app/`, import ahead of `styles.css`.
+13. Rewrite `app/index.html`. Every id in the contract preserved.
+14. Rewrite `app/src/styles.css`.
+15. `npm run build`, then the e2e suite. Mutation-check `.page-chip`.
+16. `hindi-check.mjs` for non-Latin output legibility.
+17. Look at light, dark, 900px, and 200% zoom.
 
 ## Estimate
 
-Steps 1–6 are half a day; the ramp retune in step 4 is the only part likely to
-loop. Steps 7–9 are a day.
+Phase A is half a day; step 6's retune is the only part likely to loop. Phase B is
+a day.
 
-Nothing here is hard to reverse. The stylesheet rewrite is the largest diff and
-touches no logic; `main.ts` and the worker are untouched, so the OCR path cannot
-regress. Step 3 is the one worth care — a webfont served from a CDN would break
-the offline guarantee silently, which is the failure shape this project keeps
-getting bitten by.
+**What is hard to reverse:** only step 11. npm versions cannot be unpublished
+after 72 hours, and the unscoped name `achroma` is a one-time claim. Everything
+else is a new private repo or a stylesheet.
+
+The stylesheet rewrite is the largest diff and touches no logic — `main.ts`,
+`pages.ts` and `ocr.worker.ts` are untouched, so the OCR path cannot regress. The
+two places where care is warranted are the font fallback chain for non-Latin
+output, and `.page-chip`, which is the one contract element that would fail
+quietly.
