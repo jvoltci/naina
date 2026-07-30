@@ -2644,6 +2644,230 @@ git commit -m "docs: mark the Achroma spec implemented for naina"
 
 ---
 
+# Phase C — documentation (last)
+
+Deliberately last, so the docs describe what shipped rather than what was planned. Scope is naina's: mkdocs-material, a handful of pages, no bespoke site. `proof.html` remains the live token reference at `jvoltci.github.io/achroma/`; these pages land at `/achroma/doc/`, mirroring naina's `/naina/doc/` split exactly.
+
+## Task 19: Documentation pages
+
+**Files:**
+- Create: `~/Documents/code/achroma/mkdocs.yml`
+- Create: `~/Documents/code/achroma/docs/index.md`
+- Create: `~/Documents/code/achroma/docs/tokens.md`
+- Create: `~/Documents/code/achroma/docs/dark-mode.md`
+- Create: `~/Documents/code/achroma/docs/tailwind.md`
+- Create: `~/Documents/code/achroma/docs/recipes.md`
+- Create: `~/Documents/code/achroma/docs/assets/extra.css`
+
+- [ ] **Step 1: Write `mkdocs.yml`**
+
+Two deliberate departures from naina's config, both because this is an achromatic system documenting itself:
+
+```yaml
+site_name: achroma
+site_description: An achromatic design system. Black, white and greys, with hue reserved for meaning. Zero dependencies.
+site_url: https://jvoltci.github.io/achroma/doc/
+repo_url: https://github.com/jvoltci/achroma
+repo_name: jvoltci/achroma
+edit_uri: edit/master/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: grey
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: grey
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  # Google Fonts is disabled on purpose: this package self-hosts Geist so that
+  # consumers can work offline, and fetching a webfont from a CDN to document
+  # that decision would contradict it. extra.css declares the vendored files.
+  font: false
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+
+nav:
+  - Start here:
+      - Overview: index.md
+      - Tokens: tokens.md
+  - Use it:
+      - Dark mode: dark-mode.md
+      - Tailwind and shadcn: tailwind.md
+      - Recipes: recipes.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jvoltci/achroma
+
+extra_css:
+  - assets/extra.css
+```
+
+Note `accent: grey`, not naina's `accent: blue`. A design system that forbids decorative hue should not ship docs with a blue accent.
+
+- [ ] **Step 2: Write `docs/assets/extra.css`**
+
+Declares the vendored Geist for the docs chrome and re-points mkdocs-material's own type variables. Keep it to this — do not restyle the theme.
+
+```css
+/* The docs use the system they document. Fonts are the vendored copies, not
+   Google Fonts, for the same reason the package self-hosts them. Paths resolve
+   because the deploy workflow copies fonts/ alongside the built docs. */
+
+@font-face {
+  font-family: 'Geist Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/geist-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'Geist Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/geist-mono-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+:root {
+  --md-text-font: 'Geist Variable', system-ui, sans-serif;
+  --md-code-font: 'Geist Mono Variable', ui-monospace, monospace;
+}
+```
+
+- [ ] **Step 3: Write `docs/index.md`**
+
+Cover, in this order: what achroma is in two sentences; install (`npm i achroma`, the `@import`, the pinned unpkg `<link>`); the two rules (ramp is absolute, aliases flip); the "colour is never decoration" rule including the interface-versus-content distinction with both worked examples (a yellow highlighter has to be yellow; a confidence heat-map has to run green to amber); and a link to `proof.html` as the live reference. Link `tokens.md` for the full table.
+
+State plainly that the ramp's chroma-zero property and every contrast target are machine-asserted by `npm test`, and that this is what makes the claims checkable rather than aspirational.
+
+- [ ] **Step 4: Write `docs/tokens.md`**
+
+The reference page. This is the one that has to be genuinely good, because it is what anyone integrating will actually read. Include:
+
+- The 16-step ramp as a table: token, OKLCH value, and its relative luminance (`Y = L³`), with a sentence explaining why that identity holds for achromatic colours.
+- The 17 colour aliases as a table: token, light ramp step, dark ramp step, and what it is for. Mark which ones have asserted contrast targets and what those targets are.
+- The 9 semantic tokens: token, both modes' values, measured contrast, and the `-text` / `-line` / `-bg` division of labour. Include the amber finding — `oklch(0.62 0.13 75)` on paper is 3.57:1, which is why one token per semantic is not enough.
+- Type, space, radius and motion tokens as four short tables.
+- A closing "how to add a token" note: chroma must be 0 for neutrals, and any chromatic token must be added to both `COLOUR_ALIASES` and `TARGETS` in `test/contrast.mjs` or the gamut check will silently skip it.
+
+- [ ] **Step 5: Write `docs/dark-mode.md`**
+
+How it works with no configuration (`prefers-color-scheme`), how to force a mode (`[data-theme='light']` / `.light`), and how class-based toggling works for next-themes (`.dark`). Explain that the dark values are written twice on purpose and that `test/contrast.mjs` asserts the two copies agree — because nothing else would catch them drifting.
+
+- [ ] **Step 6: Write `docs/tailwind.md`**
+
+The `achroma.tailwind.css` bridge: what to import and in what order, the full mapping table from shadcn's variable names to Achroma tokens, and the note that `--primary` becomes ink rather than a hue, which is the single line that makes a shadcn app achromatic. State clearly what the bridge does **not** provide and why — chart colours, because series cannot be distinguished by hue in an achromatic system and that needs a lightness ramp plus pattern differentiation rather than five greys.
+
+- [ ] **Step 7: Write `docs/recipes.md`**
+
+Copy-paste patterns, each a short CSS block: a card on a raised surface, a filled ink button and its hover, an input with a focus ring, a hairline-separated list, an uppercase mono micro-label, the grain overlay element, and a semantic callout using the three-token set. Keep each to the minimum that demonstrates the token usage.
+
+- [ ] **Step 8: Build it locally and check every link resolves**
+
+```bash
+cd ~/Documents/code/achroma
+pip install --quiet mkdocs-material
+mkdocs build --strict --site-dir /tmp/achroma-doc-check
+```
+
+Expected: a clean build. `--strict` turns broken internal links and nav references into errors, so a green build is the check. Then confirm the fonts referenced by `extra.css` will resolve at the deployed paths — the workflow in Task 20 is what places them.
+
+```bash
+rm -rf /tmp/achroma-doc-check
+```
+
+- [ ] **Step 9: Commit**
+
+```bash
+cd ~/Documents/code/achroma
+git add mkdocs.yml docs/
+git commit -m "docs: mkdocs-material reference at /achroma/doc/"
+```
+
+---
+
+## Task 20: Deploy the docs alongside proof.html
+
+**Files:**
+- Modify: `~/Documents/code/achroma/.github/workflows/deploy-web.yml`
+
+- [ ] **Step 1: Add a docs build step**
+
+Insert after the artifact-assembly step from Task 8, mirroring naina's approach of building docs into a subdirectory of the same Pages artifact:
+
+```yaml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build docs into /doc
+        run: |
+          pip install --quiet mkdocs-material
+          mkdocs build --strict --site-dir _site/doc
+          # extra.css references ../fonts/, which resolves from _site/doc/ to
+          # the fonts already copied into _site/ by the assemble step.
+          echo "doc: $(du -sh _site/doc | cut -f1)"
+```
+
+Also extend the workflow's `paths:` trigger to include `docs/**` and `mkdocs.yml`, or a docs-only change will not deploy.
+
+- [ ] **Step 2: Verify the font paths actually resolve**
+
+```bash
+cd ~/Documents/code/achroma
+test -f _site/fonts/geist-latin-wght-normal.woff2 && echo "fonts present at _site/fonts/"
+```
+
+Run this against a local reproduction of the assemble step. `extra.css` at `_site/doc/assets/extra.css` references `../fonts/…`, which resolves to `_site/doc/fonts/` — **not** `_site/fonts/`. Check this rather than assuming: if it does not resolve, either copy the fonts into `_site/doc/fonts/` as well or correct the relative path to `../../fonts/`. A wrong path here fails silently, as the docs falling back to system sans.
+
+- [ ] **Step 3: Commit**
+
+```bash
+cd ~/Documents/code/achroma
+git add .github/workflows/deploy-web.yml
+git commit -m "ci: build the docs into /doc on the same Pages artifact"
+```
+
+---
+
 ## Self-review notes
 
 **Spec coverage.** Every section of the spec maps to a task: vocabulary and decisions → the README in Task 1; the ramp and aliases → Task 5; semantics ×3 → Task 5; the interface-vs-content rule → the comment headers in Tasks 5 and 14 plus the overlay check in Task 17 step 3; token inventory → Task 5; architecture and the two consumers → Tasks 5, 6 and 12; fonts → Tasks 4 and 5; the four verification items → Tasks 2, 3, 5 (steps 3–4), 15, 16 and 17; the ordering constraint → Task 11 before Task 12.
