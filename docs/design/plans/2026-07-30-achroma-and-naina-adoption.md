@@ -1353,8 +1353,7 @@ git commit -m "feat: proof.html — the review surface for a file you cannot rea
 name: Deploy web app to GitHub Pages
 
 # Publishes proof.html as jvoltci.github.io/achroma/ — the living token
-# reference. The repo is private; Pages is public, which needs GitHub Pro or
-# Team (Pages is disabled for private repos on Free).
+# reference.
 #
 # No build step: achroma is plain CSS. The artifact is proof.html renamed to
 # index.html, the stylesheet, and the fonts.
@@ -1440,11 +1439,14 @@ git commit -m "ci: publish proof.html to Pages, gated on the ramp assertions"
 
 **Files:** none.
 
-- [ ] **Step 1: Create the private repo and push**
+- [ ] **Step 1: Create the public repo and push**
 
 ```bash
 cd ~/Documents/code/achroma
-gh repo create jvoltci/achroma --private --source=. --remote=origin --push
+gh repo create jvoltci/achroma --public \
+  --description "An achromatic design system. Zero dependencies, plain CSS custom properties." \
+  --homepage "https://jvoltci.github.io/achroma/" \
+  --source=. --remote=origin --push
 ```
 
 Expected: the repo URL, then a push summary.
@@ -1456,9 +1458,20 @@ gh api -X POST repos/jvoltci/achroma/pages -f build_type=workflow 2>&1 | head -5
 gh workflow run deploy-web.yml --repo jvoltci/achroma
 ```
 
-If the first command reports that Pages is not available, the account plan does not include Pages for private repos — the npm package still works and this is not blocking.
+Pages needs no paid plan on a public repo. If the POST reports the site already exists, that is fine — proceed to the workflow run.
 
-- [ ] **Step 3: Confirm the workflow went green**
+- [ ] **Step 3: Confirm nothing private leaked into a now-public repo**
+
+The repo was scaffolded before this became public, so check rather than assume:
+
+```bash
+cd ~/Documents/code/achroma
+git log --all --format='%H' | while read sha; do git ls-tree -r --name-only "$sha"; done | sort -u
+```
+
+Expected: only the files this plan created. No `.env`, no keys, no `node_modules`, nothing from another project.
+
+- [ ] **Step 4: Confirm the workflow went green**
 
 ```bash
 sleep 45 && gh run list --repo jvoltci/achroma --limit 3

@@ -170,9 +170,14 @@ One file, plain CSS custom properties, no build step.
 
 ## Architecture
 
-A new repository, `jvoltci/achroma`, at `~/Documents/code/achroma`. **Private repo,
-public Pages** — the pattern already used for `studio`. Published to npm as
-unscoped **`achroma`** (verified available 2026-07-30, as was `@jvoltci/achroma`).
+A new repository, `jvoltci/achroma`, at `~/Documents/code/achroma`. **Public and
+open source**, Apache-2.0. Published to npm as unscoped **`achroma`** (verified
+available 2026-07-30, as was `@jvoltci/achroma`).
+
+Public rather than private for three reasons beyond preference: Pages needs no
+paid plan on a public repo, the `repository` field in the published package
+resolves for anyone reading it on npm, and a design system whose source is
+unreadable is a design system nobody trusts.
 
 ```
 achroma/
