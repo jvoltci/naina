@@ -132,9 +132,9 @@ tuning mistake. So each semantic gets three tokens with three different jobs:
 |---|---|---|---|
 | **danger** light | `oklch(0.50 0.19 27)` | `oklch(0.62 0.17 27)` | `oklch(0.965 0.015 27)` |
 | **danger** dark | `oklch(0.72 0.16 25)` | `oklch(0.50 0.15 27)` | `oklch(0.240 0.045 27)` |
-| **warn** light | `oklch(0.50 0.11 75)` | `oklch(0.72 0.13 75)` | `oklch(0.968 0.022 85)` |
+| **warn** light | `oklch(0.50 0.11 75)` | `oklch(0.66 0.13 78)` | `oklch(0.968 0.022 85)` |
 | **warn** dark | `oklch(0.82 0.13 82)` | `oklch(0.55 0.11 78)` | `oklch(0.240 0.040 80)` |
-| **ok** light | `oklch(0.48 0.12 150)` | `oklch(0.62 0.12 150)` | `oklch(0.965 0.018 150)` |
+| **ok** light | `oklch(0.48 0.12 150)` | `oklch(0.58 0.12 150)` | `oklch(0.965 0.018 150)` |
 | **ok** dark | `oklch(0.78 0.13 155)` | `oklch(0.52 0.11 152)` | `oklch(0.230 0.040 152)` |
 
 These are hand-computed estimates. The script in "Verification" is the authority;
