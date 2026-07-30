@@ -21,6 +21,14 @@
   --maxw: 1240px;
 }
 
+/* Achroma's --wash is opt-in. One ramp step of top-light depth, which measures
+   as +0.09 contrast in light and -0.30 in dark against a 4.5 floor — the
+   direction that matters is dark, and it has 2.89 of margin. */
+body {
+  background-image: var(--wash);
+  background-repeat: no-repeat;
+}
+
 a {
   color: var(--fg);
   text-decoration: underline;
