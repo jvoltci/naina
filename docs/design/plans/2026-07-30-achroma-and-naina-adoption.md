@@ -752,6 +752,24 @@ git commit -m "chore: vendor Geist and Geist Mono subsets (OFL-1.1)"
 **Files:**
 - Create: `~/Documents/code/achroma/achroma.css`
 
+### Three authoring rules the test file imposes
+
+`test/contrast.mjs` parses this file with regexes rather than a CSS parser — a deliberate trade to keep the package dependency-free. That puts three constraints on how the CSS may be written. All three fail **silently**, which is why they are stated before the code rather than discovered after.
+
+**1. The film-grain data URI must stay inline in `background-image`, and must use the comma form.** `decls()` matches `/(--[a-z0-9-]+)\s*:\s*([^;]+);/g` — it only sees custom properties, so a data URI in an ordinary property is invisible to it and safe. Verified empirically:
+
+| Form | Parsed as |
+|---|---|
+| `background-image: url("data:image/svg+xml,%3Csvg…")` | not matched at all — **safe** |
+| `--grain: url("data:image/svg+xml;base64,…")` | `url("data:image/svg+xml` — **silently truncated** |
+| `--grain: url("data:image/svg+xml;utf8,<svg/>")` | `url("data:image/svg+xml` — **silently truncated** |
+
+So: never tokenise the grain URL into a custom property, and never use the `;base64` or `;utf8` variants. Neighbouring tokens survive intact in every case, so nothing would look broken — only the grain would quietly stop working.
+
+**2. All component CSS goes after the last `@achroma` marker,** and nothing after it may redefine one of the 17 colour aliases. `blocks()` sweeps everything between two markers, so a rule like `.foo { --bg: … }` placed between them folds into that mode's token map and shadows the contract. The `prefers-reduced-motion` block that re-points `--dur-*` is fine — those are not colour aliases and no check reads them.
+
+**3. The two dark blocks must be declaration-identical, character for character.** The parity check compares raw declaration strings, so `var(--n-850)` and `oklch(0.220 0 0)` register as disagreeing even though they resolve to the same colour. Write the second block as a literal copy of the first.
+
 - [ ] **Step 1: Write the file**
 
 ```css
