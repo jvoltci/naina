@@ -1,76 +1,62 @@
-/* naina web demo — dark, quiet, document-first.
-   Matches the palette of the repo's hero SVG and docs. */
+/* naina web app — Achroma.
+ *
+ * Every colour, size, radius and duration is a token. A hardcoded value here is
+ * a bug: it means the design system is missing something, and the next site will
+ * hit the same gap.
+ *
+ * The one deliberate exception is the confidence overlay drawn on the canvas by
+ * main.ts, which runs green to amber by line confidence. That is data, not
+ * decoration — deleting it would remove the signal that tells a reader which
+ * lines to distrust. Same carve-out that lets a highlighter be yellow.
+ */
+
+/* Local preview wiring. Once achroma is published this becomes
+ *   @import 'achroma/achroma.css';
+ * with "achroma": "^0.1.0" in package.json. A relative path is used for now so
+ * that no file: dependency can be committed by accident — naina's CI checks out
+ * only naina, so a file: path resolves on a laptop and fails in Actions. */
+@import '../../achroma/achroma.css';
 
 :root {
-  --bg: #0d1117;
-  --bg-raised: #151b23;
-  --bg-sunken: #0a0e14;
-  --line: #232b36;
-  --line-bright: #303a48;
-  --fg: #e6edf3;
-  --fg-dim: #9aa7b4;
-  --fg-faint: #6b7785;
-  --accent: #4ea1ff;
-  --warn: #f0b429;
-  --err: #ff6b6b;
-  --radius: 12px;
   --maxw: 1240px;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  margin: 0;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, #16202c 0%, transparent 60%),
-    var(--bg);
-  color: var(--fg);
-  font-family: Outfit, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-weight: 300;
-  line-height: 1.6;
-  min-height: 100vh;
-}
-
 a {
-  color: var(--accent);
-  text-decoration: none;
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color var(--dur-1) var(--ease-out);
 }
 a:hover {
-  text-decoration: underline;
+  text-decoration-color: var(--fg);
 }
 
-/* ── header ─────────────────────────────────────────────────────── */
+/* ── header ─────────────────────────────────────────────────────────── */
 
 .top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--s-4);
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 1.25rem 1.5rem;
+  padding: var(--s-5) var(--s-6);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--s-2);
 }
 
-/* A stylised eye: naina means eyes. */
+/* A stylised eye: naina means eyes. Ink, not an accent hue. */
 .eye {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  border: 2px solid var(--accent);
+  border: 1.5px solid var(--fg);
   position: relative;
   display: inline-block;
 }
@@ -79,179 +65,214 @@ a:hover {
   position: absolute;
   inset: 32% 34%;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--fg);
 }
 
 .wordmark {
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-size: var(--text-lg);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--track-tight);
 }
 
 .top nav {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  font-size: 0.95rem;
-  color: var(--fg-dim);
+  gap: var(--s-5);
+  font-size: var(--text-sm);
 }
 .top nav a {
   color: var(--fg-dim);
+  text-decoration: none;
 }
 .top nav a:hover {
   color: var(--fg);
 }
 
 .badge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid #1e4620;
-  background: #10251a;
-  color: #6ee7a0;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--ok-line);
+  background: var(--ok-bg);
+  color: var(--ok-text);
 }
 
-/* ── layout ─────────────────────────────────────────────────────── */
+/* ── layout ─────────────────────────────────────────────────────────── */
 
 main {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 1.5rem 4rem;
+  padding: 0 var(--s-6) var(--s-16);
 }
 
 .hero {
-  padding: 2.5rem 0 2rem;
+  padding: var(--s-16) 0 var(--s-12);
   max-width: 46rem;
 }
 
+.hero .label {
+  display: block;
+  margin: 0 0 var(--s-4);
+}
+
+/* Thin and huge, against the tiny wide label above it. This pairing is the
+   signature; a heavy weight here undoes it. Overrides achroma's base heading
+   rule, which sets h1 to --text-2xl at weight 500 for ordinary prose. */
 .hero h1 {
-  margin: 0 0 0.75rem;
-  font-size: clamp(2rem, 5vw, 3.1rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  margin: 0 0 var(--s-4);
+  font-size: var(--text-display);
+  font-weight: var(--w-thin);
+  letter-spacing: var(--track-display);
+  line-height: var(--lh-display);
 }
 
 .sub {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--text-md);
   color: var(--fg-dim);
+  max-width: 38rem;
 }
 .sub strong {
   color: var(--fg);
-  font-weight: 600;
+  font-weight: var(--w-regular);
 }
 
-/* ── drop zone ──────────────────────────────────────────────────── */
+/* ── drop zone ──────────────────────────────────────────────────────── */
 
 .drop {
-  border: 1.5px dashed var(--line-bright);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
-  padding: 3rem 1.5rem;
+  border: 1px dashed var(--rule);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  padding: var(--s-16) var(--s-6);
   text-align: center;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
+    border-color var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-spring);
 }
 .drop:hover,
 .drop:focus-visible {
-  border-color: var(--accent);
-  outline: none;
+  border-color: var(--fg);
 }
 .drop.is-over {
-  border-color: var(--accent);
-  background: linear-gradient(180deg, #14243a, #0d1725);
-  transform: scale(1.005);
+  border-color: var(--fg);
+  border-style: solid;
+  background: var(--bg-sunken);
+  transform: translateY(-2px);
 }
 
 .drop-icon {
-  width: 40px;
-  height: 40px;
-  color: var(--accent);
-  margin-bottom: 0.75rem;
+  width: 32px;
+  height: 32px;
+  color: var(--fg-dim);
+  margin-bottom: var(--s-3);
 }
 
 .drop-title {
-  margin: 0 0 0.25rem;
-  font-size: 1.1rem;
-  font-weight: 600;
+  margin: 0 0 var(--s-1);
+  font-size: var(--text-md);
+  font-weight: var(--w-regular);
   color: var(--fg);
+  letter-spacing: var(--track-tight);
 }
 .drop-hint {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--fg-faint);
 }
 
-/* ── controls ───────────────────────────────────────────────────── */
+/* ── controls ───────────────────────────────────────────────────────── */
 
 .controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: var(--s-6);
   align-items: end;
-  margin: 1.25rem 0 0;
+  margin: var(--s-6) 0 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--fg-dim);
+  gap: var(--s-2);
 }
 
 .field select {
   background: var(--bg-raised);
   color: var(--fg);
-  border: 1px solid var(--line-bright);
-  border-radius: 8px;
-  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  padding: var(--s-2) var(--s-3);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--text-sm);
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+.field select:hover {
+  border-color: var(--fg);
 }
 
 .field.checkbox {
   flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--s-2);
   cursor: pointer;
-  padding-bottom: 0.5rem;
+  padding-bottom: var(--s-2);
+  font-size: var(--text-sm);
+  color: var(--fg-dim);
 }
 .field.checkbox input {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
+  accent-color: var(--fg);
+  width: 15px;
+  height: 15px;
 }
 
-/* ── status ─────────────────────────────────────────────────────── */
+/* Up-front caveat about supported scripts. Deliberately prominent: a user who
+   discovers the limit after trusting the output has already been misled. This is
+   one of the three places colour is allowed, because it carries meaning. */
+.caveat {
+  margin: var(--s-6) 0 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--warn-line);
+  border-left: 3px solid var(--warn-line);
+  border-radius: var(--r-sm);
+  background: var(--warn-bg);
+  font-size: var(--text-sm);
+  color: var(--warn-text);
+}
+.caveat strong {
+  font-weight: var(--w-medium);
+}
+.caveat a {
+  color: var(--warn-text);
+  text-decoration-color: var(--warn-line);
+}
+
+/* ── status ─────────────────────────────────────────────────────────── */
 
 .status {
-  margin: 1.5rem 0 0;
+  margin: var(--s-6) 0 0;
 }
 
 .bar {
-  height: 4px;
-  border-radius: 999px;
-  background: var(--line);
+  height: 2px;
+  background: var(--hairline);
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, var(--accent), #7dd3fc);
-  border-radius: 999px;
-  transition: width 0.25s ease;
+  background: var(--fg);
+  transition: width var(--dur-3) var(--ease-out);
 }
 
 .bar-fill.is-indeterminate {
-  animation: sweep 1.1s ease-in-out infinite;
+  animation: sweep 1.1s var(--ease-out) infinite;
   transform-origin: left center;
 }
 
@@ -268,19 +289,19 @@ main {
 }
 
 .status-text {
-  margin: 0.6rem 0 0;
-  font-size: 0.9rem;
+  margin: var(--s-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   color: var(--fg-dim);
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* ── results ────────────────────────────────────────────────────── */
+/* ── results ────────────────────────────────────────────────────────── */
 
 .results {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  margin: 2rem 0 0;
+  gap: var(--s-4);
+  margin: var(--s-10) 0 0;
 }
 
 @media (max-width: 900px) {
@@ -290,8 +311,8 @@ main {
 }
 
 .pane {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
   background: var(--bg-raised);
   overflow: hidden;
   display: flex;
@@ -303,81 +324,93 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--s-4);
   flex-wrap: wrap;
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--line);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--hairline);
   background: var(--bg-sunken);
 }
 
+/* The pane heads use .label, which achroma already styles. Reset the heading
+   rule so h2 does not fight it. */
 .pane-head h2 {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--track-label);
 }
 
 .meta {
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
   color: var(--fg-faint);
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 .pane-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--s-1);
 }
 
 .tab,
 .btn {
   background: transparent;
-  border: 1px solid var(--line-bright);
+  border: 1px solid var(--rule);
   color: var(--fg-dim);
-  border-radius: 7px;
-  padding: 0.3rem 0.65rem;
+  border-radius: var(--r-sm);
+  padding: var(--s-1) var(--s-2);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--text-xs);
   cursor: pointer;
   transition:
-    color 0.12s ease,
-    border-color 0.12s ease,
-    background 0.12s ease;
+    color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
 }
 .tab:hover,
 .btn:hover {
   color: var(--fg);
-  border-color: var(--accent);
+  border-color: var(--fg);
 }
+/* A filled ink tab: the focus ring must invert or it is invisible against the
+   element. --ring is a token precisely so this is one declaration. */
 .tab.is-active {
   color: var(--bg);
-  background: var(--accent);
-  border-color: var(--accent);
-  font-weight: 500;
+  background: var(--fg);
+  border-color: var(--fg);
+  font-weight: var(--w-medium);
+  --ring: var(--bg);
 }
 
+/* A neutral checkerboard, so a transparent PNG is legible without introducing
+   a hue. */
 .canvas-wrap {
-  padding: 1rem;
+  padding: var(--s-4);
   overflow: auto;
   max-height: 70vh;
-  background:
-    repeating-conic-gradient(#0f141b 0% 25%, #121820 0% 50%) 50% / 18px 18px;
+  background: repeating-conic-gradient(
+      var(--bg-sunken) 0% 25%,
+      var(--bg-raised) 0% 50%
+    )
+    50% / 18px 18px;
 }
 
 canvas {
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
+/* The output pane shows recognised text, which may be Devanagari, Arabic,
+   Greek, Korean, Tamil, Telugu or Thai — none of which Geist covers. The
+   fallback chain in --font-mono handles those per-glyph. */
 .output {
   margin: 0;
-  padding: 1rem;
+  padding: var(--s-4);
   overflow: auto;
   max-height: 70vh;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.84rem;
-  line-height: 1.65;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--lh-body);
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--fg);
@@ -385,120 +418,108 @@ canvas {
 }
 
 .error {
-  margin: 1.5rem 0 0;
-  padding: 0.85rem 1rem;
-  border: 1px solid #4a2020;
-  background: #1c1113;
-  color: var(--err);
-  border-radius: 8px;
-  font-size: 0.92rem;
+  margin: var(--s-6) 0 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--danger-line);
+  border-left: 3px solid var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
 }
 
-/* ── notes ──────────────────────────────────────────────────────── */
+/* ── pager (multi-page documents) ───────────────────────────────────── */
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin: var(--s-10) 0 0;
+}
+
+.page-chip {
+  min-width: 2rem;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
+  color: var(--fg-dim);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+.page-chip:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+.page-chip.is-active {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+  font-weight: var(--w-medium);
+  --ring: var(--bg);
+}
+/* A page that failed still gets a chip — silently dropping it would leave the
+   user counting pages to work out which one is missing. */
+.page-chip.is-failed {
+  border-color: var(--danger-line);
+  color: var(--danger-text);
+}
+.page-chip.is-failed.is-active {
+  background: var(--danger-text);
+  border-color: var(--danger-text);
+  color: var(--n-0);
+  --ring: var(--n-0);
+}
+
+/* ── notes ──────────────────────────────────────────────────────────── */
 
 .notes {
-  margin: 4rem 0 0;
-  padding-top: 2.5rem;
-  border-top: 1px solid var(--line);
+  margin: var(--s-24) 0 0;
+  padding-top: var(--s-10);
+  border-top: 1px solid var(--rule);
 }
 
 .notes h2 {
-  margin: 0 0 1.5rem;
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  margin: 0 0 var(--s-8);
+  font-size: var(--text-xl);
+  font-weight: var(--w-thin);
+  letter-spacing: var(--track-tight);
 }
 
 .notes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 1.75rem 2.5rem;
+  gap: var(--s-8) var(--s-10);
 }
 
 .notes h3 {
-  margin: 0 0 0.4rem;
-  font-size: 1rem;
-  font-weight: 600;
+  margin: 0 0 var(--s-2);
+  font-size: var(--text-sm);
+  font-weight: var(--w-medium);
   color: var(--fg);
 }
 
 .notes p {
   margin: 0;
-  font-size: 0.93rem;
+  font-size: var(--text-sm);
   color: var(--fg-dim);
 }
 
 footer {
-  border-top: 1px solid var(--line);
-  margin-top: 4rem;
+  border-top: 1px solid var(--hairline);
+  margin-top: var(--s-16);
 }
 
 footer p {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 1.5rem;
-  font-size: 0.85rem;
+  padding: var(--s-6);
+  font-size: var(--text-xs);
   color: var(--fg-faint);
 }
-
-/* ── pager (multi-page documents) ────────────────────────────────── */
-
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 2rem 0 0;
-}
-
-.page-chip {
-  min-width: 2.1rem;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--line-bright);
-  border-radius: 7px;
-  background: var(--bg-raised);
-  color: var(--fg-dim);
-  font: inherit;
-  font-size: 0.82rem;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  cursor: pointer;
-  transition:
-    color 0.12s ease,
-    border-color 0.12s ease,
-    background 0.12s ease;
-}
-.page-chip:hover {
-  color: var(--fg);
-  border-color: var(--accent);
-}
-.page-chip.is-active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-  font-weight: 500;
-}
-/* A page that failed still gets a chip — silently dropping it would leave the
-   user counting pages to work out which one is missing. */
-.page-chip.is-failed {
-  border-color: #4a2020;
-  color: var(--err);
-}
-.page-chip.is-failed.is-active {
-  background: var(--err);
-  border-color: var(--err);
-  color: var(--bg);
-}
-
-/* Up-front caveat about supported scripts. Deliberately prominent: a user who
-   discovers the limit after trusting the output has already been misled. */
-.caveat {
-  margin: 1.25rem 0 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid #4a3a1a;
-  border-left: 3px solid var(--warn, #f0b429);
-  border-radius: 8px;
-  background: #1a1610;
-  font-size: 0.88rem;
-  color: #d9c9a3;
-}
-.caveat strong { color: #f0d69a; font-weight: 600; }
-.caveat a { color: var(--accent); }
