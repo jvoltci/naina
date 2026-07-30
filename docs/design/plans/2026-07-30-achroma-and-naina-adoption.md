@@ -432,6 +432,22 @@ git add test/oklch.mjs test/oklch.test.mjs
 git commit -m "test: pin OKLCH-to-luminance conversion to the sRGB primaries"
 ```
 
+### As shipped — five changes the review forced
+
+The code above is the first draft. Review found two defects in it that mutation testing surfaced and inspection would not have. The files in the repo are authoritative; this records why they differ.
+
+1. **Two tests could not fail.** Because `luminance` clamps, `white is luminance 1` and `black on white is 21:1` passed with a **49% error** in the largest matrix coefficient — the assertion read as "white is 1" but was really `min(1, anything) === 1`. Both now assert the raw pre-clamp channels from `oklchToLinearSrgb`. This is what kills the `r0 += 0.5` mutant, which now reports `got 1.5` — the number the clamp was hiding.
+
+2. **`parseOklch` conflated two outcomes.** It returned `null` both for "not a colour, skip it" and "an `oklch()` I could not parse". Since Task 3 skips non-colours with `if (!c) continue;`, a token written as `oklch(0.55 0.16 25 / 0.12)` would have been swallowed and the suite would report every token passing with one never measured. That is the `Backend defaulted OFF` failure in this project's own table. It now **throws**, naming the offending value; `null` is reserved strictly for values that are not `oklch()` literals.
+
+3. **`OKLCH(...)` was a second instance of the same hole.** CSS function names are ASCII case-insensitive, so uppercase *is* an `oklch()` literal, and it was returning `null`. Both patterns took an `i` flag — and a test, because the flag first landed unpinned.
+
+4. **The `L³` tolerance was twelve orders of magnitude too loose.** That test's inputs are exact literals (`C=0` makes `cos(0)=1`, `sin(0)=0` exactly), so the "5-decimal input rounding sets a floor" argument that justifies `0.01` on the primaries has no purchase there. Measured error is `~3.3e-16`; tolerance is now `1e-12`, which is what kills the `+9e-4` coefficient mutant. **The primaries' `0.01`/`0.005` tolerances were correctly left alone.**
+
+5. **Nothing asserted that every test ran.** `assert.equal(passed, 10)` now guards it — verified by deleting a test and getting `expected 10 tests to run, 9 did`.
+
+**Residual gap, accepted deliberately.** The `a`/`b` chroma-path coefficients are pinned ~3 orders of magnitude more loosely than the row sums, because the only instruments touching them are the three primary tests at `0.01`. `sa` can be wrong by 1.95e-2 — a 22% relative error — and pass. Consequence is bounded: pushing every constant to its surviving bound moves the tightest semantic ratio to 3.53 against a 3.0 threshold. Closing it needs a source of exact high-chroma truth, not a tolerance change. Left open, and it is the reason the semantic margins in Task 5 matter.
+
 ---
 
 ## Task 3: The ramp assertions, test-first
