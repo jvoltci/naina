@@ -669,8 +669,18 @@ That is the correct failure. If it prints contrast numbers, something is wrong.
 ```bash
 cd ~/Documents/code/achroma
 git add test/contrast.mjs
-git commit -m "test: assert chroma-zero, ramp order, dark-block parity and contrast"
+git commit -m "test: assert chroma-zero, ramp order, dark-block parity, gamut and contrast"
 ```
+
+### As shipped — one addition, and two constraints on Task 5
+
+The file was written verbatim as specified and fixture-tested against the good path (28 targets passing) plus seven mutations, all caught. One assertion was added afterwards, and two structural constraints on `achroma.css` came out of that testing.
+
+**Added: the gamut check's hidden coupling is now asserted.** The gamut loop does `if (!c) continue`, which is only safe because every chromatic token *also* appears in `TARGETS`, where an unresolvable value is a loud `cannot resolve` failure. That invariant was real but unenforced — a chromatic alias added to `COLOUR_ALIASES` and forgotten in `TARGETS` would have become gamut-skippable with nothing to notice. Now checked, and verified load-bearing: silent at baseline, fires when `--ok-line` is dropped from `TARGETS`.
+
+**Constraint 1 — `blocks()` sweeps everything between two markers, not just `:root`.** Only `--custom-property` declarations match, so ordinary properties are ignored, but a rule like `.foo { --bg: … }` between markers would fold into that block's map and could shadow a contract name. **Task 5 must keep all component CSS after the last `@achroma` marker**, and nothing after it may redefine one of the 17 alias names. The `prefers-reduced-motion` block that re-points `--dur-*` is fine — those are not colour aliases and no check reads them.
+
+**Constraint 2 — the two dark blocks must be declaration-identical, not merely equivalent.** The parity check compares raw declaration strings, so `var(--n-850)` and `oklch(0.220 0 0)` count as disagreeing even though they resolve to the same colour. Write the dark-class block as a literal copy of the media-query block.
 
 ---
 
