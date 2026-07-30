@@ -175,7 +175,11 @@ npm i achroma
 @import 'achroma/achroma.css';
 ```
 
-No tooling? `<link rel="stylesheet" href="https://unpkg.com/achroma/achroma.css">`
+No tooling? `<link rel="stylesheet" href="https://unpkg.com/achroma@0/achroma.css">`
+
+The major version is pinned deliberately. A copy-pasted `<link>` has no lockfile
+and no way to notice a breaking token rename — it would just quietly lose its
+styling.
 
 Tailwind v4 + shadcn, additionally:
 
@@ -650,11 +654,33 @@ grep -c "SIL Open Font License" /tmp/achroma-fonts/fontsource-variable-geist-5.3
 
 Expected: a count `>= 1`. This was verified as OFL-1.1 on 2026-07-30; re-checking costs a second and the `NOTICE` file asserts it.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Force binary handling for the fonts**
+
+Create `~/Documents/code/achroma/.gitattributes`:
+
+```
+*.woff2 binary
+```
+
+Git's auto-detection usually classifies compressed fonts correctly, but a font
+that is silently corrupted by a line-ending conversion still commits and still
+diffs as "fine" — and only shows up as the system fallback rendering in a
+browser. This is a one-line guard against exactly that class of quiet failure.
+
+- [ ] **Step 4: Confirm the files are intact after adding them**
 
 ```bash
 cd ~/Documents/code/achroma
-git add fonts/
+file fonts/*.woff2 | head -6
+```
+
+Expected: every line reports `Web Open Font Format (Version 2)`. Anything else — `data`, `ASCII text` — means the file was mangled in transit.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd ~/Documents/code/achroma
+git add .gitattributes fonts/
 git commit -m "chore: vendor Geist and Geist Mono subsets (OFL-1.1)"
 ```
 
