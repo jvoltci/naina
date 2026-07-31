@@ -230,12 +230,24 @@ jobs:
           sudo cp -r onnxruntime-linux-x64-${ORT_VERSION}/include/* /usr/local/include/
           sudo cp -r onnxruntime-linux-x64-${ORT_VERSION}/lib/*     /usr/local/lib/
           sudo ldconfig
+          # Same guard the library and node jobs carry: without it a partial
+          # unpack fails inside CMake's find_package instead of here.
+          test -f /usr/local/include/onnxruntime_c_api.h
       - name: Install system deps (macOS)
         if: runner.os == 'macOS'
+        # Unpinned, unlike Linux's 1.20.1: brew has no version pin for
+        # onnxruntime, so macOS builds against whatever is current (1.26.0 at the
+        # time of writing). CLAUDE.md's platform floors — macOS 13.3, glibc 2.28,
+        # Android API 28 — are ORT's, so they move when this floats and the two
+        # runners can disagree about them. Left as it is because every other job
+        # here does the same; pinning is a decision for all of them at once.
         run: brew install ninja cmake yaml-cpp onnxruntime
 
       # Builds the core from source through build.rs, which is the path a
       # crates.io user takes — so CI exercises what they will, not a shortcut.
+      # build.rs asks CMake for the resolved link line rather than restating the
+      # core's dependencies (cmake/NainaRustLinkManifest.cmake), so nothing here
+      # needs to know that yaml-cpp, libcurl and ONNX Runtime are involved.
       - name: Vendor the core
         run: ./vendor.sh
 
