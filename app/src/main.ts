@@ -31,13 +31,20 @@ const langEl = $<HTMLSelectElement>('language');
 const boxesEl = $<HTMLInputElement>('show-boxes');
 const statusEl = $<HTMLElement>('status');
 const statusTextEl = $<HTMLElement>('status-text');
-const barFillEl = $<HTMLElement>('bar-fill');
+// Two loaders, not one bar doing both jobs. .n-progress is a real <progress> and
+// answers "this much is done"; .n-bar answers "something is happening". nilam's
+// loader section calls substituting one for the other a usability error, and the
+// single .bar-fill this replaces did exactly that.
+const progressEl = $<HTMLProgressElement>('progress');
+const barEl = $<HTMLElement>('bar');
 const resultsEl = $<HTMLElement>('results');
+const skeletonEl = $<HTMLElement>('skeleton');
 const pagerEl = $<HTMLElement>('pager');
 const canvasEl = $<HTMLCanvasElement>('canvas');
 const outputEl = $<HTMLElement>('output');
 const metaEl = $<HTMLElement>('meta');
 const errorEl = $<HTMLElement>('error');
+const errorTextEl = $<HTMLElement>('error-text');
 const tabMdEl = $<HTMLButtonElement>('tab-md');
 const tabTxtEl = $<HTMLButtonElement>('tab-txt');
 const tabJsonEl = $<HTMLButtonElement>('tab-json');
@@ -84,7 +91,14 @@ worker.addEventListener('message', (event: MessageEvent<WorkerResponse>) => {
     return;
   }
   if (msg.kind === 'stage') {
-    setStatus(`${msg.label}…`, null);
+    // A stage broadcast knows LESS than the page counter it would replace, so it
+    // does not get to replace it. Measured: on a two-page PDF the app showed
+    // "Reading page 2 of 2…" with a determinate .n-progress at 50% for a few
+    // milliseconds and then overwrote it with "Reading…" and an indeterminate
+    // .n-bar, because the worker posts this the moment it starts inferring. The
+    // app was throwing away the only proportion it had.
+    if (pageStatus) setStatus(pageStatus.text, pageStatus.fraction);
+    else setStatus(`${msg.label}…`, null);
     return;
   }
 
@@ -116,27 +130,50 @@ function ask(req: RequestBody): Promise<WorkerResponse> {
 
 // ── status ─────────────────────────────────────────────────────────────
 
+/**
+ * Where a multi-page read has got to, when there is more than one page. Held
+ * here rather than passed around because it has to survive the worker's own
+ * 'stage' broadcasts, which arrive mid-page and carry no proportion.
+ *
+ * null for a single page: "page 1 of 1" is not progress, it is arithmetic.
+ */
+let pageStatus: { text: string; fraction: number } | null = null;
+
+// `fraction` is the one bit of information that decides which loader is honest:
+// a number means a proportion is known, null means the duration is not. Nothing
+// else in this function branches, deliberately.
 function setStatus(text: string, fraction: number | null) {
   statusEl.hidden = false;
   statusTextEl.textContent = text;
   if (fraction === null) {
-    barFillEl.style.width = '100%';
-    barFillEl.classList.add('is-indeterminate');
+    progressEl.hidden = true;
+    barEl.hidden = false;
   } else {
-    barFillEl.classList.remove('is-indeterminate');
-    barFillEl.style.width = `${Math.round(fraction * 100)}%`;
+    barEl.hidden = true;
+    progressEl.hidden = false;
+    // max="1", so the fraction goes in as-is; <progress> puts it in the
+    // accessibility tree itself, which is why there is no aria-valuenow here.
+    progressEl.value = fraction;
   }
+}
+
+// "Content shaped like THIS is coming." Only worth showing when there is nothing
+// on screen yet — on a re-read the previous result is still visible and swapping
+// it for grey blocks would lose information the reader already had.
+function setSkeleton(on: boolean) {
+  skeletonEl.hidden = !on || results.length > 0;
 }
 
 function clearStatus() {
   statusEl.hidden = true;
-  barFillEl.classList.remove('is-indeterminate');
+  pageStatus = null;
+  setSkeleton(false);
 }
 
 function showError(message: string) {
   clearStatus();
   errorEl.hidden = false;
-  errorEl.textContent = message;
+  errorTextEl.textContent = message;
 }
 
 // ── rendering ──────────────────────────────────────────────────────────
@@ -146,6 +183,74 @@ function toPlainText(page: NainaPage | null): string {
   if (!page) return '';
   return page.lines.map((l) => l.text).join('\n');
 }
+
+/**
+ * Four corner points, whichever shape the core emitted.
+ *
+ * THE BINDING'S TYPE IS WRONG AND THIS IS WHY THE OVERLAY NEVER PAINTED.
+ * bindings/wasm/src/index.d.ts declares `quad: number[]` and documents it as
+ * "x0,y0,x1,y1,x2,y2,x3,y3 in source pixels". The runtime actually emits four
+ * [x, y] PAIRS: [[105.7,142.2],[1567.1,142.2],[1567.1,201.6],[105.7,201.6]].
+ *
+ * So the old guard `if (q.length < 8) continue;` was true for every line — a
+ * 4-element array — and the loop skipped all of them. TypeScript could not catch
+ * it, because the code agreed with the declaration and the declaration disagreed
+ * with reality. Found by sampling the painted canvas for non-greyscale pixels:
+ * there were zero, on a page whose twelve lines all came back at 0.99.
+ *
+ * Normalised here rather than in the binding. Correcting a published type
+ * declaration is its own change with its own blast radius; this accepts both
+ * shapes so it is right either way, and the .d.ts is reported separately.
+ */
+function toPoints(quad: number[] | number[][]): [number, number][] {
+  if (quad.length === 0) return [];
+  if (Array.isArray(quad[0])) return quad as [number, number][];
+  const flat = quad as number[];
+  return Array.from({ length: Math.floor(flat.length / 2) }, (_, i): [number, number] => [
+    flat[i * 2],
+    flat[i * 2 + 1],
+  ]);
+}
+
+/**
+ * Resolve a nilam token to a concrete colour a canvas will accept.
+ *
+ * getPropertyValue('--ok-9') returns the token's LITERAL text, which is
+ * `light-dark(oklch(…), oklch(…))` — custom properties are substituted, not
+ * computed. A canvas has no colour-scheme context, so light-dark() there does
+ * not resolve and the assignment is silently dropped. Painting the token onto a
+ * real element and reading back its computed `color` does the resolution in the
+ * one place that can do it: the DOM.
+ */
+function resolveToken(name: string): string {
+  const probe = document.createElement('span');
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.color = `var(${name})`;
+  document.body.append(probe);
+  const value = getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+}
+
+/**
+ * Does this engine accept color-mix() as a canvas paint? Probed once, because a
+ * rejected assignment is a NO-OP rather than a throw — it leaves whatever was
+ * there before, which is how a wrong colour ships without anyone noticing.
+ *
+ * The three literals below are a feature test, not paint: nothing they touch is
+ * ever shown. '#000000' is the sentinel the probe watches for, and red/blue are
+ * the two simplest arguments color-mix() will accept. A token here would test
+ * whether the token resolves, which is a different question and is answered by
+ * resolveToken above.
+ */
+const MIX_OK = (() => {
+  const ctx = document.createElement('canvas').getContext('2d');
+  if (!ctx) return false;
+  ctx.strokeStyle = '#000000';
+  ctx.strokeStyle = 'color-mix(in oklab, red 50%, blue)';
+  return ctx.strokeStyle !== '#000000';
+})();
 
 function drawOverlay() {
   const r = results[current];
@@ -165,25 +270,57 @@ function drawOverlay() {
 
   if (!boxesEl.checked || !r.json) return;
 
-  for (const line of r.json.lines) {
-    const q = line.quad;
-    if (q.length < 8) continue;
+  // THE RAMP'S ENDPOINTS ARE NOW TOKENS, and that is a change of kind rather than
+  // of shade. It used to be `hsl(120…0 85% 55%)` — the last two hardcoded colours
+  // in src/, justified in styles.css as "data, not decoration", which is a fair
+  // carve-out and still leaves two unproven values on the page.
+  //
+  // --ok-9 and --warn-9 ARE the two things this ramp says: "trust this line" and
+  // "check this line". Using them means the overlay inherits everything the
+  // palette proved — the separation measured under protanopia, deuteranopia and
+  // tritanopia, and the polarity flip, since step 9 is the L 0.585 solid in light
+  // mode and the L 0.660 glow in dark. The old literals were one pair of values
+  // for both modes, which on a dark page put a 55%-lightness green over a
+  // near-black canvas.
+  //
+  // Resolved per call, not once at module load, so following the OS from light to
+  // dark repaints in the right pair.
+  //
+  // Confidence still drives the mix — green when sure, amber when not — so it is
+  // obvious at a glance which lines to distrust. That is the signal; deleting it
+  // would remove the only thing telling a reader the model can be wrong.
+  const ok = MIX_OK ? resolveToken('--ok-9') : '';
+  const warn = MIX_OK ? resolveToken('--warn-9') : '';
+  const tokenised = ok !== '' && warn !== '';
 
-    // Confidence drives the hue — green when sure, amber when not — so it is
-    // obvious at a glance which lines to distrust.
+  ctx.lineWidth = 1.5;
+  for (const line of r.json.lines) {
+    const pts = toPoints(line.quad);
+    if (pts.length < 3) continue;
+
     const t = Math.max(0, Math.min(1, (line.confidence - 0.5) / 0.5));
-    const hue = Math.round(120 * t);
-    ctx.strokeStyle = `hsl(${hue} 85% 55% / 0.95)`;
-    ctx.fillStyle = `hsl(${hue} 85% 55% / 0.10)`;
-    ctx.lineWidth = 1.5;
+    const paint = tokenised
+      ? `color-mix(in oklab, ${ok} ${Math.round(t * 100)}%, ${warn})`
+      : // Last resort, and only reachable on an engine without color-mix() in
+        // canvas. Kept as the original hsl() ramp rather than a token, because a
+        // token cannot be interpolated without the thing that is missing.
+        `hsl(${Math.round(120 * t)} 85% 55%)`;
+    ctx.strokeStyle = paint;
+    ctx.fillStyle = paint;
 
     ctx.beginPath();
-    ctx.moveTo(q[0] * scale, q[1] * scale);
-    for (let i = 2; i < 8; i += 2) ctx.lineTo(q[i] * scale, q[i + 1] * scale);
+    ctx.moveTo(pts[0][0] * scale, pts[0][1] * scale);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * scale, pts[i][1] * scale);
     ctx.closePath();
+    // globalAlpha rather than an alpha channel in the colour: color-mix() would
+    // need a second nested mix against transparent to carry one, and two
+    // different alphas are wanted from the same paint.
+    ctx.globalAlpha = 0.1;
     ctx.fill();
+    ctx.globalAlpha = 0.95;
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 }
 
 function currentText(): string {
@@ -202,8 +339,35 @@ function renderPager() {
     ...results.map((r, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = `page-chip${i === current ? ' is-active' : ''}${r.error ? ' is-failed' : ''}`;
-      b.textContent = String(r.page.number);
+      // .n-btn n-btn-sm is the whole chip. The active one is n-btn-fill, and a
+      // failed active one is n-btn-danger — both are nilam's solved step-9/ink
+      // pairs, so they invert polarity correctly in dark mode without a literal
+      // white anywhere.
+      const fill = r.error ? 'n-btn-danger' : 'n-btn-fill';
+      b.className = [
+        'n-btn',
+        'n-btn-sm',
+        'page-chip',
+        i === current ? fill : '',
+        r.error ? 'is-failed' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+      b.append(String(r.page.number));
+      if (r.error) {
+        // The non-hue channel. Colour alone made a failed page 3 and a working
+        // page 3 the same chip for a deuteranope — WCAG 1.4.1, and the defect
+        // nilam's proveStatusChannels() exists to catch.
+        const glyph = document.createElement('span');
+        glyph.className = 'chip-glyph';
+        glyph.setAttribute('aria-hidden', 'true');
+        glyph.textContent = '×';
+        b.append(glyph);
+      }
+      // aria-label rather than only title: title is not reliably announced, and
+      // for a failed page the reason is the whole point of the chip.
+      b.setAttribute('aria-label', r.error ? `${r.page.label} — ${r.error}` : r.page.label);
+      if (i === current) b.setAttribute('aria-current', 'page');
       b.title = r.error ? `${r.page.label} — ${r.error}` : r.page.label;
       b.addEventListener('click', () => {
         current = i;
@@ -216,12 +380,21 @@ function renderPager() {
 
 function render() {
   resultsEl.hidden = results.length === 0;
+  // Real content beats a placeholder the moment it exists.
+  if (results.length > 0) skeletonEl.hidden = true;
   const r = results[current];
   if (!r) return;
 
-  tabMdEl.classList.toggle('is-active', view === 'md');
-  tabTxtEl.classList.toggle('is-active', view === 'txt');
-  tabJsonEl.classList.toggle('is-active', view === 'json');
+  // aria-selected, not a class. .n-tab selects on the attribute, so a tab whose
+  // state is missing from the accessibility tree does not get painted either —
+  // which is the point of doing it this way round.
+  tabMdEl.setAttribute('aria-selected', String(view === 'md'));
+  tabTxtEl.setAttribute('aria-selected', String(view === 'txt'));
+  tabJsonEl.setAttribute('aria-selected', String(view === 'json'));
+  // --measure is a reading measure; JSON is not read left to right, and at 65ch
+  // a nested object wraps mid-key. The exemption is keyed off the content rather
+  // than a class someone has to remember to toggle.
+  outputEl.dataset.view = view;
   outputEl.textContent = r.error ? `Could not read this page: ${r.error}` : currentText();
 
   const lines = r.json?.lines.length ?? 0;
@@ -255,7 +428,11 @@ async function readPages(
 
   for (const [i, page] of pages.entries()) {
     if (pages.length > 1) {
-      setStatus(`${verb} page ${i + 1} of ${pages.length}…`, i / pages.length);
+      // i, not i + 1: the bar reports pages FINISHED, which is what a proportion
+      // means. Reporting i + 1 would show 50% before the first page had produced
+      // anything, and 100% while the last one was still running.
+      pageStatus = { text: `${verb} page ${i + 1} of ${pages.length}…`, fraction: i / pages.length };
+      setStatus(pageStatus.text, pageStatus.fraction);
     }
     try {
       // Only auto-detection needs the small copy; making one otherwise is waste.
@@ -314,10 +491,23 @@ async function handleFiles(files: (File | Blob)[]) {
   busy = true;
   errorEl.hidden = true;
 
+  // A new file replaces whatever was on screen, so clear it up front rather than
+  // leaving a stale page and its stale meta line sitting under a progress bar
+  // for the next 40 seconds. This is also what makes the skeleton correct: it is
+  // only ever shown when there is genuinely nothing to look at.
+  results = [];
+  current = 0;
+  resultsEl.hidden = true;
+  pagerEl.hidden = true;
+
   try {
     const tier = tierEl.value as TierName;
     const language = langEl.value;
     setStatus('Opening…', null);
+    // Before the first result exists the wait is the whole interaction — 27 MB
+    // of ort-web, 11 MB of weights, then inference. The skeleton says where the
+    // text will land; a bar cannot.
+    setSkeleton(true);
 
     const pages: SourcePage[] = [];
     for (const file of files) {

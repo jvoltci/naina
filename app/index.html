@@ -14,7 +14,8 @@
          theme-color would be wrong half the time. These are the sRGB forms of
          nilam's --neutral-1 in each mode, computed with nilam's own toHex() from
          the oklch in nilam.tokens.css rather than eyeballed. Both carry the
-         brand's C 0.007, which is why neither is a pure grey any more. -->
+         brand's C 0.007, which is why neither is a pure grey any more.
+         Re-verified against the installed 0.3.1 tokens this pass. -->
     <meta name="theme-color" content="#f8f8fd" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#101014" media="(prefers-color-scheme: dark)" />
     <!-- Link previews. Absolute URLs on purpose: unfurlers do not resolve relative
@@ -45,19 +46,30 @@
     <meta name="twitter:image" content="https://jvoltci.github.io/naina/og.png" />
   </head>
   <body>
+    <!-- 2.4.1. .n-skip is hidden until focused and then a real target; the page
+         had no way to jump past the header before. -->
+    <a class="n-skip" href="#main">Skip to content</a>
+
     <header class="top">
-      <div class="brand">
-        <span class="eye" aria-hidden="true"></span>
-        <span class="wordmark">naina</span>
+      <div class="n-container top-inner">
+        <div class="brand n-cluster">
+          <span class="eye" aria-hidden="true"></span>
+          <span class="wordmark">naina</span>
+        </div>
+        <nav class="n-cluster">
+          <a href="./doc/">Docs</a>
+          <a href="https://github.com/jvoltci/naina">GitHub</a>
+          <!-- .n-badge-info, not n-badge-ok: "offline ready" is a capability, not
+               the outcome of an operation. The glyph is nilam's required non-hue
+               channel; see the long note in styles.css. -->
+          <span id="offline-badge" class="n-badge n-badge-info" hidden>
+            <i class="n-badge-glyph" aria-hidden="true">i</i>offline ready
+          </span>
+        </nav>
       </div>
-      <nav>
-        <a href="./doc/">Docs</a>
-        <a href="https://github.com/jvoltci/naina">GitHub</a>
-        <span id="offline-badge" class="badge" hidden>offline ready</span>
-      </nav>
     </header>
 
-    <main>
+    <main id="main" class="n-container">
       <section class="hero">
         <p class="label">In-browser OCR · nothing uploaded</p>
         <h1>Extract text from any document.</h1>
@@ -68,7 +80,9 @@
         </p>
       </section>
 
-      <!-- Drop target doubles as the empty state. -->
+      <!-- Drop target doubles as the empty state, and is the heaviest object on
+           the page by design: --line-2 dashed --brand-7, --r-5, --rim, --space-9
+           of block padding. -->
       <section
         id="drop"
         class="drop"
@@ -89,21 +103,34 @@
             />
           </svg>
           <p class="drop-title">Drop a PDF or image, paste, or click to choose</p>
-          <p class="drop-hint">PDF, PNG, JPEG, WebP — several files at once is fine</p>
+          <p class="drop-hint faint">PDF, PNG, JPEG, WebP — several files at once is fine</p>
         </div>
       </section>
 
-      <div class="controls">
-        <label class="field">
-          <span class="label">Model size</span>
-          <select id="tier">
+      <!-- The strongest claim naina has, placed where the question gets asked
+           rather than in the notes at the bottom. info is the achromatic status
+           family: "nothing is wrong" needs no hue. -->
+      <div class="privacy n-note n-note-info">
+        <span class="n-note-glyph" aria-hidden="true">i</span>
+        <div>
+          <span class="n-note-title">Nothing leaves this tab.</span>
+          There is no server to upload to — detection, recognition and markdown
+          assembly all run here, in WebAssembly. Open your network panel and
+          watch: once the weights are cached there is no traffic at all.
+        </div>
+      </div>
+
+      <div class="controls n-cluster">
+        <div class="n-field">
+          <label class="n-label" for="tier">Model size</label>
+          <select class="n-select" id="tier">
             <option value="tiny" selected>Tiny — 11 MB, fastest</option>
             <option value="small">Small — 54 MB, more accurate</option>
           </select>
-        </label>
-        <label class="field">
-          <span class="label">Script</span>
-          <select id="language">
+        </div>
+        <div class="n-field">
+          <label class="n-label" for="language">Script</label>
+          <select class="n-select" id="language">
             <option value="auto" selected>Auto — detect the script</option>
             <option value="">Latin, Chinese, Japanese</option>
             <option value="arabic">Arabic, Persian, Urdu</option>
@@ -116,34 +143,57 @@
             <option value="te">Telugu</option>
             <option value="th">Thai</option>
           </select>
-        </label>
-        <label class="field checkbox">
-          <input id="show-boxes" type="checkbox" checked />
-          <span>Show detected text</span>
+        </div>
+        <label class="n-choice">
+          <input class="n-check" id="show-boxes" type="checkbox" checked />
+          Show detected text
         </label>
       </div>
 
       <!-- Stated up front, not in the notes at the bottom. A user who feeds it
            Hindi gets fabricated text at high confidence, and finding that out
-           afterwards is too late. -->
-      <p class="caveat">
-        Script detection is <strong>automatic</strong> — leave it on Auto unless you
-        know better. Set it explicitly and choosing wrong returns
-        <strong>plausible-looking wrong text, not an error</strong>, because the
-        model reads confidently in whichever alphabet you give it. Handwriting is
-        unreliable. <a href="./doc/limits/">Full limitations</a>.
-      </p>
+           afterwards is too late. The ! glyph is the non-hue channel: warn and ok
+           are the same colour to a deuteranope, so hue alone signals nothing. -->
+      <div class="caveat n-note n-note-warn">
+        <span class="n-note-glyph" aria-hidden="true">!</span>
+        <div>
+          <span class="n-note-title">Script detection is automatic.</span>
+          Leave it on Auto unless you know better. Set it explicitly and choosing
+          wrong returns plausible-looking wrong text, not an error, because the
+          model reads confidently in whichever alphabet you give it. Handwriting
+          is unreliable. <a href="./doc/limits/">Full limitations</a>.
+        </div>
+      </div>
 
-      <!-- Status line: model download first, then the read itself. -->
+      <!-- Status. Two loaders, and which one shows is decided by whether a
+           proportion is known — see the loader note in styles.css. -->
       <section id="status" class="status" hidden>
-        <div class="bar"><div id="bar-fill" class="bar-fill"></div></div>
-        <p id="status-text" class="status-text"></p>
+        <progress id="progress" class="n-progress" value="0" max="1" hidden></progress>
+        <div id="bar" class="n-bar" role="progressbar" aria-label="Working" hidden></div>
+        <p id="status-text" class="status-text faint" role="status"></p>
       </section>
 
-      <nav id="pager" class="pager" aria-label="Pages" hidden></nav>
+      <!-- "Content shaped like THIS is coming." Only shown when there is nothing
+           on screen yet; a re-read keeps its real result and uses the bar. -->
+      <div id="skeleton" class="results" hidden aria-hidden="true">
+        <div class="pane n-card">
+          <div class="pane-head"><div class="n-skeleton" style="block-size: 0.75rem; inline-size: 3rem"></div></div>
+          <div class="canvas-wrap"><div class="n-skeleton skeleton-page"></div></div>
+        </div>
+        <div class="pane n-card">
+          <div class="pane-head"><div class="n-skeleton" style="block-size: 0.75rem; inline-size: 5rem"></div></div>
+          <div class="skeleton-lines">
+            <i class="n-skeleton"></i><i class="n-skeleton"></i><i class="n-skeleton"></i>
+            <i class="n-skeleton"></i><i class="n-skeleton"></i><i class="n-skeleton"></i>
+            <i class="n-skeleton"></i>
+          </div>
+        </div>
+      </div>
+
+      <nav id="pager" class="pager n-cluster" aria-label="Pages" hidden></nav>
 
       <section id="results" class="results" hidden>
-        <div class="pane">
+        <div class="pane n-card">
           <div class="pane-head">
             <h2 class="label">Page</h2>
             <span id="meta" class="meta"></span>
@@ -153,67 +203,95 @@
           </div>
         </div>
 
-        <div class="pane">
+        <div class="pane n-card">
           <div class="pane-head">
-            <h2 class="label">Extracted</h2>
-            <div class="pane-actions">
-              <button id="tab-md" class="tab is-active" type="button">Markdown</button>
-              <button id="tab-txt" class="tab" type="button">Text</button>
-              <button id="tab-json" class="tab" type="button">JSON</button>
-              <button id="copy" class="btn" type="button">Copy</button>
-              <button id="download" class="btn" type="button">Save page</button>
-              <button id="download-all" class="btn" type="button" hidden>Save all</button>
+            <!-- .n-tab reads aria-selected, not a class. main.ts sets it, so the
+                 state is in the accessibility tree because that is the only way
+                 to get it painted. -->
+            <div class="pane-tabs n-tabs" role="tablist" aria-label="Output format">
+              <button id="tab-md" class="n-tab" type="button" role="tab" aria-selected="true">
+                Markdown
+              </button>
+              <button id="tab-txt" class="n-tab" type="button" role="tab" aria-selected="false">
+                Text
+              </button>
+              <button id="tab-json" class="n-tab" type="button" role="tab" aria-selected="false">
+                JSON
+              </button>
+            </div>
+            <div class="pane-actions n-cluster">
+              <button id="copy" class="n-btn n-btn-sm" type="button">Copy</button>
+              <button id="download" class="n-btn n-btn-sm" type="button">Save page</button>
+              <button id="download-all" class="n-btn n-btn-sm" type="button" hidden>Save all</button>
             </div>
           </div>
-          <pre id="output" class="output"></pre>
+          <div class="output-wrap">
+            <pre id="output" class="output" data-view="md"></pre>
+          </div>
         </div>
       </section>
 
-      <section id="error" class="error" hidden></section>
+      <!-- role="alert" is an implicit aria-live="assertive": a failed read should
+           interrupt, unlike the polite status line above. -->
+      <div id="error" class="error n-note n-note-danger" role="alert" hidden>
+        <span class="n-note-glyph" aria-hidden="true">×</span>
+        <div id="error-text"></div>
+      </div>
 
       <section class="notes">
         <h2>How this works</h2>
         <div class="notes-grid">
-          <div>
-            <h3>Nothing is uploaded</h3>
-            <p>
-              The whole pipeline runs in this tab, including PDF rendering. Open
-              your network panel and watch — once the weights are cached, there is
-              no traffic at all. No account, no quota, no upload.
-            </p>
+          <div class="n-card n-card-pad">
+            <div class="n-prose">
+              <h3>Nothing is uploaded</h3>
+              <p>
+                The whole pipeline runs in this tab, including PDF rendering. Open
+                your network panel and watch — once the weights are cached, there
+                is no traffic at all. No account, no quota, no upload.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3>Works offline</h3>
-            <p>
-              Weights are cached by content hash on first use. Come back with no
-              connection and it still reads.
-            </p>
+          <div class="n-card n-card-pad">
+            <div class="n-prose">
+              <h3>Works offline</h3>
+              <p>
+                Weights are cached by content hash on first use. Come back with no
+                connection and it still reads.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3>The same code as the server</h3>
-            <p>
-              Detection post-processing, text decoding, reading order and markdown
-              assembly are the same C++ that naina's Python and Node packages run —
-              compiled to WebAssembly, not rewritten in JavaScript.
-            </p>
+          <div class="n-card n-card-pad">
+            <div class="n-prose">
+              <h3>The same code as the server</h3>
+              <p>
+                Detection post-processing, text decoding, reading order and
+                markdown assembly are the same C++ that naina's Python and Node
+                packages run — compiled to WebAssembly, not rewritten in
+                JavaScript.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3>What it cannot do</h3>
-            <p>
-              Handwriting is weak, and scripts outside PP-OCRv6's character set
-              (Devanagari among them) come back as confident nonsense rather than
-              an error. Latin and CJK print are its strengths.
-            </p>
+          <div class="n-card n-card-pad">
+            <div class="n-prose">
+              <h3>What it cannot do</h3>
+              <p>
+                Handwriting is weak, and scripts outside PP-OCRv6's character set
+                (Devanagari among them) come back as confident nonsense rather
+                than an error. Latin and CJK print are its strengths.
+              </p>
+            </div>
           </div>
         </div>
       </section>
     </main>
 
     <footer>
-      <p>
-        Apache-2.0 · PP-OCRv6 and PP-DocLayout weights, mirrored and hash-pinned ·
-        <a href="https://github.com/jvoltci/naina">source</a>
-      </p>
+      <div class="n-container">
+        <p class="faint">
+          Apache-2.0 · PP-OCRv6 and PP-DocLayout weights, mirrored and hash-pinned ·
+          <a href="https://github.com/jvoltci/naina">source</a>
+        </p>
+      </div>
     </footer>
 
     <div class="grain" aria-hidden="true"></div>

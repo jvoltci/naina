@@ -73,6 +73,15 @@ async function pdfToPages(file: File | Blob, onPage?: (n: number, of: number) =>
 
       // White background. A PDF page is transparent where nothing is drawn, and
       // transparent composited over black inverts the text for the detector.
+      //
+      // A LITERAL, AND DELIBERATELY NOT A TOKEN. This is paper, not interface:
+      // it is the substrate the recognition model sees, and PP-OCRv6 was trained
+      // on dark ink on white. Using --surface here would tint the model's input
+      // to oklch(0.2455 0 285) in dark mode and change what naina reads — the
+      // page would give different text depending on the reader's OS setting,
+      // which is the one thing this tool must never do. Same class of value as
+      // the confidence ramp in main.ts, in the other direction: that one is
+      // data going out, this one is data going in.
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
