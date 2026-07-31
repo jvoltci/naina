@@ -1,44 +1,101 @@
-/* naina web app — Achroma.
+/* naina web app — nilam.
  *
  * Every colour, size, radius and duration is a token. A hardcoded value here is
  * a bug: it means the design system is missing something, and the next site will
- * hit the same gap.
+ * hit the same gap. Where nilam genuinely has no value in a role, the gap is
+ * declared as a local token in :root below and named, rather than inlined at the
+ * point of use.
  *
  * The one deliberate exception is the confidence overlay drawn on the canvas by
  * main.ts, which runs green to amber by line confidence. That is data, not
  * decoration — deleting it would remove the signal that tells a reader which
  * lines to distrust. Same carve-out that lets a highlighter be yellow.
+ *
+ * MIGRATED FROM ACHROMA. achroma was unpublished from npm; nilam replaces it.
+ * The move is not a rename. Two things changed in kind:
+ *
+ *   1. The page is no longer achromatic. achroma's greys were C 0; nilam's carry
+ *      C 0.007 at the brand hue 285, so every "neutral" now has a faint violet
+ *      cast by construction. "Hue reserved for meaning" is no longer literally
+ *      true of the greys, only of the status families.
+ *   2. Colour roles are solved, not picked. Step 11 is the lightness at which
+ *      text hits 4.5:1 against step 3 — so `color: var(--warn-11)` on
+ *      `background: var(--warn-3)` is 4.55:1 by construction, in both modes, and
+ *      cannot drift. Every contrast number in the comments below was measured
+ *      off nilam.tokens.css with nilam's own contrast(), not estimated.
  */
 
-/* achroma is published, so this is the real package import now, with
- * "achroma": "^0.2.0" in package.json. The relative `../../achroma/achroma.css`
- * that stood here could only ever resolve on a laptop: naina's CI checks out
- * naina alone, which is why this branch was never merged to master.
+/* Split imports, not 'nilam/nilam.css': the bundle also carries the .n-* layer,
+ * and naina uses none of it. tokens + scale + base is what the page is built on.
+ * NOT 'nilam/tailwind.css' — this is plain CSS, no Tailwind. */
+@import 'nilam/tokens.css';
+@import 'nilam/scale.css';
+@import 'nilam/base.css';
+
+/* nilam ships no fonts; achroma bundled Geist and Geist Mono. Dropping them
+ * would have taken the page to system-ui, and the hero signature below depends
+ * on a variable face with a real 200 weight — Segoe UI has no such instance, so
+ * on Windows "thin and huge" would have silently become "regular and huge".
  *
- * The components layer is imported too. naina's own .tab, .btn, .page-chip and
- * .pane are keeping their bespoke rules — they are load-bearing for the OCR
- * flow and predate the component set — but .ac-note and the layout primitives
- * are worth having, and importing the file costs nothing that is unused. */
-@import 'achroma/achroma.css';
-@import 'achroma/achroma.components.css';
+ * These are the upstream packages achroma subsetted its own copies from
+ * (its NOTICE named @fontsource-variable/geist@5.3.0), so the font files are the
+ * same bytes, self-hosted, same 'Geist Variable' family name. Vite fingerprints
+ * and inlines the @font-face URLs, and unicode-range means only the subsets the
+ * page actually uses get fetched. Same-origin, so sw.js caches them for offline.
+ */
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
 :root {
   --maxw: 1240px;
+
+  /* Geist first, then nilam's own stacks verbatim. A custom property cannot
+     reference itself, so the tail has to be repeated rather than composed. */
+  --font-sans:
+    'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono:
+    'Geist Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+    Consolas, 'Liberation Mono', monospace;
+
+  /* nilam's weight scale starts at 400 (--weight-normal) and has nothing
+     lighter, even though its own scale.css says the display size wants "weight
+     200 at this size, never 700". That is the gap; this is the token for it. */
+  --weight-thin: 200;
+
+  /* achroma's --wash, rebuilt on nilam tokens. Same geometry, and the colour is
+     an exact role match: achroma washed towards --bg-raised in both modes, which
+     is --surface here.
+
+     One ramp step of top-light depth, and the cost is still measured rather than
+     assumed. Where the wash is fully opaque the page reads as --surface instead
+     of --neutral-1, so:
+
+       --neutral-12 body text   8.02 -> 8.51 light,  8.31 -> 7.09 dark
+       --neutral-11 dim text    5.14 -> 5.45 light,  5.32 -> 4.55 dark
+
+     The direction that matters is still dark, and the worst case is dim text at
+     4.55:1. That is not luck: --surface in dark mode is L 0.2455, the same
+     lightness as --neutral-3, and step 11 is solved to 4.5:1 against step 3. The
+     wash lands exactly on nilam's proven floor with 0.05 to spare. Deepening it
+     one more step would break 1.4.3, so it stays at one. */
+  --wash: radial-gradient(120% 70% at 50% -15%, var(--surface) 0%, transparent 55%);
 }
 
-/* Achroma's --wash is opt-in. One ramp step of top-light depth, which measures
-   as +0.09 contrast in light and -0.30 in dark against a 4.5 floor — the
-   direction that matters is dark, and it has 2.89 of margin. */
 body {
   background-image: var(--wash);
   background-repeat: no-repeat;
 }
 
-/* No `a` rule here. achroma 0.2.0 styles every <a> achromatic-and-underlined in
- * @layer base, which is exactly what naina was reimplementing. Removing the
- * duplicate keeps links identical on every site that installs the package.
- * `.caveat a` below still works: achroma sets `color: inherit`, so a link inside
- * a warn callout picks up --warn-text on its own. */
+/* No `a` rule here. CHECKED against nilam.base.css, not assumed: nilam styles
+ * every <a> with `color: inherit` plus an underline in --neutral-8, in
+ * @layer nilam.base — the same thing achroma did and the same thing naina was
+ * reimplementing before either package existed. Removing the duplicate keeps
+ * links identical on every site that installs the package.
+ * `.caveat a` below still works for the same reason it did under achroma:
+ * `color: inherit` means a link inside a warn callout picks up --warn-11 on its
+ * own. nilam's underline default is --neutral-8 rather than achroma's
+ * --fg-faint, which is why .caveat a still restates text-decoration-color. */
 
 /* ── header ─────────────────────────────────────────────────────────── */
 
@@ -46,17 +103,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-4);
+  gap: var(--space-4);
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: var(--s-5) var(--s-6);
-  border-bottom: 1px solid var(--hairline);
+  padding: var(--space-5) var(--space-5);
+  border-bottom: 1px solid var(--neutral-6);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--space-2);
 }
 
 /* A stylised eye: naina means eyes. Ink, not an accent hue. */
@@ -64,7 +121,7 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  border: 1.5px solid var(--fg);
+  border: 1.5px solid var(--neutral-12);
   position: relative;
   display: inline-block;
 }
@@ -73,44 +130,71 @@ body {
   position: absolute;
   inset: 32% 34%;
   border-radius: 50%;
-  background: var(--fg);
+  background: var(--neutral-12);
 }
 
 .wordmark {
-  font-size: var(--text-lg);
-  font-weight: var(--w-medium);
-  letter-spacing: var(--track-tight);
+  font-size: var(--text-3);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
 }
 
 .top nav {
   display: flex;
   align-items: center;
-  gap: var(--s-5);
-  font-size: var(--text-sm);
+  gap: var(--space-5);
+  font-size: var(--text-0);
 }
 .top nav a {
-  color: var(--fg-dim);
+  color: var(--neutral-11);
   text-decoration: none;
 }
 .top nav a:hover {
-  color: var(--fg);
+  color: var(--neutral-12);
 }
 
 /* --info-*, which is achromatic, and NOT --ok-*. "offline ready" is a statement
    of capability, not the outcome of an operation: nothing happened and nothing is
    wrong. Green claimed a success that never occurred, and it was also the loudest
-   colour on the page at load — a status hue outshouting the brand one. */
+   colour on the page at load — a status hue outshouting the brand one.
+
+   The claim survives the move because nilam's info family is byte-identical to
+   its neutral ramp: --info-11 is C 0.007 against --ok-11's C 0.107 light /
+   0.128 dark. So "info is the achromatic status" is still literally true, and
+   still measurably quieter than green. */
 .badge {
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: var(--w-medium);
-  letter-spacing: var(--track-label);
+  font-size: var(--text-000);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-micro);
   text-transform: uppercase;
-  padding: var(--s-1) var(--s-2);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--info-line);
-  background: var(--info-bg);
-  color: var(--info-text);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-2);
+  border: 1px solid var(--info-8);
+  background: var(--info-3);
+  color: var(--info-11);
+}
+
+/* ── the micro-label ────────────────────────────────────────────────── */
+
+/* Was .ac-label, which nilam has no equivalent for: its .n-label is a form-field
+ * label (--text-0, medium, --neutral-12), a different thing entirely. Ported
+ * locally rather than dropped — it is one half of the type signature, and the
+ * hero and the pane heads are built out of the tension between it and the huge
+ * thin heading. Tiny, wide, uppercase, mono.
+ *
+ * Every value is a nilam token and two are exact: --tracking-micro is 0.14em,
+ * the same as achroma's --track-label, and --text-000 bottoms out at 0.6875rem,
+ * the same as achroma's flat --text-2xs. This is also verbatim the recipe nilam
+ * itself uses for .n-table th — the treatment exists in the package, just not
+ * as a class you can apply. */
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--text-000);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+  color: var(--neutral-11);
 }
 
 /* ── layout ─────────────────────────────────────────────────────────── */
@@ -118,39 +202,55 @@ body {
 main {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 var(--s-6) var(--s-16);
+  padding: 0 var(--space-5) var(--space-8);
 }
 
 .hero {
-  padding: var(--s-16) 0 var(--s-12);
+  padding: var(--space-8) 0 var(--space-7);
   max-width: 46rem;
 }
 
-.hero .ac-label {
+.hero .label {
   display: block;
-  margin: 0 0 var(--s-4);
+  margin: 0 0 var(--space-4);
 }
 
 /* Thin and huge, against the tiny wide label above it. This pairing is the
-   signature; a heavy weight here undoes it. Overrides achroma's base heading
-   rule, which sets h1 to --text-2xl at weight 500 for ordinary prose. */
+   signature; a heavy weight here undoes it. Overrides nilam's base heading rule,
+   which sets every h1-h6 to --weight-semibold with --leading-tight.
+
+   --text-7, not nilam's --text-display. Both are fluid clamps, but --text-display
+   tops out at 7.5rem for "one thing per page" on a full-width canvas, and this
+   heading lives in a 46rem column: at a 1280px viewport it would render ~115px
+   and wrap to four lines. --text-7's floor is 2.5rem, identical to achroma's
+   --text-display floor, and it caps at 4rem — 64px against achroma's ~77px at
+   the same viewport, the closest of the two by a wide margin.
+
+   Two values could not come across. nilam has no weight below 400, hence the
+   local --weight-thin. And its tightest leading is --leading-tight at 1.15 where
+   achroma's --lh-display was 1.02; that one is not worth a local token, because
+   1.15 is a value nilam considered for exactly this job. The heading sits a
+   little looser than it did. */
 .hero h1 {
-  margin: 0 0 var(--s-4);
-  font-size: var(--text-display);
-  font-weight: var(--w-thin);
-  letter-spacing: var(--track-display);
-  line-height: var(--lh-display);
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-7);
+  font-weight: var(--weight-thin);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
 }
 
 .sub {
   margin: 0;
-  font-size: var(--text-md);
-  color: var(--fg-dim);
+  font-size: var(--text-2);
+  color: var(--neutral-11);
   max-width: 38rem;
 }
+/* Now doing more work than it used to. achroma set strong to weight 500; nilam
+   has no strong rule, so the UA's 700 applies. This pulls it back to 400: the
+   sentence should change colour, not shout. */
 .sub strong {
-  color: var(--fg);
-  font-weight: var(--w-regular);
+  color: var(--neutral-12);
+  font-weight: var(--weight-normal);
 }
 
 /* ── drop zone ──────────────────────────────────────────────────────── */
@@ -160,12 +260,21 @@ main {
    at all — every accent use needed a hover, a drag or a loaded document, so the
    only colour a visitor saw on arrival was the green offline badge. This zone is
    not one affordance among several, it is the entire product. It gets the hue
-   before anyone touches anything. */
+   before anyone touches anything.
+
+   --brand-8, and this is the one place the achroma role table had to be argued
+   with. Mapping --accent-line to step 6 is right for a subtle divider and wrong
+   here: measured against --surface, --brand-6 is 1.64:1 light / 1.32:1 dark,
+   where achroma's --accent-line was 4.18 / 3.25. A dashed border at 1.3:1 is
+   not an affordance, it is a rumour, and 1.4.11 wants 3:1 for a control
+   boundary. --brand-8 measures 4.45 / 3.59 — the same border naina had, very
+   slightly stronger. Step 8 is also what nilam's own .n-link uses for a coloured
+   line on a coloured ground. Applied consistently to every --*-line role below. */
 .drop {
-  border: 1px dashed var(--accent-line);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  padding: var(--s-16) var(--s-6);
+  border: 1px dashed var(--brand-8);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  padding: var(--space-8) var(--space-5);
   text-align: center;
   cursor: pointer;
   transition:
@@ -174,39 +283,45 @@ main {
     transform var(--dur-2) var(--ease-spring);
 }
 /* Hover intensifies rather than introduces: the border goes solid and the fill
-   picks up --accent-bg, so the escalation reads as "yes, this one" instead of
+   picks up --brand-3, so the escalation reads as "yes, this one" instead of
    "oh, this was interactive after all". */
 .drop:hover,
 .drop:focus-visible {
   border-style: solid;
-  background: var(--accent-bg);
+  background: var(--brand-3);
 }
 .drop.is-over {
   border-style: solid;
-  background: var(--accent-bg);
+  background: var(--brand-3);
   transform: translateY(-2px);
 }
 
 /* The svg strokes with currentColor, so this one declaration tints the arrow.
-   It is the focal point of the page and the first indigo a visitor sees. */
+   It is the focal point of the page and the first violet a visitor sees.
+
+   margin-inline is new and load-bearing. nilam's base sets svg to display:block
+   (achroma left it inline), and a 32px block box does not answer to the parent's
+   text-align — without this the arrow sits hard against the left edge of the
+   zone. */
 .drop-icon {
   width: 32px;
   height: 32px;
-  color: var(--accent-text);
-  margin-bottom: var(--s-3);
+  margin-inline: auto;
+  color: var(--brand-11);
+  margin-bottom: var(--space-3);
 }
 
 .drop-title {
-  margin: 0 0 var(--s-1);
-  font-size: var(--text-md);
-  font-weight: var(--w-regular);
-  color: var(--fg);
-  letter-spacing: var(--track-tight);
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-2);
+  font-weight: var(--weight-normal);
+  color: var(--neutral-12);
+  letter-spacing: var(--tracking-tight);
 }
 .drop-hint {
   margin: 0;
-  font-size: var(--text-sm);
-  color: var(--fg-faint);
+  font-size: var(--text-0);
+  color: var(--neutral-11);
 }
 
 /* ── controls ───────────────────────────────────────────────────────── */
@@ -214,85 +329,100 @@ main {
 .controls {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-6);
+  gap: var(--space-5);
   align-items: end;
-  margin: var(--s-6) 0 0;
+  margin: var(--space-5) 0 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: var(--space-2);
 }
 
 .field select {
-  background: var(--bg-raised);
-  color: var(--fg);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-sm);
-  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  color: var(--neutral-12);
+  border: 1px solid var(--neutral-7);
+  border-radius: var(--r-2);
+  padding: var(--space-2) var(--space-3);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-0);
   transition: border-color var(--dur-1) var(--ease-out);
 }
 .field select:hover {
-  border-color: var(--fg);
+  border-color: var(--neutral-12);
 }
 
 .field.checkbox {
   flex-direction: row;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--space-2);
   cursor: pointer;
-  padding-bottom: var(--s-2);
-  font-size: var(--text-sm);
-  color: var(--fg-dim);
+  padding-bottom: var(--space-2);
+  font-size: var(--text-0);
+  color: var(--neutral-11);
 }
+/* Was closing a leak, now redirecting one. achroma set no accent-color at all,
+   so this rule existed to stop the OS painting the tick blue. nilam closes that
+   itself with --brand-9; the override stands because a "show detected text"
+   toggle is a preference, not a brand moment. */
 .field.checkbox input {
-  accent-color: var(--fg);
+  accent-color: var(--neutral-12);
   width: 15px;
   height: 15px;
 }
 
 /* Up-front caveat about supported scripts. Deliberately prominent: a user who
    discovers the limit after trusting the output has already been misled. This is
-   one of the three places colour is allowed, because it carries meaning. */
+   one of the three places colour is allowed, because it carries meaning.
+
+   --warn-11 on --warn-3 is 4.55:1 in both modes, and that is a construction
+   rather than a measurement that happened to pass — step 11's lightness is
+   defined as the point where text hits 4.5:1 against step 3.
+
+   The 3px left stripe is the non-hue channel, which is the whole point of it:
+   red and green are the same colour to a deuteranope, so a warn callout that
+   signals only by hue signals nothing. It is --warn-8 for the same reason the
+   drop border is: step 6 measures 1.37:1 against --warn-3 and the stripe would
+   effectively not be there. Step 8 is 3.72 / 3.59, against achroma's 3.37 /
+   3.35. */
 .caveat {
-  margin: var(--s-6) 0 0;
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--warn-line);
-  border-left: 3px solid var(--warn-line);
-  border-radius: var(--r-sm);
-  background: var(--warn-bg);
-  font-size: var(--text-sm);
-  color: var(--warn-text);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--warn-8);
+  border-left: 3px solid var(--warn-8);
+  border-radius: var(--r-2);
+  background: var(--warn-3);
+  font-size: var(--text-0);
+  color: var(--warn-11);
 }
 .caveat strong {
-  font-weight: var(--w-medium);
+  font-weight: var(--weight-medium);
 }
 .caveat a {
-  color: var(--warn-text);
-  text-decoration-color: var(--warn-line);
+  color: var(--warn-11);
+  text-decoration-color: var(--warn-8);
 }
 
 /* ── status ─────────────────────────────────────────────────────────── */
 
 .status {
-  margin: var(--s-6) 0 0;
+  margin: var(--space-5) 0 0;
 }
 
 .bar {
   height: 2px;
-  background: var(--hairline);
+  background: var(--neutral-6);
   overflow: hidden;
 }
 
 /* Accent, not ink: a bar that is moving is the one thing on screen telling you
-   the app is working. That is affordance, which is what --accent-* marks. */
+   the app is working. That is affordance, which is what the brand ramp marks. */
 .bar-fill {
   height: 100%;
   width: 0;
-  background: var(--accent-fill);
+  background: var(--brand-9);
   transition: width var(--dur-3) var(--ease-out);
 }
 
@@ -314,10 +444,10 @@ main {
 }
 
 .status-text {
-  margin: var(--s-3) 0 0;
+  margin: var(--space-3) 0 0;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--fg-dim);
+  font-size: var(--text-00);
+  color: var(--neutral-11);
 }
 
 /* ── results ────────────────────────────────────────────────────────── */
@@ -325,8 +455,8 @@ main {
 .results {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--s-4);
-  margin: var(--s-10) 0 0;
+  gap: var(--space-4);
+  margin: var(--space-7) 0 0;
 }
 
 @media (max-width: 900px) {
@@ -336,9 +466,9 @@ main {
 }
 
 .pane {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
+  border: 1px solid var(--neutral-6);
+  border-radius: var(--r-3);
+  background: var(--surface);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -349,41 +479,42 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-4);
+  gap: var(--space-4);
   flex-wrap: wrap;
-  padding: var(--s-3) var(--s-4);
-  border-bottom: 1px solid var(--hairline);
-  background: var(--bg-sunken);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--neutral-6);
+  background: var(--neutral-3);
 }
 
-/* The pane heads use .ac-label, which achroma already styles. Reset the heading
-   rule so h2 does not fight it. */
+/* The pane heads use .label, above. Reset the size and tracking so nilam's base
+   heading rule does not fight it — it no longer sets a per-level font-size at
+   all, so an unstyled h2 here would come out at the UA's 1.5em. */
 .pane-head h2 {
   margin: 0;
-  font-size: var(--text-2xs);
-  letter-spacing: var(--track-label);
+  font-size: var(--text-000);
+  letter-spacing: var(--tracking-micro);
 }
 
 .meta {
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--fg-faint);
+  font-size: var(--text-000);
+  color: var(--neutral-11);
 }
 
 .pane-actions {
   display: flex;
-  gap: var(--s-1);
+  gap: var(--space-1);
 }
 
 .tab,
 .btn {
   background: transparent;
-  border: 1px solid var(--rule);
-  color: var(--fg-dim);
-  border-radius: var(--r-sm);
-  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--neutral-7);
+  color: var(--neutral-11);
+  border-radius: var(--r-2);
+  padding: var(--space-1) var(--space-2);
   font: inherit;
-  font-size: var(--text-xs);
+  font-size: var(--text-00);
   cursor: pointer;
   transition:
     color var(--dur-1) var(--ease-out),
@@ -392,28 +523,36 @@ main {
 }
 .tab:hover,
 .btn:hover {
-  color: var(--fg);
-  border-color: var(--fg);
+  color: var(--neutral-12);
+  border-color: var(--neutral-12);
 }
-/* A filled ink tab: the focus ring must invert or it is invisible against the
-   element. --ring is a token precisely so this is one declaration. */
+/* A filled tab. --brand-ink and never a literal white: step 9 inverts polarity
+   by mode, so the fill is dark violet with white text on a light page and the
+   L 0.66 glow with dark text on a dark one. Measured, --brand-ink on --brand-9
+   is 4.57:1 light / 5.92:1 dark.
+   The `--ring: var(--accent-on-fill)` override that used to be here is gone, and
+   deliberately: achroma's focus ring read `outline: 2px solid var(--ring)`, so
+   setting the property inverted it. nilam hardcodes --brand-9 and solves the
+   same problem with --ring-offset instead — the 2px gap guarantees the colour
+   adjacent to the ring is the page, not the element, so it measures 4.31:1 light
+   / 5.79:1 dark against --neutral-1 whatever the tab is filled with. Setting
+   --ring here would now be dead code. */
 .tab.is-active {
-  color: var(--accent-on-fill);
-  background: var(--accent-fill);
-  border-color: var(--accent-fill);
-  font-weight: var(--w-medium);
-  --ring: var(--accent-on-fill);
+  color: var(--brand-ink);
+  background: var(--brand-9);
+  border-color: var(--brand-9);
+  font-weight: var(--weight-medium);
 }
 
 /* A neutral checkerboard, so a transparent PNG is legible without introducing
-   a hue. */
+   a hue. As neutral as nilam gets: --surface is C 0, --neutral-3 is C 0.007. */
 .canvas-wrap {
-  padding: var(--s-4);
+  padding: var(--space-4);
   overflow: auto;
   max-height: 70vh;
   background: repeating-conic-gradient(
-      var(--bg-sunken) 0% 25%,
-      var(--bg-raised) 0% 50%
+      var(--neutral-3) 0% 25%,
+      var(--surface) 0% 50%
     )
     50% / 18px 18px;
 }
@@ -422,7 +561,7 @@ canvas {
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-2);
 }
 
 /* The output pane shows recognised text, which may be Devanagari, Arabic,
@@ -430,27 +569,27 @@ canvas {
    fallback chain in --font-mono handles those per-glyph. */
 .output {
   margin: 0;
-  padding: var(--s-4);
+  padding: var(--space-4);
   overflow: auto;
   max-height: 70vh;
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: var(--lh-body);
+  font-size: var(--text-0);
+  line-height: var(--leading-normal);
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--fg);
+  color: var(--neutral-12);
   tab-size: 2;
 }
 
 .error {
-  margin: var(--s-6) 0 0;
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--danger-line);
-  border-left: 3px solid var(--danger-line);
-  background: var(--danger-bg);
-  color: var(--danger-text);
-  border-radius: var(--r-sm);
-  font-size: var(--text-sm);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--danger-8);
+  border-left: 3px solid var(--danger-8);
+  background: var(--danger-3);
+  color: var(--danger-11);
+  border-radius: var(--r-2);
+  font-size: var(--text-0);
 }
 
 /* ── pager (multi-page documents) ───────────────────────────────────── */
@@ -458,20 +597,20 @@ canvas {
 .pager {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-1);
-  margin: var(--s-10) 0 0;
+  gap: var(--space-1);
+  margin: var(--space-7) 0 0;
 }
 
 .page-chip {
   min-width: 2rem;
-  padding: var(--s-1) var(--s-2);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-sm);
-  background: var(--bg-raised);
-  color: var(--fg-dim);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--neutral-7);
+  border-radius: var(--r-2);
+  background: var(--surface);
+  color: var(--neutral-11);
   font: inherit;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-00);
   cursor: pointer;
   transition:
     color var(--dur-1) var(--ease-out),
@@ -479,72 +618,127 @@ canvas {
     background var(--dur-1) var(--ease-out);
 }
 .page-chip:hover {
-  color: var(--fg);
-  border-color: var(--fg);
+  color: var(--neutral-12);
+  border-color: var(--neutral-12);
 }
 .page-chip.is-active {
-  background: var(--accent-fill);
-  border-color: var(--accent-fill);
-  color: var(--accent-on-fill);
-  font-weight: var(--w-medium);
-  --ring: var(--accent-on-fill);
+  background: var(--brand-9);
+  border-color: var(--brand-9);
+  color: var(--brand-ink);
+  font-weight: var(--weight-medium);
 }
 /* A page that failed still gets a chip — silently dropping it would leave the
    user counting pages to work out which one is missing. */
 .page-chip.is-failed {
-  border-color: var(--danger-line);
-  color: var(--danger-text);
+  border-color: var(--danger-8);
+  color: var(--danger-11);
 }
+/* Was `background: var(--danger-text); color: var(--n-0)` — the text colour used
+   as a fill, with literal white on top. nilam has the solved pair for this, so
+   use it: step 9 is the danger solid and --danger-ink is the ink solved for it,
+   4.55:1 light / 5.65:1 dark. Hardcoding white would have been wrong in dark
+   mode, where step 9 is the glow and its ink is near-black. */
 .page-chip.is-failed.is-active {
-  background: var(--danger-text);
-  border-color: var(--danger-text);
-  color: var(--n-0);
-  --ring: var(--n-0);
+  background: var(--danger-9);
+  border-color: var(--danger-9);
+  color: var(--danger-ink);
 }
 
 /* ── notes ──────────────────────────────────────────────────────────── */
 
 .notes {
-  margin: var(--s-24) 0 0;
-  padding-top: var(--s-10);
-  border-top: 1px solid var(--rule);
+  margin: var(--space-9) 0 0;
+  padding-top: var(--space-7);
+  border-top: 1px solid var(--neutral-7);
 }
 
 .notes h2 {
-  margin: 0 0 var(--s-8);
-  font-size: var(--text-xl);
-  font-weight: var(--w-thin);
-  letter-spacing: var(--track-tight);
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-4);
+  font-weight: var(--weight-thin);
+  letter-spacing: var(--tracking-tight);
 }
 
 .notes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: var(--s-8) var(--s-10);
+  gap: var(--space-6) var(--space-7);
 }
 
 .notes h3 {
-  margin: 0 0 var(--s-2);
-  font-size: var(--text-sm);
-  font-weight: var(--w-medium);
-  color: var(--fg);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-0);
+  font-weight: var(--weight-medium);
+  color: var(--neutral-12);
 }
 
 .notes p {
   margin: 0;
-  font-size: var(--text-sm);
-  color: var(--fg-dim);
+  font-size: var(--text-0);
+  color: var(--neutral-11);
 }
 
 footer {
-  border-top: 1px solid var(--hairline);
-  margin-top: var(--s-16);
+  border-top: 1px solid var(--neutral-6);
+  margin-top: var(--space-8);
 }
 
 footer p {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: var(--s-6);
-  font-size: var(--text-xs);
-  color: var(--fg-faint);
+  padding: var(--space-5);
+  font-size: var(--text-00);
+  color: var(--neutral-11);
+}
+
+/* ── grain ──────────────────────────────────────────────────────────── */
+
+/* Ported from achroma's .ac-grain rather than dropped. nilam has no equivalent
+ * and would not: the grain is what made an ACHROMATIC surface read as material
+ * rather than flat, and nilam is not selling flatness as a problem. Kept anyway
+ * because it is the page's texture, dropping it is a visible design change, and
+ * it is self-contained — one fixed element, an inline SVG data URI, no JS and no
+ * network.
+ *
+ * The 180px tile and the two opacity ceilings are achroma's measured values,
+ * carried over unchanged. --z-max is nilam's 1000 rather than achroma's 9999,
+ * which is safe for the same reason nilam gives for shipping only four z tokens:
+ * dialogs and popovers live in the browser's top layer, which no z-index reaches,
+ * so there is nothing above this that a bigger number would help with.
+ *
+ * Two media queries rather than one light-dark(), and that is forced, not lazy:
+ * light-dark() resolves to a <color> and `opacity` takes a <number>. The dark
+ * ceiling has to come through prefers-color-scheme, which is exactly equivalent
+ * here because naina never forces a mode — there is no .dark/.light class and no
+ * theme toggle anywhere in the app. If one is ever added, this needs the class
+ * selectors too. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-max);
+  pointer-events: none;
+  opacity: 0.1;
+  background-repeat: repeat;
+  background-size: 180px 180px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  .grain {
+    opacity: 0.07;
+  }
+}
+
+/* Both of these are user requests to stop adding visual noise, and the grain is
+   literally that. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .grain {
+    display: none;
+  }
+}
+
+@media print {
+  .grain {
+    display: none;
+  }
 }

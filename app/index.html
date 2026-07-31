@@ -12,9 +12,11 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <!-- Both modes declared: the app follows prefers-color-scheme, so a single
          theme-color would be wrong half the time. These are the sRGB forms of
-         Achroma's --bg in each mode. -->
-    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)" />
+         nilam's --neutral-1 in each mode, computed with nilam's own toHex() from
+         the oklch in nilam.tokens.css rather than eyeballed. Both carry the
+         brand's C 0.007, which is why neither is a pure grey any more. -->
+    <meta name="theme-color" content="#f8f8fd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101014" media="(prefers-color-scheme: dark)" />
     <!-- Link previews. Absolute URLs on purpose: unfurlers do not resolve relative
          paths, and the card must be a PNG because most of them will not render
          SVG (and GitHub raw serves .svg as text/plain regardless). -->
@@ -57,7 +59,7 @@
 
     <main>
       <section class="hero">
-        <p class="ac-label">In-browser OCR · nothing uploaded</p>
+        <p class="label">In-browser OCR · nothing uploaded</p>
         <h1>Extract text from any document.</h1>
         <p class="sub">
           PDFs and images, in your browser, free and without limits.
@@ -93,14 +95,14 @@
 
       <div class="controls">
         <label class="field">
-          <span class="ac-label">Model size</span>
+          <span class="label">Model size</span>
           <select id="tier">
             <option value="tiny" selected>Tiny — 11 MB, fastest</option>
             <option value="small">Small — 54 MB, more accurate</option>
           </select>
         </label>
         <label class="field">
-          <span class="ac-label">Script</span>
+          <span class="label">Script</span>
           <select id="language">
             <option value="auto" selected>Auto — detect the script</option>
             <option value="">Latin, Chinese, Japanese</option>
@@ -143,7 +145,7 @@
       <section id="results" class="results" hidden>
         <div class="pane">
           <div class="pane-head">
-            <h2 class="ac-label">Page</h2>
+            <h2 class="label">Page</h2>
             <span id="meta" class="meta"></span>
           </div>
           <div class="canvas-wrap">
@@ -153,7 +155,7 @@
 
         <div class="pane">
           <div class="pane-head">
-            <h2 class="ac-label">Extracted</h2>
+            <h2 class="label">Extracted</h2>
             <div class="pane-actions">
               <button id="tab-md" class="tab is-active" type="button">Markdown</button>
               <button id="tab-txt" class="tab" type="button">Text</button>
@@ -214,7 +216,7 @@
       </p>
     </footer>
 
-    <div class="ac-grain" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

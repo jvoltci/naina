@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "@jvoltci/naina-wasm": "file:../bindings/wasm",
-    "achroma": "^0.2.0",
+    "nilam": "^0.3.0",
     "onnxruntime-web": "^1.27.0",
     "pdfjs-dist": "^6.2.108"
   },
