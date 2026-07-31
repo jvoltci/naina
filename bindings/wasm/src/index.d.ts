@@ -24,18 +24,45 @@ export type NainaLanguage =
   | 'te'   // Telugu
   | 'th'   // Thai;
 
-/** One recognised line. `quad` is x0,y0,x1,y1,x2,y2,x3,y3 in source pixels,
- *  clockwise from top-left. */
+/** One recognised line. */
 export interface NainaLine {
   text: string;
   confidence: number;
   score: number;
   /** Index into `regions`, or -1 when layout matched no region. */
   region_id: number;
-  quad: number[];
+  /**
+   * Four corners as `[x, y]` pairs, clockwise from top-left, in source pixels.
+   * Not necessarily axis-aligned: rotated text yields a rotated quad.
+   *
+   * THIS DECLARED A FLAT `number[]` OF EIGHT NUMBERS UNTIL 2026-07-31 AND THAT
+   * WAS NEVER THE RUNTIME SHAPE. The web app's overlay guarded on
+   * `quad.length < 8` — true for every line, since the array is four elements
+   * long — and so painted nothing, in every version. tsc could not catch it:
+   * the code agreed with this file and this file disagreed with the core.
+   *
+   * The shape is fixed by the sole producer, `Page::json()` in
+   * core/src/page.cc, which writes `"quad":[` then loops `for (int c = 0; c < 4;
+   * ++c)` emitting `[x,y]` each time. Four pairs, unconditionally — there is no
+   * branch that can emit a flat array, an empty one, or a fifth corner. The
+   * tuple type below says exactly that, so a consumer indexing `quad[4]` now
+   * fails to compile instead of reading undefined.
+   */
+  quad: [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number],
+  ];
 }
 
-/** A layout region. `bbox` is x,y,w,h,score. */
+/** A layout region. `bbox` is `[x, y, w, h]` in source pixels.
+ *
+ *  It said `x,y,w,h,score` until 2026-07-31, found while checking the `quad`
+ *  shape above against the same function. core/src/page.cc appends exactly four
+ *  floats — x, y, w, h — and the region's detector score is not in this JSON at
+ *  all. (The C ABI does carry it, which is why the Rust and Flutter `Region`
+ *  types have a `score` field and this one cannot.) */
 export interface NainaRegion {
   kind:
     | 'unknown'

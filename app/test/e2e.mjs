@@ -137,11 +137,36 @@ try {
     ok(/mean confidence 0\.9\d/.test(meta), `${label}: mean confidence above 0.9`);
 
     // The canvas overlay must actually have been painted.
-    const painted = await page.evaluate(() => {
+    //
+    // `c.width > 0` was the whole assertion until 2026-07-31, and it is why the
+    // confidence overlay shipped broken in every version: drawImage() alone
+    // gives the canvas a size, so the check passed with zero boxes drawn. The
+    // cause was bindings/wasm/src/index.d.ts declaring `quad` as eight flat
+    // numbers when the core emits four [x, y] pairs, so the draw loop's
+    // `length < 8` guard skipped every line.
+    //
+    // What separates "image drawn" from "image drawn AND boxes drawn" is
+    // colour: the fixtures are black text on white, so every pixel of a
+    // bare-image canvas has r == g == b. The overlay paints a green-to-amber
+    // confidence ramp, which cannot be greyscale. Counting pixels where the
+    // channels differ therefore counts overlay, and nothing else.
+    //
+    // Measured on the Latin fixture: 0 with the old guard, 35360 with it fixed.
+    // The floor is 500 — low enough not to depend on stroke widths or on how
+    // many lines a fixture happens to have, high enough that JPEG-ish colour
+    // noise in a photographed scan could not reach it on its own.
+    const overlayPixels = await page.evaluate(() => {
       const c = document.getElementById('canvas');
-      return c instanceof HTMLCanvasElement && c.width > 0 && c.height > 0;
+      if (!(c instanceof HTMLCanvasElement) || c.width === 0 || c.height === 0) return -1;
+      const d = c.getContext('2d')?.getImageData(0, 0, c.width, c.height).data;
+      if (!d) return -1;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] !== d[i + 1] || d[i + 1] !== d[i + 2]) n++;
+      }
+      return n;
     });
-    ok(painted, `${label}: page canvas rendered`);
+    ok(overlayPixels > 500, `${label}: confidence overlay painted (${overlayPixels} coloured px)`);
 
     if (label === 'pdf') {
       // Pages are read one at a time and painted as they finish, so the second

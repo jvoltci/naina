@@ -184,33 +184,25 @@ function toPlainText(page: NainaPage | null): string {
   return page.lines.map((l) => l.text).join('\n');
 }
 
-/**
- * Four corner points, whichever shape the core emitted.
+/* The shape normalisation that used to live here — toPoints(), accepting both a
+ * flat [x0,y0,…] array and [x,y] pairs — is gone, because the binding's type no
+ * longer lies about which one arrives.
  *
- * THE BINDING'S TYPE IS WRONG AND THIS IS WHY THE OVERLAY NEVER PAINTED.
- * bindings/wasm/src/index.d.ts declares `quad: number[]` and documents it as
- * "x0,y0,x1,y1,x2,y2,x3,y3 in source pixels". The runtime actually emits four
- * [x, y] PAIRS: [[105.7,142.2],[1567.1,142.2],[1567.1,201.6],[105.7,201.6]].
+ * It existed to work around bindings/wasm/src/index.d.ts declaring `quad:
+ * number[]`, documented as eight flat numbers. That declaration is why the
+ * overlay never painted in any version: the old guard `if (q.length < 8)
+ * continue;` was true for every line, since the array is four elements long.
+ * The .d.ts is now a tuple of four [x, y] pairs, which is what the core has
+ * always emitted, so `line.quad` is used directly below.
  *
- * So the old guard `if (q.length < 8) continue;` was true for every line — a
- * 4-element array — and the loop skipped all of them. TypeScript could not catch
- * it, because the code agreed with the declaration and the declaration disagreed
- * with reality. Found by sampling the painted canvas for non-greyscale pixels:
- * there were zero, on a page whose twelve lines all came back at 0.99.
- *
- * Normalised here rather than in the binding. Correcting a published type
- * declaration is its own change with its own blast radius; this accepts both
- * shapes so it is right either way, and the .d.ts is reported separately.
+ * The runtime shape is GUARANTEED, not merely observed. Page::json() in
+ * core/src/page.cc is the only thing that writes this JSON, the WASM binding
+ * only JSON.parse()s that string (bindings/wasm/src/index.mjs readJson), and
+ * the writer loops `for (int c = 0; c < 4; ++c)` appending `[x,y]` with no
+ * branch — so four pairs is unconditional. A defensive accept-both would now be
+ * dead code that hides a regression rather than surviving one; test/e2e.mjs
+ * counts painted overlay pixels instead, which fails loudly if this ever moves.
  */
-function toPoints(quad: number[] | number[][]): [number, number][] {
-  if (quad.length === 0) return [];
-  if (Array.isArray(quad[0])) return quad as [number, number][];
-  const flat = quad as number[];
-  return Array.from({ length: Math.floor(flat.length / 2) }, (_, i): [number, number] => [
-    flat[i * 2],
-    flat[i * 2 + 1],
-  ]);
-}
 
 /**
  * Resolve a nilam token to a concrete colour a canvas will accept.
@@ -295,8 +287,7 @@ function drawOverlay() {
 
   ctx.lineWidth = 1.5;
   for (const line of r.json.lines) {
-    const pts = toPoints(line.quad);
-    if (pts.length < 3) continue;
+    const pts = line.quad;
 
     const t = Math.max(0, Math.min(1, (line.confidence - 0.5) / 0.5));
     const paint = tokenised
