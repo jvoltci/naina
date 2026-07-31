@@ -1,95 +1,166 @@
+<!--
+  The link-preview card, on nilam.
+
+  ON NILAM TOKENS, AS HEX, AND THAT NEEDS SAYING. Every colour below is a nilam
+  token converted with nilam's own toHex() from the oklch in nilam.tokens.css —
+  the same method index.html uses for its two theme-color values, and for the
+  same reason: the consumer cannot resolve a custom property. An unfurler fetches
+  a flat PNG, so light-dark() has nowhere to resolve and @import has nowhere to
+  fetch from. The token name is written beside every value, so a re-solve at a
+  different hue is a find-and-replace against a list rather than a redesign.
+
+  DARK MODE ONLY, and that is a choice rather than an oversight. The card is one
+  static raster and there is no second file an unfurler would pick. Dark reads
+  better in a feed, it is what the previous card did, and it is the mode where
+  nilam's step 9 is the L 0.660 glow — which is the version of the brand worth
+  putting on a poster.
+
+  SYSTEM FONT STACK, no Google Fonts. The old card @import'ed Outfit and
+  JetBrains Mono over the network from inside the SVG, so the shipped PNG
+  depended on fonts.googleapis.com being reachable at render time and on a 2.5s
+  sleep in render-og.mjs being long enough. Both of those are silent failures:
+  the card would still render, in Helvetica, and nothing would say so. These are
+  nilam's --font-sans and --font-mono stacks written out literally instead, so the
+  card comes from the same faces as the rest of the system with no network at all.
+  Rendered on macOS, system-ui resolves to SF Pro, which has a real ultralight
+  instance — which is what the wordmark needs.
+
+  The wordmark is the app's hero signature: --weight-thin (200) at 96px with
+  -0.035em of tracking, against the tiny wide labels on the panels. The old card
+  was weight 800 at 78px, which is the "bold AND big" nilam's scale.css calls
+  shouting rather than confidence.
+
+  THE ONE COLOUR THAT IS CARRYING DATA is the confidence reading, "conf 0.99", in
+  --ok-11. Same carve-out styles.css grants the canvas overlay: a confidence
+  figure is data, and green here means "this line is trustworthy". Noting it
+  because "green means success" is exactly the claim the offline badge was
+  changed to stop making, and this is the one place on the card where an outcome
+  really has been measured.
+
+  Regenerate with:  node test/render-og.mjs
+-->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <defs>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
-      .h1   { font-family: Outfit, sans-serif; font-weight: 800; font-size: 78px; fill: #f0f6fc; letter-spacing: -0.035em; }
-      .sub  { font-family: Outfit, sans-serif; font-weight: 300; font-size: 31px; fill: #9aa7b4; }
-      .mono { font-family: 'JetBrains Mono', monospace; font-size: 17px; }
-      .pill { font-family: Outfit, sans-serif; font-weight: 600; font-size: 19px; fill: #cbd5e1; }
-      .lbl  { font-family: 'JetBrains Mono', monospace; font-size: 14px; fill: #6b7785; }
+      /* nilam --font-sans and --font-mono, verbatim minus the emoji tail. */
+      .sans { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+              font-size: 17px; }
+
+      /* --weight-thin, which is --text-display's own recommendation, at tracking
+         tighter than nilam ships because display type needs it. Same treatment,
+         same reasoning as .hero h1 in styles.css. --neutral-12. */
+      .h1   { font-weight: 200; font-size: 96px; fill: #ababb0; letter-spacing: -0.035em; }
+      /* Levels 1 and 2 of the text hierarchy: --neutral-12 then --neutral-11.
+         --weight-light (300) is new in nilam 0.3.1 and is what this size wants. */
+      .sub  { font-weight: 300; font-size: 31px; fill: #ababb0; }
+      .sub2 { font-weight: 300; font-size: 31px; fill: #87878c; }
+      /* Level 3, rebuilt the same way the app rebuilds it: one size step down
+         plus --tracking-wide (0.04em), not a third grey, because nilam has
+         exactly two text steps by construction. --neutral-11. */
+      .lbl  { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+              font-size: 14px; fill: #87878c; letter-spacing: 0.04em; }
+      /* --weight-medium. --neutral-12 for a fact, --neutral-7 for the separators
+         between facts, so the row reads as a list rather than as prose. */
+      .pill { font-weight: 500; font-size: 19px; fill: #ababb0; }
+      .sep  { font-weight: 500; font-size: 19px; fill: #6b6b6f; }
     </style>
 
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0d1117"/>
-      <stop offset="55%" stop-color="#111a24"/>
-      <stop offset="100%" stop-color="#0a0e14"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="18%" cy="12%" r="55%">
-      <stop offset="0%" stop-color="#1d3b5c" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
+    <!-- The app's --wash, same geometry and the same role colour: a radial from
+         --surface at the top centre, fading to nothing at 55%. --wash is
+           radial-gradient(120% 70% at 50% -15%, var(--surface) 0%, transparent 55%)
+         and an SVG radialGradient takes one radius, so 60% stands in for the
+         120%/70% ellipse. One ramp step of top light, which is all it ever was.
+         The old card had a three-stop diagonal between #0d1117, #111a24 and
+         #0a0e14 plus a #1d3b5c corner glow — four values, no palette. -->
+    <radialGradient id="wash" cx="50%" cy="-15%" r="60%">
+      <stop offset="0%" stop-color="#202020" stop-opacity="1"/>
+      <stop offset="55%" stop-color="#202020" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#4ea1ff"/>
-      <stop offset="100%" stop-color="#a855f7"/>
-    </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect width="1200" height="630" fill="url(#glow)"/>
+  <!-- --neutral-1 dark. The same value index.html declares as its dark
+       theme-color, so the card and the page agree on what black is. -->
+  <rect width="1200" height="630" fill="#101014"/>
+  <rect width="1200" height="630" fill="url(#wash)"/>
 
-  <!-- the eye: naina means eyes -->
-  <g transform="translate(74 72)">
+  <!-- the eye: naina means eyes. --brand-9 dark, the L 0.660 glow, with the
+       glint in --brand-ink because that is the ink solved against it. -->
+  <g transform="translate(74 62)">
     <path d="M0 26c14-23 28-34 42-34s28 11 42 34c-14 23-28 34-42 34S14 49 0 26z"
-          fill="none" stroke="#4ea1ff" stroke-width="3.4" stroke-linejoin="round"/>
-    <circle cx="42" cy="26" r="12" fill="#4ea1ff"/>
-    <circle cx="46" cy="21" r="4" fill="#0d1117" opacity=".5"/>
+          fill="none" stroke="#8a7ef7" stroke-width="3.4" stroke-linejoin="round"/>
+    <circle cx="42" cy="26" r="12" fill="#8a7ef7"/>
+    <circle cx="46" cy="21" r="4" fill="#0d0d0d" opacity=".5"/>
   </g>
 
-  <text class="h1" x="74" y="212">naina</text>
-  <rect x="74" y="238" width="108" height="5" rx="2.5" fill="url(#rule)"/>
+  <text class="sans h1" x="74" y="230">naina</text>
+  <!-- --brand-9, solid. The old card ran this rule as a #4ea1ff-to-#a855f7
+       gradient: two hexes, neither from any palette, 48 degrees apart in hue. -->
+  <rect x="74" y="254" width="108" height="5" rx="2.5" fill="#8a7ef7"/>
 
-  <text class="sub" x="74" y="300">Free OCR that runs in your browser.</text>
-  <text class="sub" x="74" y="344" fill="#6b7785">Nothing is uploaded. Ten scripts. Works offline.</text>
+  <text class="sans sub"  x="74" y="318">Free OCR that runs in your browser.</text>
+  <text class="sans sub2" x="74" y="360">Nothing is uploaded. Ten scripts. Works offline.</text>
 
-  <!-- input page -->
-  <g transform="translate(74 396)">
-    <rect width="222" height="150" rx="9" fill="#151b23" stroke="#232b36"/>
-    <text class="lbl" x="14" y="26">scan.pdf</text>
-    <rect x="14" y="42" width="150" height="9" rx="3" fill="#3a4552"/>
-    <rect x="14" y="62" width="192" height="7" rx="3" fill="#2a333e"/>
-    <rect x="14" y="79" width="176" height="7" rx="3" fill="#2a333e"/>
-    <rect x="14" y="96" width="186" height="7" rx="3" fill="#2a333e"/>
-    <rect x="14" y="113" width="118" height="7" rx="3" fill="#2a333e"/>
+  <!-- input page. A --surface panel on a --neutral-1 ground with a --neutral-6
+       edge, which is exactly what .n-card is: step 6 is the decorative hairline
+       and 1.4.11 does not govern it. rx 14 is --r-5 (0.875rem), the app's card
+       radius. -->
+  <g transform="translate(74 404)">
+    <rect width="222" height="150" rx="14" fill="#202020" stroke="#353539"/>
+    <text class="lbl" x="16" y="28">scan.pdf</text>
+    <!-- --neutral-8 for the heading line, --neutral-6 for body lines: the same
+         two steps the skeleton in the app uses to say "text lands here". -->
+    <rect x="16" y="44" width="150" height="9" rx="3" fill="#818186"/>
+    <rect x="16" y="64" width="190" height="7" rx="3" fill="#353539"/>
+    <rect x="16" y="81" width="174" height="7" rx="3" fill="#353539"/>
+    <rect x="16" y="98" width="184" height="7" rx="3" fill="#353539"/>
+    <rect x="16" y="115" width="116" height="7" rx="3" fill="#353539"/>
   </g>
 
-  <!-- arrow -->
-  <g transform="translate(316 470)">
-    <line x1="0" y1="0" x2="44" y2="0" stroke="#4ea1ff" stroke-width="2.6" stroke-dasharray="7 6"/>
-    <path d="M44 -7 L58 0 L44 7 Z" fill="#4ea1ff"/>
+  <!-- arrow, --brand-9. The brand marks affordance, and this arrow is the one
+       thing on the card that says what naina does. -->
+  <g transform="translate(316 478)">
+    <line x1="0" y1="0" x2="44" y2="0" stroke="#8a7ef7" stroke-width="2.6" stroke-dasharray="7 6"/>
+    <path d="M44 -7 L58 0 L44 7 Z" fill="#8a7ef7"/>
   </g>
 
   <!-- output: markdown, and a non-Latin script to show the range -->
-  <g transform="translate(392 396)">
-    <rect width="330" height="150" rx="9" fill="#151b23" stroke="#232b36"/>
-    <text class="lbl" x="14" y="26">page.md</text>
-    <text class="mono" x="14" y="52" fill="#4ea1ff" font-weight="500"># Annual Report</text>
-    <text class="mono" x="14" y="79" fill="#e6edf3">Revenue grew 22%</text>
-    <text class="mono" x="14" y="106" fill="#e6edf3">अयोध्याकाण्डे</text>
-    <text class="mono" x="14" y="133" fill="#6ee7a0">conf 0.99</text>
+  <g transform="translate(392 404)">
+    <rect width="330" height="150" rx="14" fill="#202020" stroke="#353539"/>
+    <text class="lbl" x="16" y="28">page.md</text>
+    <!-- --brand-11, the text role on the brand ramp, 4.54:1 on --surface. -->
+    <text class="mono" x="16" y="54" fill="#837ed4" font-weight="500"># Annual Report</text>
+    <text class="mono" x="16" y="81" fill="#ababb0">Revenue grew 22%</text>
+    <text class="mono" x="16" y="108" fill="#ababb0">अयोध्याकाण्डे</text>
+    <!-- --ok-11. Data, not decoration — see the header note. -->
+    <text class="mono" x="16" y="135" fill="#53974c">conf 0.99</text>
   </g>
 
-  <!-- what you can install it from -->
-  <g transform="translate(786 400)">
-    <rect width="340" height="34" rx="17" fill="#151b23" stroke="#2a333e"/>
-    <text class="mono" x="18" y="23" fill="#cbd5e1">pip install naina</text>
+  <!-- what you can install it from. --neutral-7 is the control-boundary step,
+       solved to 3.05:1 against step 3, so these read as things rather than as
+       suggestions. The old card outlined them in #2a333e, which against its own
+       #151b23 fill was under 1.4:1 — the same defect nilam 0.2.0 fixed. -->
+  <g transform="translate(786 408)">
+    <rect width="340" height="34" rx="17" fill="#202020" stroke="#6b6b6f"/>
+    <text class="mono" x="18" y="23" fill="#ababb0">pip install naina</text>
 
-    <rect y="46" width="340" height="34" rx="17" fill="#151b23" stroke="#2a333e"/>
-    <text class="mono" x="18" y="69" fill="#cbd5e1">npm i @jvoltci/naina</text>
+    <rect y="46" width="340" height="34" rx="17" fill="#202020" stroke="#6b6b6f"/>
+    <text class="mono" x="18" y="69" fill="#ababb0">npm i @jvoltci/naina</text>
 
-    <rect y="92" width="340" height="34" rx="17" fill="#151b23" stroke="#2a333e"/>
-    <text class="mono" x="18" y="115" fill="#cbd5e1">cargo add naina</text>
+    <rect y="92" width="340" height="34" rx="17" fill="#202020" stroke="#6b6b6f"/>
+    <text class="mono" x="18" y="115" fill="#ababb0">cargo add naina</text>
 
-    <text class="lbl" y="150" fill="#4a5563">also pub.dev · WASM · MCP</text>
+    <text class="lbl" y="150">also pub.dev · WASM · MCP</text>
   </g>
 
   <!-- facts along the bottom -->
-  <g transform="translate(74 588)">
-    <text class="pill" x="0" y="0">11 MB</text>
-    <text class="pill" x="106" y="0" fill="#4a5563">·</text>
-    <text class="pill" x="132" y="0">Apache-2.0</text>
-    <text class="pill" x="290" y="0" fill="#4a5563">·</text>
-    <text class="pill" x="316" y="0">no cloud, no API key</text>
-    <text class="pill" x="588" y="0" fill="#4a5563">·</text>
-    <text class="pill" x="614" y="0" fill="#4ea1ff">jvoltci.github.io/naina</text>
+  <g transform="translate(74 594)">
+    <text class="sans pill" x="0" y="0">11 MB</text>
+    <text class="sans sep"  x="106" y="0">·</text>
+    <text class="sans pill" x="132" y="0">Apache-2.0</text>
+    <text class="sans sep"  x="290" y="0">·</text>
+    <text class="sans pill" x="316" y="0">no cloud, no API key</text>
+    <text class="sans sep"  x="588" y="0">·</text>
+    <text class="sans pill" x="614" y="0" fill="#837ed4">jvoltci.github.io/naina</text>
   </g>
 </svg>

@@ -21,16 +21,56 @@
  *   2. Colour roles are solved, not picked. Step 11 is the lightness at which
  *      text hits 4.5:1 against step 3 — so `color: var(--warn-11)` on
  *      `background: var(--warn-3)` is 4.55:1 by construction, in both modes, and
- *      cannot drift. Every contrast number in the comments below was measured
- *      off nilam.tokens.css with nilam's own contrast(), not estimated.
+ *      cannot drift.
+ *
+ * ── THE DESIGN PASS (this revision) ───────────────────────────────────────────
+ *
+ * The migration ported achroma's own classes across. This pass replaces them
+ * with nilam's component layer wherever one exists, which deleted roughly a
+ * third of this file: .badge, .caveat, .error, .bar/.bar-fill/@keyframes sweep,
+ * .tab, .btn, .field select and most of .page-chip are now .n-badge-info,
+ * .n-note-warn, .n-note-danger, .n-progress + .n-bar, .n-tab, .n-btn, .n-select
+ * and .n-btn-sm. What is left below is either genuinely absent from nilam (the
+ * micro-label, the grain, the wash, a card head) or page-specific geometry.
+ *
+ * Three recorded decisions were OVERTURNED, each because the package changed
+ * under them rather than because the reasoning was wrong. They are marked
+ * OVERTURNED at the point of use with the old argument intact:
+ *
+ *   a. Steps 7 vs 8 for control boundaries. See .drop.
+ *   b. The local --weight-thin. nilam 0.3.1 ships it.
+ *   c. accent-color on the "show detected text" checkbox. See .n-choice note.
+ *
+ * EVERY CONTRAST NUMBER IN THIS FILE WAS RE-MEASURED against the INSTALLED
+ * nilam.tokens.css with nilam's own contrast(), and several were stale. naina
+ * was migrated while nilam was still 0.1.x, and nilam 0.2.0 re-solved steps 7
+ * and 8 against step 3 instead of step 1 — so every figure the old comments
+ * quoted for a border was a number that no longer shipped. The stale ones are
+ * called out where they were, because "the comment was confidently wrong" is
+ * more useful to the next reader than a silently corrected number.
  */
 
-/* Split imports, not 'nilam/nilam.css': the bundle also carries the .n-* layer,
- * and naina uses none of it. tokens + scale + base is what the page is built on.
- * NOT 'nilam/tailwind.css' — this is plain CSS, no Tailwind. */
+/* Split imports, not 'nilam/nilam.css'. Everything below now leans on the .n-*
+ * layer, so components.css is in — but NOT widgets.css, which is the combobox
+ * and the slider and needs nilam/behaviours to do anything; naina has neither.
+ * NOT 'nilam/tailwind.css' either — this is plain CSS, no Tailwind.
+ *
+ * tokens.css must come first: it is the file that declares
+ * `@layer nilam.tokens, nilam.base, nilam.components, nilam.utilities` and so
+ * fixes the layer order. Import base or components ahead of it and the order
+ * gets established by first appearance instead, which happens to come out the
+ * same here and would not survive someone reordering these lines. */
+/* DECLARED BEFORE THE IMPORTS, AND IT HAS TO BE. See the reduced-motion block at
+ * the very bottom of this file: this is the one place naina has to out-cascade
+ * nilam, and the only way to do it is from a layer that nilam's own layer
+ * statement has not already ordered. A bare @layer statement is one of the two
+ * things allowed to precede @import, so this is legal here and nowhere later. */
+@layer naina.motion;
+
 @import 'nilam/tokens.css';
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
+@import 'nilam/components.css';
 
 /* nilam ships no fonts; achroma bundled Geist and Geist Mono. Dropping them
  * would have taken the page to system-ui, and the hero signature below depends
@@ -47,8 +87,6 @@
 @import '@fontsource-variable/geist-mono';
 
 :root {
-  --maxw: 1240px;
-
   /* Geist first, then nilam's own stacks verbatim. A custom property cannot
      reference itself, so the tail has to be repeated rather than composed. */
   --font-sans:
@@ -58,10 +96,19 @@
     'Geist Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
     Consolas, 'Liberation Mono', monospace;
 
-  /* nilam's weight scale starts at 400 (--weight-normal) and has nothing
-     lighter, even though its own scale.css says the display size wants "weight
-     200 at this size, never 700". That is the gap; this is the token for it. */
-  --weight-thin: 200;
+  /* --weight-thin IS GONE FROM HERE, and that is the point. It used to read:
+       "nilam's weight scale starts at 400 and has nothing lighter, even though
+        its own scale.css says the display size wants weight 200. That is the
+        gap; this is the token for it."
+     nilam 0.3.1 ships --weight-thin: 200 and --weight-light: 300, and its
+     scale.css credits "an app that had to define --weight-thin locally" — this
+     app. The gap is closed upstream, so the local definition would now be a
+     second source of truth for the same number. Deleted, not kept as a no-op. */
+
+  /* --maxw IS ALSO GONE. It was 1240px; .n-container is 72rem (1152px) with
+     --space-4 of gutter, and every wrapper on the page now uses it. 88px
+     narrower, one fewer local token, and the header, main and footer can no
+     longer drift apart from each other by editing one of three copies. */
 
   /* achroma's --wash, rebuilt on nilam tokens. Same geometry, and the colour is
      an exact role match: achroma washed towards --bg-raised in both modes, which
@@ -74,11 +121,18 @@
        --neutral-12 body text   8.02 -> 8.51 light,  8.31 -> 7.09 dark
        --neutral-11 dim text    5.14 -> 5.45 light,  5.32 -> 4.55 dark
 
+     Re-measured this pass against the installed 0.3.1 tokens: all four figures
+     still hold to two decimals, because steps 11 and 12 were already solving
+     against step 3 and 0.2.0 did not touch them.
+
      The direction that matters is still dark, and the worst case is dim text at
      4.55:1. That is not luck: --surface in dark mode is L 0.2455, the same
      lightness as --neutral-3, and step 11 is solved to 4.5:1 against step 3. The
      wash lands exactly on nilam's proven floor with 0.05 to spare. Deepening it
-     one more step would break 1.4.3, so it stays at one. */
+     one more step would break 1.4.3, so it stays at one.
+
+     Still a local token because nilam has no gradient tokens at all — it solves
+     colours, not fills. That is the right scope for it and not a gap. */
   --wash: radial-gradient(120% 70% at 50% -15%, var(--surface) 0%, transparent 55%);
 }
 
@@ -91,29 +145,100 @@ body {
  * every <a> with `color: inherit` plus an underline in --neutral-8, in
  * @layer nilam.base — the same thing achroma did and the same thing naina was
  * reimplementing before either package existed. Removing the duplicate keeps
- * links identical on every site that installs the package.
- * `.caveat a` below still works for the same reason it did under achroma:
- * `color: inherit` means a link inside a warn callout picks up --warn-11 on its
- * own. nilam's underline default is --neutral-8 rather than achroma's
- * --fg-faint, which is why .caveat a still restates text-decoration-color. */
+ * links identical on every site that installs the package. */
+
+/* ── the third hierarchy level ──────────────────────────────────────────
+ *
+ * THIS IS THE GAP THE MIGRATION LEFT OPEN, and it is the most interesting thing
+ * on the page.
+ *
+ * achroma had three text colours: --fg, --fg-dim, --fg-faint. nilam has exactly
+ * two text steps by construction — 11 solves to 4.5:1 against step 3 and 12 to
+ * 7:1 — and there is no third, because there is no third contrast requirement to
+ * invert. So .drop-hint, .meta and footer p, all of which were --fg-faint, came
+ * out of the migration as --neutral-11 and read identically to .sub, which was
+ * --fg-dim. Three levels of hierarchy became two, silently.
+ *
+ * The fix is not to invent a --neutral-11-and-a-half. It is the lesson nilam
+ * teaches everywhere else: WHEN A CHANNEL RUNS OUT, USE A DIFFERENT CHANNEL.
+ * That is the same argument as the status glyphs (hue runs out for a
+ * deuteranope, so add a shape) and as --rim (shadow runs out in dark mode, so
+ * add a light edge).
+ *
+ * The channel here is SIZE plus TRACKING, not colour:
+ *
+ *   level 1  --neutral-12  --text-1/--text-2  sans   body and titles
+ *   level 2  --neutral-11  --text-0/--text-2  sans   .sub, note bodies
+ *   level 3  --neutral-11  --text-00          sans   + --tracking-wide
+ *
+ * One size step down (--text-0 -> --text-00, 14px -> 13px at the top of the
+ * clamp) and 0.04em of extra tracking. Tracking is deliberate rather than
+ * decorative: nilam's own rule is "tracking rises as size falls", so widening at
+ * a smaller size is what the scale already asks for, and it makes level 3 read
+ * as a caption rather than as small body text — which is the distinction
+ * --fg-faint used to carry.
+ *
+ * Weight was considered and rejected as the third channel. Geist at 300 in a
+ * 13px caption loses stem contrast on a non-retina display, and the whole page
+ * already spends weight 200 on the hero; using light weights for "quieter" as
+ * well would make the same channel mean two things.
+ *
+ * Contrast is unaffected — level 3 is still --neutral-11, so still 5.14:1 light
+ * and 5.32:1 dark on --neutral-1, well past 1.4.3's 4.5:1. Shrinking text does
+ * not relax that floor (the large-text exemption only relaxes upward), which is
+ * why --text-00 and not --text-000: 13px is the smallest size that is still
+ * comfortably a sentence.
+ *
+ * Where the content is machine output rather than prose, level 3 also takes
+ * --font-mono — see .meta and .status-text. That is a fourth channel used to
+ * separate "this is a measurement" from "this is a caption", not to make it
+ * quieter still. */
+.faint {
+  font-size: var(--text-00);
+  letter-spacing: var(--tracking-wide);
+  color: var(--neutral-11);
+}
+
+/* ── the micro-label ────────────────────────────────────────────────── */
+
+/* Was .ac-label. CONFIRMED this pass rather than assumed, and the confirmation
+ * came from nilam's own demo: demo/index.html defines .eyebrow and .lbl locally,
+ * with exactly this recipe, twice. The package author needed the treatment on
+ * the showcase page and still did not put it in the component layer.
+ *
+ * .n-label is not it — that is a form-field label (--text-0, medium,
+ * --neutral-12) and is now used for what it is, on the two <select>s below.
+ * .n-table th IS this recipe, but as a type selector inside a table.
+ *
+ * So .label stays, and the gap is real: nilam has no .n-eyebrow. Reported.
+ *
+ * Every value is a nilam token and two are exact: --tracking-micro is 0.14em,
+ * the same as achroma's --track-label, and --text-000 bottoms out at 0.6875rem,
+ * the same as achroma's flat --text-2xs. */
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--text-000);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+  color: var(--neutral-11);
+}
 
 /* ── header ─────────────────────────────────────────────────────────── */
 
+/* The border spans the viewport; the content inside is held to .n-container.
+   Two elements rather than one because a container that also draws the rule
+   would stop the rule 88px short of each edge. */
 .top {
+  border-bottom: var(--line-1) solid var(--neutral-6);
+}
+
+.top-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: var(--space-5) var(--space-5);
-  border-bottom: 1px solid var(--neutral-6);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  padding-block: var(--space-4);
 }
 
 /* A stylised eye: naina means eyes. Ink, not an accent hue. */
@@ -124,6 +249,7 @@ body {
   border: 1.5px solid var(--neutral-12);
   position: relative;
   display: inline-block;
+  flex: none;
 }
 .eye::after {
   content: '';
@@ -140,8 +266,6 @@ body {
 }
 
 .top nav {
-  display: flex;
-  align-items: center;
   gap: var(--space-5);
   font-size: var(--text-0);
 }
@@ -153,56 +277,35 @@ body {
   color: var(--neutral-12);
 }
 
-/* --info-*, which is achromatic, and NOT --ok-*. "offline ready" is a statement
-   of capability, not the outcome of an operation: nothing happened and nothing is
-   wrong. Green claimed a success that never occurred, and it was also the loudest
-   colour on the page at load — a status hue outshouting the brand one.
+/* The offline badge is now .n-badge n-badge-info in the markup, and the local
+   .badge class is gone. The reasoning it carried is worth keeping, because it is
+   the reason the variant is `info` and not `ok`:
+
+   --info-*, which is achromatic, and NOT --ok-*. "offline ready" is a statement
+   of capability, not the outcome of an operation: nothing happened and nothing
+   is wrong. Green claimed a success that never occurred, and it was also the
+   loudest colour on the page at load — a status hue outshouting the brand one.
 
    The claim survives the move because nilam's info family is byte-identical to
    its neutral ramp: --info-11 is C 0.007 against --ok-11's C 0.107 light /
    0.128 dark. So "info is the achromatic status" is still literally true, and
-   still measurably quieter than green. */
-.badge {
-  font-family: var(--font-mono);
-  font-size: var(--text-000);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-micro);
-  text-transform: uppercase;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--r-2);
-  border: 1px solid var(--info-8);
-  background: var(--info-3);
-  color: var(--info-11);
-}
+   still measurably quieter than green.
 
-/* ── the micro-label ────────────────────────────────────────────────── */
+   What the component adds over the local class is the glyph slot. nilam's own
+   rule is that every status variant carries a non-hue channel, enforced by
+   proveStatusChannels(); the local .badge signalled by hue alone and would have
+   failed that check if a stylesheet could be checked. It is achromatic, so the
+   glyph is arguably redundant here — but a reader cannot know that a particular
+   badge is the achromatic one, and consistency is the point.
 
-/* Was .ac-label, which nilam has no equivalent for: its .n-label is a form-field
- * label (--text-0, medium, --neutral-12), a different thing entirely. Ported
- * locally rather than dropped — it is one half of the type signature, and the
- * hero and the pane heads are built out of the tension between it and the huge
- * thin heading. Tiny, wide, uppercase, mono.
- *
- * Every value is a nilam token and two are exact: --tracking-micro is 0.14em,
- * the same as achroma's --track-label, and --text-000 bottoms out at 0.6875rem,
- * the same as achroma's flat --text-2xs. This is also verbatim the recipe nilam
- * itself uses for .n-table th — the treatment exists in the package, just not
- * as a class you can apply. */
-.label {
-  font-family: var(--font-mono);
-  font-size: var(--text-000);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-micro);
-  text-transform: uppercase;
-  color: var(--neutral-11);
-}
+   What it loses: the local class was mono/uppercase/--tracking-micro at --r-2.
+   .n-badge is proportional, medium, --r-full. Accepted — the pill reads as a
+   status chip rather than as a third micro-label competing with .label. */
 
 /* ── layout ─────────────────────────────────────────────────────────── */
 
 main {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: 0 var(--space-5) var(--space-8);
+  padding-block-end: var(--space-8);
 }
 
 .hero {
@@ -218,25 +321,58 @@ main {
 /* Thin and huge, against the tiny wide label above it. This pairing is the
    signature; a heavy weight here undoes it. Overrides nilam's base heading rule,
    which sets every h1-h6 to --weight-semibold with --leading-tight.
+   --weight-thin now comes from the package, not from :root above.
 
-   --text-7, not nilam's --text-display. Both are fluid clamps, but --text-display
-   tops out at 7.5rem for "one thing per page" on a full-width canvas, and this
-   heading lives in a 46rem column: at a 1280px viewport it would render ~115px
-   and wrap to four lines. --text-7's floor is 2.5rem, identical to achroma's
-   --text-display floor, and it caps at 4rem — 64px against achroma's ~77px at
-   the same viewport, the closest of the two by a wide margin.
+   --text-7, not --text-display — RE-DECIDED THIS PASS, WITH A SCREENSHOT, and
+   the answer changed for a different reason than the one first given.
 
-   Two values could not come across. nilam has no weight below 400, hence the
-   local --weight-thin. And its tightest leading is --leading-tight at 1.15 where
-   achroma's --lh-display was 1.02; that one is not worth a local token, because
-   1.15 is a value nilam considered for exactly this job. The heading sits a
-   little looser than it did. */
+   The original note argued from arithmetic: --text-display tops out at 7.5rem,
+   renders 115.2px at a 1280px viewport, and "would wrap to four lines" in this
+   46rem column. Rendered, it wraps to three, not four — so the arithmetic was
+   wrong in detail. It was right in conclusion, and worse than it claimed. All
+   three cases were built on the real page at a 1280px viewport and measured:
+
+     A  --text-7,       46rem   64px    2 lines  131px  drop zone starts at 418px
+     B  --text-display, 46rem  115px    3 lines  318px  drop zone starts at 605px
+     C  --text-display, full  115px    2 lines  212px  drop zone starts at 499px
+
+   B is the one that settles it, and the deciding fact is not the height. The
+   three lines break as "Extract text / from any / document.", so the middle line
+   is an eight-character fragment of a sentence — and the heading ends up 1.27x
+   the height of the drop zone. The hero is literally heavier than the product.
+
+   C looks genuinely good: it breaks cleanly in two at a phrase boundary and lh
+   0.92 locks the lines into one mass, which is nilam's demo treatment working
+   exactly as advertised. It was still rejected, for two reasons. The drop zone
+   starts 81px lower, which on a 900px laptop viewport is the difference between
+   seeing the target and having to scroll for it. And the heading would be 1120px
+   wide over a .sub still held to 38rem, so the hero would have to become a
+   full-width poster block to be coherent — at which point the page has a poster
+   at the top and the product below it, which is backwards for a tool.
+
+   So --text-display is not wrong here because it is unfamiliar. It is wrong
+   because naina's one-thing-per-page is the drop zone, not the sentence naming
+   what the drop zone does.
+
+   WHAT THE SCREENSHOT ACTUALLY CHANGED is the leading. The migration recorded
+   the loss as a size regression, 77px -> 64px, and dismissed the leading:
+   "1.15 is a value nilam considered for exactly this job. The heading sits a
+   little looser than it did." At 64px over two lines, 1.15 is not "a little
+   looser" — it opens a visible gap that stops the two lines reading as one mass,
+   and that gap, not the missing 13px, is what made the hero go limp. So the
+   leading goes back to achroma's 1.02 and the tracking to its -0.035em, both as
+   literal values, because nilam's tightest tokens are --leading-tight at 1.15
+   and --tracking-tight at -0.02em and neither is tight enough for display type.
+   That is a real gap in the scale and it is reported rather than papered over.
+   Measured: the h1 box goes from 147px to 131px and the two lines lock up. */
 .hero h1 {
   margin: 0 0 var(--space-4);
   font-size: var(--text-7);
   font-weight: var(--weight-thin);
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
+  /* Tighter than --tracking-tight (-0.02em) and --leading-tight (1.15), which
+     are the tightest nilam ships. Optical tightening at display size; see above. */
+  letter-spacing: -0.035em;
+  line-height: 1.02;
 }
 
 .sub {
@@ -245,9 +381,9 @@ main {
   color: var(--neutral-11);
   max-width: 38rem;
 }
-/* Now doing more work than it used to. achroma set strong to weight 500; nilam
-   has no strong rule, so the UA's 700 applies. This pulls it back to 400: the
-   sentence should change colour, not shout. */
+/* Level 2 -> level 1 for the sentence that carries the privacy claim. achroma
+   set strong to weight 500; nilam has no strong rule, so the UA's 700 applies.
+   This pulls it back to 400: the sentence should change colour, not shout. */
 .sub strong {
   color: var(--neutral-12);
   font-weight: var(--weight-normal);
@@ -255,25 +391,70 @@ main {
 
 /* ── drop zone ──────────────────────────────────────────────────────── */
 
-/* Accent AT REST, not on hover, and that is a correction. Applying
-   "accent marks affordance" strictly gave a first paint with no brand hue on it
-   at all — every accent use needed a hover, a drag or a loaded document, so the
-   only colour a visitor saw on arrival was the green offline badge. This zone is
-   not one affordance among several, it is the entire product. It gets the hue
-   before anyone touches anything.
+/* Accent AT REST, not on hover, and that is a correction that still stands.
+   Applying "accent marks affordance" strictly gave a first paint with no brand
+   hue on it at all — every accent use needed a hover, a drag or a loaded
+   document, so the only colour a visitor saw on arrival was the offline badge.
+   This zone is not one affordance among several, it is the entire product. It
+   gets the hue before anyone touches anything, and this pass makes it larger,
+   rounds it to --r-5 to match .n-card, doubles the border to --line-2 and gives
+   it --rim, so that it is unambiguously the heaviest object on the page.
 
-   --brand-8, and this is the one place the achroma role table had to be argued
-   with. Mapping --accent-line to step 6 is right for a subtle divider and wrong
-   here: measured against --surface, --brand-6 is 1.64:1 light / 1.32:1 dark,
-   where achroma's --accent-line was 4.18 / 3.25. A dashed border at 1.3:1 is
-   not an affordance, it is a rumour, and 1.4.11 wants 3:1 for a control
-   boundary. --brand-8 measures 4.45 / 3.59 — the same border naina had, very
-   slightly stronger. Step 8 is also what nilam's own .n-link uses for a coloured
-   line on a coloured ground. Applied consistently to every --*-line role below. */
+   --brand-7 AT REST, --brand-8 ON HOVER. THIS OVERTURNS the migration, which
+   used step 8 for both and said so explicitly: "Applied consistently to every
+   --*-line role below." The old argument was correct at the time and is quoted
+   in full because the numbers in it are the interesting part:
+
+     "Mapping --accent-line to step 6 is right for a subtle divider and wrong
+      here: measured against --surface, --brand-6 is 1.64:1 light / 1.32:1 dark,
+      where achroma's --accent-line was 4.18 / 3.25. A dashed border at 1.3:1 is
+      not an affordance, it is a rumour, and 1.4.11 wants 3:1 for a control
+      boundary. --brand-8 measures 4.45 / 3.59."
+
+   Two things. First, step 6 at 1.64 / 1.32 is still exactly right — re-measured,
+   unchanged, because 0.2.0 deliberately left step 6 solving against the page as
+   the decorative card edge. Second, "--brand-8 measures 4.45 / 3.59" is now
+   FALSE, and tracing why is the whole story: 4.45 / 3.59 is pre-0.2.0
+   --brand-8, oklch(0.5832 0.1576 285) light. The shipped 0.3.1 value measures
+   5.03 / 4.19 against --surface. naina was migrated against nilam 0.1.x and the
+   comment kept quoting numbers that stopped shipping.
+
+   What stopped shipping was step 7. nilam 0.2.0's commit message says it
+   outright: steps 7 and 8 solved AND asserted against step 1, so step 7
+   measured exactly 3.05:1 on the page and 2.70:1 on a card, where controls
+   actually live — "compliant in the docs and failing in the product". 0.2.0
+   re-solved 7 and 8 against step 3. It says it found this "by migrating a real
+   app: a dashed 1.37:1 border on its drop zone — the entire product". That app
+   is this one. This border is why the token was fixed.
+
+   So the reason for reaching past step 7 is gone, and using it is now the
+   role-faithful answer. Re-measured against the installed 0.3.1 tokens:
+
+     --brand-7 on --surface   3.65 light / 3.05 dark   <- rest, clears 1.4.11
+     --brand-8 on --surface   5.03 light / 4.19 dark   <- hover
+     --brand-7 on --brand-3   3.05 / 3.05              <- exactly its contract
+     --brand-8 on --brand-3   4.20 / 4.20              <- exactly its contract
+
+   Step 7 is the control boundary and step 8 is its hover; that is what the scale
+   says and it is now true rather than aspirational. Using 8 for both, as the
+   migration did, spends the hover role on the rest state and then has nothing
+   left to escalate to — which is why the old rule had to escalate with
+   border-style alone. Now both channels move. */
 .drop {
-  border: 1px dashed var(--brand-8);
-  border-radius: var(--r-3);
+  border: var(--line-2) dashed var(--brand-7);
+  border-radius: var(--r-5);
   background: var(--surface);
+  /* --rim, not a shadow. The zone is --surface sitting on a --neutral-1 page,
+     which is the same relationship .n-card has, so it earns the same top light.
+     Transparent in light mode by construction; in dark mode it is what stops a
+     --surface panel dissolving into the page. */
+  box-shadow: var(--rim);
+  /* --space-8, not --space-9. 96px was tried first and rendered a 310px box that
+     was 200px of nothing: "the most confident thing on the page" is not the same
+     as "the tallest", and an empty target that large reads as an unfinished
+     layout rather than as an invitation. The confidence comes from the --line-2
+     brand border, the --r-5 radius, the 40px icon and a --text-3 title. 64px
+     gives ~230px, still comfortably the heaviest object here. */
   padding: var(--space-8) var(--space-5);
   text-align: center;
   cursor: pointer;
@@ -282,173 +463,280 @@ main {
     background var(--dur-2) var(--ease-out),
     transform var(--dur-2) var(--ease-spring);
 }
-/* Hover intensifies rather than introduces: the border goes solid and the fill
-   picks up --brand-3, so the escalation reads as "yes, this one" instead of
-   "oh, this was interactive after all". */
+/* Hover intensifies rather than introduces: the border goes solid AND up a step,
+   and the fill picks up --brand-3, so the escalation reads as "yes, this one"
+   instead of "oh, this was interactive after all". */
 .drop:hover,
 .drop:focus-visible {
   border-style: solid;
+  border-color: var(--brand-8);
   background: var(--brand-3);
 }
 .drop.is-over {
   border-style: solid;
+  border-color: var(--brand-8);
   background: var(--brand-3);
   transform: translateY(-2px);
 }
 
 /* The svg strokes with currentColor, so this one declaration tints the arrow.
-   It is the focal point of the page and the first violet a visitor sees.
+   It is the focal point of the page and the first violet a visitor sees. 40px
+   rather than 32px this pass, for the same reason the padding grew.
 
-   margin-inline is new and load-bearing. nilam's base sets svg to display:block
-   (achroma left it inline), and a 32px block box does not answer to the parent's
-   text-align — without this the arrow sits hard against the left edge of the
-   zone. */
+   --brand-11 is the text role, 5.14:1 on --neutral-1 and 5.45 / 4.54 on
+   --surface, so a 1.4px stroke on it is well clear of 1.4.11's 3:1 for a
+   graphical object. Re-measured; unchanged by 0.2.0.
+
+   margin-inline is load-bearing. nilam's base sets svg to display:block
+   (achroma left it inline), and a block box does not answer to the parent's
+   text-align — without this the arrow sits hard against the left edge. */
 .drop-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   margin-inline: auto;
   color: var(--brand-11);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .drop-title {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3);
   font-weight: var(--weight-normal);
   color: var(--neutral-12);
   letter-spacing: var(--tracking-tight);
 }
+/* Level 3. Was --text-0 at --neutral-11, i.e. .sub's exact treatment one size
+   down, which is what made the drop zone read as two equally-weighted lines
+   instead of a title and a caption. Now .faint in the markup: --text-00 plus
+   --tracking-wide. Nothing else changed. */
 .drop-hint {
   margin: 0;
-  font-size: var(--text-0);
-  color: var(--neutral-11);
 }
 
 /* ── controls ───────────────────────────────────────────────────────── */
 
+/* .n-cluster in the markup supplies flex-wrap and the gap; these two override
+   what a cluster cannot know. align-items: end so the two <select>s and the
+   checkbox row sit on one baseline even though the selects carry a label above.
+   The width is here because .n-select is inline-size: 100% — correct inside a
+   form column, and inside a flex row it would otherwise collapse to the widest
+   <option>, which is 40 characters of "Hindi, Marathi, Nepali, Sanskrit". */
 .controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
   align-items: end;
+  gap: var(--space-5);
   margin: var(--space-5) 0 0;
 }
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.controls .n-field {
+  min-inline-size: 15rem;
 }
-
-.field select {
-  background: var(--surface);
-  color: var(--neutral-12);
-  border: 1px solid var(--neutral-7);
-  border-radius: var(--r-2);
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
+/* The checkbox row has no label above it, so with align-items: end it would sit
+   on the bottom of the row and the tick would land below the selects. 2.25rem is
+   .n-select's own min-block-size, and .n-choice centres its content, so the two
+   controls line up exactly rather than approximately. Reserving the label's
+   height as bottom padding was tried first and put the tick 17px high — the
+   label box and the control box are different heights. */
+.controls .n-choice {
+  min-block-size: 2.25rem;
   font-size: var(--text-0);
-  transition: border-color var(--dur-1) var(--ease-out);
-}
-.field select:hover {
-  border-color: var(--neutral-12);
 }
 
-.field.checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
-  padding-bottom: var(--space-2);
-  font-size: var(--text-0);
-  color: var(--neutral-11);
+/* OVERTURNED: the accent-color override on the "show detected text" checkbox is
+   gone, and .n-check now paints the brand tick. The old note read:
+
+     "Was closing a leak, now redirecting one. achroma set no accent-color at
+      all, so this rule existed to stop the OS painting the tick blue. nilam
+      closes that itself with --brand-9; the override stands because a 'show
+      detected text' toggle is a preference, not a brand moment."
+
+   The premise no longer holds. .n-check is appearance:none with the tick drawn
+   as a clip-path in --brand-ink on a --brand-9 box, so accent-color is not in
+   the picture at all and setting it would be dead code. The argument that
+   survives — "a preference is not a brand moment" — is an argument against
+   nilam's own solved checked state, in a file whose first line says a hardcoded
+   value here is a bug. Fighting the component to make one checkbox greyer is
+   the wrong trade: it costs the proven --brand-ink/--brand-9 pair (4.57:1 light,
+   5.92:1 dark) to buy a distinction nobody asked for. */
+
+/* Up-front caveat about supported scripts, now .n-note n-note-warn in the
+   markup. Deliberately prominent: a user who discovers the limit after trusting
+   the output has already been misled.
+
+   The local .caveat class is gone. It was a faithful reimplementation of
+   .n-note-warn with one difference that mattered, and the difference is why the
+   component is better. The old note:
+
+     "The 3px left stripe is the non-hue channel, which is the whole point of
+      it: red and green are the same colour to a deuteranope, so a warn callout
+      that signals only by hue signals nothing. It is --warn-8 for the same
+      reason the drop border is: step 6 measures 1.37:1 against --warn-3 and the
+      stripe would effectively not be there. Step 8 is 3.72 / 3.59."
+
+   Right instinct, wrong channel. A 3px stripe in a warn hue is still a hue —
+   a deuteranope sees a stripe, not a warning. .n-note-warn's non-hue channel is
+   the ! GLYPH, which is a shape and survives every simulation, and it is the
+   channel proveStatusChannels() actually enforces. So the stripe goes and the
+   glyph arrives.
+
+   Its border is --warn-6, which measures 1.47:1 on --warn-2, and that is
+   correct rather than a regression: a note is not a control, 1.4.11 does not
+   govern its edge, and 0.2.0's commit says step 6 stays decorative for exactly
+   this case. The old 3.72 / 3.59 figures were also pre-0.2.0 --warn-8; the
+   shipped value measures 4.50 / 4.57 on --warn-2.
+
+   Body text is --warn-12 (7.60 light / 7.73 dark on --warn-2), a step stronger
+   than the old --warn-11 on --warn-3 at 4.55. */
+
+/* Both notes need their own spacing; .n-note has padding but no margin, which is
+   right for a component that does not know what it sits between. */
+.privacy {
+  margin: var(--space-4) 0 0;
 }
-/* Was closing a leak, now redirecting one. achroma set no accent-color at all,
-   so this rule existed to stop the OS painting the tick blue. nilam closes that
-   itself with --brand-9; the override stands because a "show detected text"
-   toggle is a preference, not a brand moment. */
-.field.checkbox input {
-  accent-color: var(--neutral-12);
-  width: 15px;
-  height: 15px;
-}
-
-/* Up-front caveat about supported scripts. Deliberately prominent: a user who
-   discovers the limit after trusting the output has already been misled. This is
-   one of the three places colour is allowed, because it carries meaning.
-
-   --warn-11 on --warn-3 is 4.55:1 in both modes, and that is a construction
-   rather than a measurement that happened to pass — step 11's lightness is
-   defined as the point where text hits 4.5:1 against step 3.
-
-   The 3px left stripe is the non-hue channel, which is the whole point of it:
-   red and green are the same colour to a deuteranope, so a warn callout that
-   signals only by hue signals nothing. It is --warn-8 for the same reason the
-   drop border is: step 6 measures 1.37:1 against --warn-3 and the stripe would
-   effectively not be there. Step 8 is 3.72 / 3.59, against achroma's 3.37 /
-   3.35. */
 .caveat {
   margin: var(--space-5) 0 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--warn-8);
-  border-left: 3px solid var(--warn-8);
-  border-radius: var(--r-2);
-  background: var(--warn-3);
-  font-size: var(--text-0);
-  color: var(--warn-11);
 }
-.caveat strong {
-  font-weight: var(--weight-medium);
+/* The error note is the same component again — .n-note n-note-danger, with the ×
+   glyph as the non-hue channel. Worth seeing why the glyph is load-bearing here
+   and not decorative: --danger-2 is oklch(0.962 0.003 22) and --warn-2 is
+   oklch(0.962 0.004 68), so in light mode the error fill and the caveat fill
+   above it are within 0.001 L and 0.001 C of each other. They are the same
+   colour to anyone, not just to a deuteranope. The red × is the whole signal. */
+.error {
+  margin: var(--space-5) 0 0;
 }
-.caveat a {
-  color: var(--warn-11);
+
+/* One local rule the note needs. nilam's base underlines every <a> in
+   --neutral-8, which is a neutral line under warn-hued text; inside a coloured
+   note that reads as a different link than the ones on the rest of the page.
+   --warn-8 keeps the underline in the note's own family. `color` is untouched
+   because base already sets `color: inherit`, so the link picks up --warn-12
+   from .n-note-warn on its own. NOT .n-link, which is --brand-11 and would put
+   the brand hue inside a status callout. */
+.n-note-warn a {
   text-decoration-color: var(--warn-8);
 }
 
+/* ── the privacy claim ──────────────────────────────────────────────── */
+
+/* Everything runs on-device, and that is naina's strongest claim. It used to
+   appear once in .sub and once more in a paragraph at the very bottom of the
+   page, which is to say it was asserted and then buried. It is now an
+   .n-note n-note-info directly BELOW the drop zone (see .privacy above), so it
+   answers the question
+   the drop zone provokes — "what happens to my file?" — at the moment it is
+   asked rather than after the answer stops mattering.
+
+   info, and this is the reason the family exists. nilam's info is deliberately
+   achromatic: the state that means "nothing is wrong" does not need a hue, and
+   spending one on it collided with the brand at hue 285. A reassurance is
+   exactly that state. An ok-green note here would claim the outcome of an
+   operation that has not happened, which is the same mistake the offline badge
+   used to make. --info-12 on --info-2 is 7.60 light / 7.73 dark, and --info-11
+   is C 0.007 against --ok-11's C 0.107 / 0.128, so it is measurably the quietest
+   thing that can still be a status. Its margin is set above, next to .caveat's,
+   so the two notes' spacing is visible in one place. */
+
 /* ── status ─────────────────────────────────────────────────────────── */
+
+/* OCR is slow — 36s for one page at the tiny tier on this machine — so this is
+   the main UX problem on the page, and the migration left it as a single 2px
+   local bar doing two jobs at once.
+ *
+ * .bar, .bar-fill, .bar-fill.is-indeterminate and @keyframes sweep are all gone.
+ * They were one element that set a width% when a proportion was known and ran a
+ * scaleX animation when it was not, which is precisely the substitution nilam's
+ * loader section calls "a real usability error". Three components now answer
+ * three different questions:
+ *
+ *   .n-progress   a proportion IS known    — weights 3 of 7, page 2 of 12
+ *   .n-bar        duration is unknown      — opening, reading
+ *   .n-skeleton   the SHAPE is known       — the two result panes, incoming
+ *
+ * .n-progress is a real <progress>, so its value is in the accessibility tree
+ * without any aria-valuenow to keep in sync; .n-bar carries role="progressbar"
+ * with no value, which is how an indeterminate bar is spelled. main.ts swaps
+ * them on whether its `fraction` argument is null — the one bit of information
+ * that decides which question is being answered.
+ *
+ * .n-skeleton is the addition that actually helps. On a first visit the wait is
+ * 27 MB of ort-web plus 11 MB of weights plus inference, and until this pass the
+ * page showed a hairline and a sentence for all of it. A skeleton of the two
+ * panes tells the reader where to look when the text lands, which a bar cannot.
+ * It only appears when there is nothing on screen yet — on a re-read the real
+ * result is still there and replacing it with grey blocks would be a downgrade,
+ * so the bar carries that case alone.
+ *
+ * Under prefers-reduced-motion all three keep animating on opacity, from
+ * nilam's own exemption: a frozen loader reads as a hung app, not as respect. */
 
 .status {
   margin: var(--space-5) 0 0;
 }
 
-.bar {
-  height: 2px;
-  background: var(--neutral-6);
-  overflow: hidden;
-}
-
-/* Accent, not ink: a bar that is moving is the one thing on screen telling you
-   the app is working. That is affordance, which is what the brand ramp marks. */
-.bar-fill {
-  height: 100%;
-  width: 0;
-  background: var(--brand-9);
-  transition: width var(--dur-3) var(--ease-out);
-}
-
-.bar-fill.is-indeterminate {
-  animation: sweep 1.1s var(--ease-out) infinite;
-  transform-origin: left center;
-}
-
-@keyframes sweep {
-  0% {
-    transform: scaleX(0.05) translateX(0);
-  }
-  50% {
-    transform: scaleX(0.4) translateX(150%);
-  }
-  100% {
-    transform: scaleX(0.05) translateX(2000%);
-  }
-}
-
+/* Level 3, mono, because this is machine output: "Fetching weights — ppocrv6
+   (3 of 7)". role="status" in the markup — an implicit aria-live="polite", so a
+   screen-reader user is told what stage a 40-second operation reached. That was
+   missing entirely before, which on the slowest interaction in the app is the
+   more serious of the two problems this section had. */
 .status-text {
   margin: var(--space-3) 0 0;
   font-family: var(--font-mono);
-  font-size: var(--text-00);
-  color: var(--neutral-11);
 }
+
+/* .n-SKELETON IS INVISIBLE ON A CARD IN DARK MODE, and this is a real bug rather
+   than a taste adjustment. Its gradient runs --neutral-3 -> --neutral-4 ->
+   --neutral-3, which nilam solved against the PAGE. These sit on a .n-card.
+   Measured against --surface with nilam's own contrast():
+
+     --neutral-3  its rest step     1.198 light / 1.001 dark
+     --neutral-4  its shimmer peak  1.272 light / 1.084 dark
+
+   1.001 is not "faint", it is the same colour. --neutral-3 and --surface are both
+   L 0.2455 in dark mode by construction — which is the very coincidence the
+   --wash comment at the top of this file relies on for its contrast floor. So in
+   dark mode the placeholder's rest state does not exist and only the peak of the
+   shimmer shows, which reads as an empty card that occasionally breathes.
+   Found by screenshotting the dark in-progress state and seeing two blank panes.
+
+   One step up at each stop: --neutral-4 -> --neutral-6, so 1.272 -> 1.644 light
+   and 1.084 -> 1.324 dark. Never equal in either mode, and still well under the
+   1.644 that nilam itself considers a decorative hairline — a placeholder has to
+   be quieter than content or it reads as content.
+
+   background-IMAGE, not background. The shorthand would reset nilam's own
+   `background-size: 200% 100%` to auto and the shimmer would stop travelling.
+   Scoped to #skeleton so this does not silently redefine .n-skeleton for anything
+   else that might use it later. */
+#skeleton .n-skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--neutral-4) 25%,
+    var(--neutral-6) 50%,
+    var(--neutral-4) 75%
+  );
+}
+
+/* The skeleton's shape. Percentages and aspect ratios rather than tokens, and
+   deliberately: these are the proportions of the content that is arriving, the
+   same class of value as the confidence overlay's ramp position. A token cannot
+   express "the third line of a paragraph is shorter". */
+.skeleton-page {
+  aspect-ratio: 5 / 7;
+  inline-size: 100%;
+}
+.skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.skeleton-lines i {
+  display: block;
+  block-size: 0.75rem;
+}
+.skeleton-lines i:nth-child(1) { inline-size: 45%; block-size: 1.25rem; }
+.skeleton-lines i:nth-child(4) { inline-size: 82%; }
+.skeleton-lines i:nth-child(5) { inline-size: 64%; }
+.skeleton-lines i:nth-child(7) { inline-size: 71%; }
 
 /* ── results ────────────────────────────────────────────────────────── */
 
@@ -465,83 +753,80 @@ main {
   }
 }
 
+/* .n-card in the markup carries --surface, the --neutral-6 edge, --r-5,
+   --shadow-1 and --rim. What is left here is the three things a card cannot
+   know: that it is a flex column, that its head must clip to the radius, and
+   that it must be allowed to be narrower than its content (min-width: 0, or a
+   long unbroken JSON string makes the grid track wider than the page). */
 .pane {
-  border: 1px solid var(--neutral-6);
-  border-radius: var(--r-3);
-  background: var(--surface);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
+/* nilam has .n-dialog-head but no .n-card-head, so this stays local. Reported.
+   --neutral-3 is the component-surface step, one above the card's own
+   --surface, which is what makes the head read as attached rather than as a
+   separate strip. */
 .pane-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex-wrap: wrap;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--neutral-6);
+  border-bottom: var(--line-1) solid var(--neutral-6);
   background: var(--neutral-3);
 }
 
-/* The pane heads use .label, above. Reset the size and tracking so nilam's base
-   heading rule does not fight it — it no longer sets a per-level font-size at
-   all, so an unstyled h2 here would come out at the UA's 1.5em. */
+/* The pane heads use .label. Reset the size and tracking so nilam's base heading
+   rule does not fight it — base no longer sets a per-level font-size at all, so
+   an unstyled h2 here would come out at the UA's 1.5em. */
 .pane-head h2 {
   margin: 0;
   font-size: var(--text-000);
   letter-spacing: var(--tracking-micro);
 }
 
+/* Level 3 plus mono: a measurement, not a caption. --text-000 rather than
+   --text-00 because this line is a dense run of six facts and has to survive
+   wrapping inside a pane head; it is the one place level 3 goes a size below its
+   own floor, and it gets --tracking-micro's cousin --tracking-wide to hold it
+   open. Contrast is unchanged at --neutral-11.
+
+   Its TEXT IS LOAD-BEARING beyond the design: e2e.mjs, auto-check.mjs and
+   hindi-check.mjs all poll #meta for /mean confidence \d/ and auto-check splits
+   it on 'script detected:'. Restructuring this line into an .n-table or moving
+   the confidence into an .n-badge — both of which were considered — silently
+   breaks three suites, so the string format in main.ts is unchanged. */
 .meta {
   font-family: var(--font-mono);
   font-size: var(--text-000);
+  letter-spacing: var(--tracking-wide);
   color: var(--neutral-11);
 }
 
+/* The view switcher is .n-tabs / .n-tab, and the actions are .n-btn n-btn-sm.
+   Two clusters, not one row of six lookalike buttons: choosing a format and
+   performing an action are different kinds of thing and used to be spelled
+   identically, with .tab and .btn differing only in which class name they had.
+
+   .n-tab reads aria-selected rather than a class, which is the useful part —
+   nilam's comment calls it a forcing function, and it forced a real fix here:
+   main.ts now sets aria-selected instead of toggling .is-active, so the tab
+   state is in the accessibility tree because that is the only way to get it
+   painted. The old .tab.is-active had no ARIA at all.
+
+   .n-tabs draws its own bottom rule, which inside a pane head would be a second
+   line 1px above the head's own border. Suppressed here rather than in the
+   component, since it is this placement that is unusual, not the component. */
+.pane-tabs {
+  border-block-end: none;
+  margin-block: calc(-1 * var(--space-1));
+}
 .pane-actions {
-  display: flex;
   gap: var(--space-1);
-}
-
-.tab,
-.btn {
-  background: transparent;
-  border: 1px solid var(--neutral-7);
-  color: var(--neutral-11);
-  border-radius: var(--r-2);
-  padding: var(--space-1) var(--space-2);
-  font: inherit;
-  font-size: var(--text-00);
-  cursor: pointer;
-  transition:
-    color var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out),
-    background var(--dur-1) var(--ease-out);
-}
-.tab:hover,
-.btn:hover {
-  color: var(--neutral-12);
-  border-color: var(--neutral-12);
-}
-/* A filled tab. --brand-ink and never a literal white: step 9 inverts polarity
-   by mode, so the fill is dark violet with white text on a light page and the
-   L 0.66 glow with dark text on a dark one. Measured, --brand-ink on --brand-9
-   is 4.57:1 light / 5.92:1 dark.
-   The `--ring: var(--accent-on-fill)` override that used to be here is gone, and
-   deliberately: achroma's focus ring read `outline: 2px solid var(--ring)`, so
-   setting the property inverted it. nilam hardcodes --brand-9 and solves the
-   same problem with --ring-offset instead — the 2px gap guarantees the colour
-   adjacent to the ring is the page, not the element, so it measures 4.31:1 light
-   / 5.79:1 dark against --neutral-1 whatever the tab is filled with. Setting
-   --ring here would now be dead code. */
-.tab.is-active {
-  color: var(--brand-ink);
-  background: var(--brand-9);
-  border-color: var(--brand-9);
-  font-weight: var(--weight-medium);
 }
 
 /* A neutral checkerboard, so a transparent PNG is legible without introducing
@@ -564,14 +849,36 @@ canvas {
   border-radius: var(--r-2);
 }
 
-/* The output pane shows recognised text, which may be Devanagari, Arabic,
-   Greek, Korean, Tamil, Telugu or Thai — none of which Geist covers. The
-   fallback chain in --font-mono handles those per-glyph. */
+.output-wrap {
+  overflow: auto;
+  max-height: 70vh;
+}
+
+/* THE OUTPUT IS TEXT, so it gets --measure. A full-width pane on a 1152px
+   container gives the markdown view a ~520px column at --text-0 in mono, which
+   is about 62 characters — but at a wider viewport, or with the pager column
+   collapsed on narrow screens, the same <pre> runs to 90+ and long OCR output at
+   that measure is tiring in exactly the way --measure exists to prevent. 65ch
+   resolves against the element's own font, so in --font-mono at --text-0 it is
+   roughly 546px rather than the ~490px it would be in the sans face. That is the
+   right number for this content, not a coincidence to be corrected.
+
+   NOT .n-prose, and this was tried. .n-prose is `max-inline-size: var(--measure)`
+   plus heading sizes, list markers, and a `pre` rule that paints --neutral-2
+   with its own border and --r-4 padding — a second bordered box inside the pane,
+   which is wrong. What applies to a <pre> of extracted text is the measure and
+   nothing else, so the measure is taken directly. .n-prose is used where there
+   is real prose: the notes below.
+
+   The JSON view is exempt. --measure is a reading measure and JSON is not read
+   left-to-right; at 65ch a nested object wraps mid-key and the structure that is
+   the whole point of the view disappears. main.ts sets data-view, so the
+   exemption is a fact about the content rather than a class someone has to
+   remember to toggle. */
 .output {
   margin: 0;
   padding: var(--space-4);
-  overflow: auto;
-  max-height: 70vh;
+  max-inline-size: var(--measure);
   font-family: var(--font-mono);
   font-size: var(--text-0);
   line-height: var(--leading-normal);
@@ -580,68 +887,69 @@ canvas {
   color: var(--neutral-12);
   tab-size: 2;
 }
-
-.error {
-  margin: var(--space-5) 0 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--danger-8);
-  border-left: 3px solid var(--danger-8);
-  background: var(--danger-3);
-  color: var(--danger-11);
-  border-radius: var(--r-2);
-  font-size: var(--text-0);
+.output[data-view='json'] {
+  max-inline-size: none;
 }
 
 /* ── pager (multi-page documents) ───────────────────────────────────── */
 
+/* The chips are .n-btn n-btn-sm, and the active one is .n-btn-fill. That is the
+   whole styling — the local .page-chip rules for background, border, radius,
+   font and the three transitions are gone, and with them the second definition
+   of what a small button looks like on this page.
+
+   .n-btn-fill rather than a hand-rolled fill because step 9 inverts polarity by
+   mode: dark violet with white text on a light page, the L 0.66 glow with dark
+   text on a dark one. Re-measured, --brand-ink on --brand-9 is 4.57:1 light /
+   5.92:1 dark. This was already correct in the migration and the note it carried
+   is worth keeping, because it explains something that is no longer visible:
+
+     "The `--ring: var(--accent-on-fill)` override that used to be here is gone,
+      and deliberately: achroma's focus ring read `outline: 2px solid var(--ring)`,
+      so setting the property inverted it. nilam hardcodes --brand-9 and solves
+      the same problem with --ring-offset instead — the 2px gap guarantees the
+      colour adjacent to the ring is the page, not the element, so it measures
+      4.31:1 light / 5.79:1 dark against --neutral-1 whatever the chip is filled
+      with." */
 .pager {
-  display: flex;
-  flex-wrap: wrap;
   gap: var(--space-1);
   margin: var(--space-7) 0 0;
 }
 
+/* .n-btn-sm has no intrinsic width, so a single-digit chip would be 10px of
+   glyph in 20px of padding and the row would look ragged against "10". One
+   value, and it is the only thing this class does. */
 .page-chip {
-  min-width: 2rem;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--neutral-7);
-  border-radius: var(--r-2);
-  background: var(--surface);
-  color: var(--neutral-11);
-  font: inherit;
-  font-family: var(--font-mono);
-  font-size: var(--text-00);
-  cursor: pointer;
-  transition:
-    color var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out),
-    background var(--dur-1) var(--ease-out);
+  min-inline-size: 2.25rem;
 }
-.page-chip:hover {
-  color: var(--neutral-12);
-  border-color: var(--neutral-12);
-}
-.page-chip.is-active {
-  background: var(--brand-9);
-  border-color: var(--brand-9);
-  color: var(--brand-ink);
-  font-weight: var(--weight-medium);
-}
+
 /* A page that failed still gets a chip — silently dropping it would leave the
-   user counting pages to work out which one is missing. */
+   user counting pages to work out which one is missing.
+
+   --danger-7, matching the drop zone's step-7 reasoning: this is a control
+   boundary, and step 7 is the role solved for it (3.65:1 light / 3.04:1 dark on
+   --surface, 3.05 / 3.05 on --neutral-3). The migration used --danger-8 here for
+   the same reason it used --brand-8 on the drop zone, and it is corrected for
+   the same reason.
+
+   THE GLYPH IS NEW AND IT IS A BUG FIX. The failed chip signalled by hue alone,
+   which for a deuteranope means it did not signal — a failed page 3 and a
+   working page 3 were the same chip. It is the exact defect nilam's
+   proveStatusChannels() exists to catch and the exact defect the old .caveat
+   stripe was reaching for. main.ts appends an aria-hidden × and puts the error
+   itself in aria-label, so the non-visual channel is the accessible name rather
+   than a title attribute that assistive tech may not announce. */
 .page-chip.is-failed {
-  border-color: var(--danger-8);
+  border-color: var(--danger-7);
   color: var(--danger-11);
 }
-/* Was `background: var(--danger-text); color: var(--n-0)` — the text colour used
-   as a fill, with literal white on top. nilam has the solved pair for this, so
-   use it: step 9 is the danger solid and --danger-ink is the ink solved for it,
-   4.55:1 light / 5.65:1 dark. Hardcoding white would have been wrong in dark
-   mode, where step 9 is the glow and its ink is near-black. */
-.page-chip.is-failed.is-active {
-  background: var(--danger-9);
-  border-color: var(--danger-9);
-  color: var(--danger-ink);
+/* The failed chip when it is also the current page: .n-btn-danger in the markup
+   supplies --danger-9 with --danger-ink, 4.55:1 light / 5.65:1 dark. Hardcoding
+   white would be wrong in dark mode, where step 9 is the glow and its ink is
+   near-black. Only the glyph's spacing is left here. */
+.chip-glyph {
+  font-family: var(--font-mono);
+  opacity: 0.8;
 }
 
 /* ── notes ──────────────────────────────────────────────────────────── */
@@ -649,56 +957,72 @@ canvas {
 .notes {
   margin: var(--space-9) 0 0;
   padding-top: var(--space-7);
-  border-top: 1px solid var(--neutral-7);
+  border-top: var(--line-1) solid var(--neutral-7);
 }
 
-.notes h2 {
+.notes > h2 {
   margin: 0 0 var(--space-6);
   font-size: var(--text-4);
   font-weight: var(--weight-thin);
   letter-spacing: var(--tracking-tight);
 }
 
+/* 24rem rather than the old 15rem, because the cells are now .n-card n-card-pad
+   wrapping .n-prose and a 15rem card with --space-5 of padding leaves 12rem of
+   measure for a --text-3 heading. 24rem is also what makes four items lay out as
+   2x2 on the 72rem container: 20rem was tried and auto-fit chose three columns,
+   which left the fourth card alone on a row of its own. */
 .notes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: var(--space-6) var(--space-7);
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  gap: var(--space-4);
 }
 
-.notes h3 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-0);
-  font-weight: var(--weight-medium);
-  color: var(--neutral-12);
+/* .n-prose is the right component for these: they are a heading and a paragraph
+   of documentation, which is what it sizes. It supplies --measure, --text-3 on
+   h3 (up from the local --text-0, a real improvement — these were captions
+   pretending to be headings) and the sibling spacing. What it cannot know is
+   that its first child is flush against a card's padding, because
+   `.n-prose h3 { margin-block-start: var(--space-5) }` applies to every h3
+   including the first one. */
+.notes .n-prose > :first-child {
+  margin-block-start: 0;
 }
-
-.notes p {
-  margin: 0;
-  font-size: var(--text-0);
+.notes .n-prose p {
   color: var(--neutral-11);
 }
 
+/* Level 3. Was --text-00 at --neutral-11 with no other differentiation, which
+   made the licence line read at the same volume as .sub. .faint in the markup
+   adds the tracking; mono because it is a list of identifiers and versions. */
 footer {
-  border-top: 1px solid var(--neutral-6);
+  border-top: var(--line-1) solid var(--neutral-6);
   margin-top: var(--space-8);
 }
 
 footer p {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: var(--space-5);
-  font-size: var(--text-00);
-  color: var(--neutral-11);
+  padding-block: var(--space-5);
+  font-family: var(--font-mono);
+  margin: 0;
 }
 
 /* ── grain ──────────────────────────────────────────────────────────── */
 
-/* Ported from achroma's .ac-grain rather than dropped. nilam has no equivalent
- * and would not: the grain is what made an ACHROMATIC surface read as material
- * rather than flat, and nilam is not selling flatness as a problem. Kept anyway
- * because it is the page's texture, dropping it is a visible design change, and
- * it is self-contained — one fixed element, an inline SVG data URI, no JS and no
- * network.
+/* Ported from achroma's .ac-grain rather than dropped, and RE-CONFIRMED this
+ * pass rather than carried over on momentum. nilam has no equivalent and would
+ * not: the grain is what made an ACHROMATIC surface read as material rather than
+ * flat, and nilam is not selling flatness as a problem — it ships --rim and
+ * three shadows for depth, and this pass adopts --rim on the drop zone and via
+ * .n-card everywhere else.
+ *
+ * Kept anyway, for the reason that survived: it is the page's texture, dropping
+ * it is a visible design change with nothing behind it, and it is self-contained
+ * — one fixed element, an inline SVG data URI, no JS and no network. Two things
+ * were checked before keeping it. It sits at --z-max over the .n-skip link and
+ * over every focus ring, which at 10% opacity and pointer-events: none is
+ * cosmetically invisible and functionally inert. And it composites over
+ * .n-card's --rim without muddying it, because the rim is a 1px inset highlight
+ * and the noise tile is 180px.
  *
  * The 180px tile and the two opacity ceilings are achroma's measured values,
  * carried over unchanged. --z-max is nilam's 1000 rather than achroma's 9999,
@@ -740,5 +1064,67 @@ footer p {
 @media print {
   .grain {
     display: none;
+  }
+}
+
+/* ── reduced motion: a bug in nilam 0.3.1, worked around ─────────────────
+ *
+ * NILAM'S LOADER EXEMPTION DOES NOT WORK, and on this page that matters more
+ * than on most, because the thing it governs is a 40-second wait.
+ *
+ * nilam.components.css has a careful block for prefers-reduced-motion whose own
+ * comment says exactly the right thing: "a FROZEN spinner does not read as
+ * 'reduced motion', it reads as 'this app has hung'... WCAG 2.3.3 governs
+ * non-essential animation, and a loading indicator is essential by definition."
+ * It then sets animation-duration: 1.4s !important and
+ * animation-iteration-count: infinite !important to keep the loaders breathing.
+ *
+ * nilam.base.css has the usual blanket rule in the same media query:
+ * animation-duration: 0.01ms !important, animation-iteration-count: 1 !important
+ * on *, *::before, *::after.
+ *
+ * Both are !important, and FOR !important DECLARATIONS CASCADE LAYER ORDER IS
+ * REVERSED — the earlier layer wins. nilam.base is declared before
+ * nilam.components, so the blanket rule beats the exemption written to escape it.
+ * The loaders freeze. animation-name survives as n-breathe, because base does not
+ * set a name, which makes the failure look deliberate: the right keyframes, run
+ * once, for 0.01ms.
+ *
+ * Measured in Chrome on the built page with reducedMotion: 'reduce':
+ *   .n-bar::after   animation-name n-breathe, duration 1e-05s, iterations 1
+ *   .n-skeleton     animation-name n-breathe, duration 1e-05s, iterations 1
+ *
+ * This is the class of bug nilam's own README names: "an assertion that shares
+ * its premise with the thing it audits is not an audit." The comment states the
+ * intent, the CSS states the intent, and nothing checks that the intent survives
+ * the cascade.
+ *
+ * WHY THIS IS IN A LAYER AND NOT UNLAYERED. nilam's README says "anything you
+ * write unlayered beats all of it. No !important needed" — which is true for
+ * normal declarations and false for !important ones, where unlayered author
+ * styles are the LOWEST priority, below every layer. Both were tried against a
+ * reduction of nilam's structure:
+ *
+ *   as shipped                          duration 1e-05s   iterations 1
+ *   unlayered !important in this file   duration 1e-05s   iterations 1   (loses)
+ *   layer declared before nilam.base    duration 1.4s     infinite      (wins)
+ *
+ * Hence @layer naina.motion at the top of this file, declared ahead of nilam's
+ * own layer statement. This is the only rule in it, and if the upstream bug is
+ * fixed the layer and this block can both be deleted with no other change.
+ *
+ * Scoped to the two loaders naina actually uses. .n-spinner, .n-dots and
+ * .n-btn[aria-busy] have the same bug and are not on this page; adding them here
+ * would be fixing nilam from the wrong file. */
+@layer naina.motion {
+  @media (prefers-reduced-motion: reduce) {
+    .n-bar::after,
+    .n-skeleton {
+      /* Opacity only — n-breathe moves nothing across the screen, so there is
+         nothing here for a vestibular disorder to react to. The duration and the
+         count are all that were lost; nilam's own animation-name gets through. */
+      animation-duration: 1.4s !important;
+      animation-iteration-count: infinite !important;
+    }
   }
 }
