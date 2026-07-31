@@ -175,6 +175,22 @@ if(NAINA_WITH_NCNN)
     target_compile_definitions(naina-core PRIVATE NAINA_HAVE_NCNN=1)
 endif()
 
+# cargo, not CMake, issues the final link for the Rust crate, and a static
+# libnaina.a records nothing about what it needs. build.rs passes a path in;
+# CMake — the only party that knows where ONNX Runtime was found, where the
+# vendored yaml-cpp archive landed and which libcurl was linked — writes the
+# answer there. Without it build.rs has to restate every transitive dependency
+# of this file by hand, which is how the rust CI job shipped naming one of three.
+#
+# It has to happen *here*, not in the root CMakeLists: find_package creates
+# imported targets in the calling directory's scope, so CURL::libcurl and
+# ONNXRuntime::ONNXRuntime are not targets one level up. Called from the root
+# they came out as bare -lCURL::libcurl.
+if(NAINA_RUST_LINK_MANIFEST)
+    include(NainaRustLinkManifest)
+    naina_write_rust_link_manifest(naina-core "${NAINA_RUST_LINK_MANIFEST}")
+endif()
+
 if(NOT NAINA_BUILD_PYTHON)
     include(GNUInstallDirs)
     install(TARGETS naina-core
