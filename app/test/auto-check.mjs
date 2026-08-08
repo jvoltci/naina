@@ -28,7 +28,12 @@ for (const [file, expect] of process.argv.slice(2).map(a => a.split('='))) {
   page.on('console', m => { if (m.type() === 'error' && !/VerifyEach|Removing initializer|webgpu/i.test(m.text())) console.log('    CONSOLE:', m.text().slice(0, 160)); });
   page.on('pageerror', e => console.log('    PAGEERROR:', e.message.slice(0, 160)));
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'load' });
-  // Selector is left on its default, which must be Auto.
+  // Auto is now SELECTED EXPLICITLY, because it is no longer the default — the
+  // dropdown ships on Latin, since English scans are the common case. This test
+  // asks "does Auto detect the right script", not "what is the default", so
+  // setting it keeps the assertion pointed at what it was always about. The
+  // default itself is asserted separately below.
+  await page.selectOption('#language', 'auto');
   const sel = await page.locator('#language').inputValue();
   const t0 = Date.now();
   await page.setInputFiles('#file', file);

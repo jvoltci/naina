@@ -45,6 +45,8 @@ const outputEl = $<HTMLElement>('output');
 const metaEl = $<HTMLElement>('meta');
 const errorEl = $<HTMLElement>('error');
 const errorTextEl = $<HTMLElement>('error-text');
+const successEl = $<HTMLElement>('success');
+const successTextEl = $<HTMLElement>('success-text');
 const tabMdEl = $<HTMLButtonElement>('tab-md');
 const tabTxtEl = $<HTMLButtonElement>('tab-txt');
 const tabJsonEl = $<HTMLButtonElement>('tab-json');
@@ -401,6 +403,24 @@ function render() {
     `${lines} lines · ${regions} regions · mean confidence ${mean.toFixed(2)} · ` +
     `${(r.ms / 1000).toFixed(1)}s${scriptNote}`;
 
+  // The ok-green note. A SEPARATE STRING FROM #meta ON PURPOSE: e2e.mjs,
+  // auto-check.mjs and hindi-check.mjs all poll #meta for /mean confidence \d/
+  // and auto-check splits it on 'script detected:', so that line's format is
+  // load-bearing and is left exactly as it was. This is prose for a human.
+  //
+  // Counts pages, not the current one — "read complete" is a statement about the
+  // job, and on a 12-page PDF a per-page note would announce twelve times to a
+  // screen reader for one operation.
+  const failed = results.filter((x) => x.error).length;
+  successEl.hidden = results.length === 0 || failed === results.length;
+  if (!successEl.hidden) {
+    const pages = results.length - failed;
+    const total = results.reduce((a, x) => a + (x.json?.lines.length ?? 0), 0);
+    successTextEl.textContent =
+      ` ${pages} page${pages === 1 ? '' : 's'} · ${total} line${total === 1 ? '' : 's'}` +
+      `${failed ? ` · ${failed} failed` : ''}. Nothing was uploaded.`;
+  }
+
   downloadAllEl.hidden = results.length < 2;
   renderPager();
   drawOverlay();
@@ -490,6 +510,9 @@ async function handleFiles(files: (File | Blob)[]) {
   current = 0;
   resultsEl.hidden = true;
   pagerEl.hidden = true;
+  // A stale "read complete" sitting above a running progress bar would claim the
+  // previous job's outcome for this one.
+  successEl.hidden = true;
 
   try {
     const tier = tierEl.value as TierName;
