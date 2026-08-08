@@ -60,13 +60,19 @@
  * fixes the layer order. Import base or components ahead of it and the order
  * gets established by first appearance instead, which happens to come out the
  * same here and would not survive someone reordering these lines. */
-/* DECLARED BEFORE THE IMPORTS, AND IT HAS TO BE. See the reduced-motion block at
- * the very bottom of this file: this is the one place naina has to out-cascade
- * nilam, and the only way to do it is from a layer that nilam's own layer
- * statement has not already ordered. A bare @layer statement is one of the two
- * things allowed to precede @import, so this is legal here and nowhere later. */
-@layer naina.motion;
-
+/* THE LOCAL @layer naina.motion IS GONE, and so is the block at the foot of this
+ * file that it existed for. nilam 0.7.0 ships nilam.motion.css, which is the same
+ * fix done properly: declared in the FIRST cascade layer, which is the only
+ * position that beats nilam.base's blanket reduced-motion rule (important
+ * declarations resolve in REVERSE layer order, so the earlier layer wins).
+ *
+ * Importing it is strictly better than the workaround it replaces, which only
+ * ever covered .n-bar::after and .n-skeleton. Upstream also handles .n-spinner,
+ * .n-dots, .n-btn[aria-busy], the .n-spinner-xl ornament, and — the one this app
+ * could not have known to fix — keeps n-wake and n-persist at their REAL
+ * timings, so a reduced-motion reader is not told a 200ms request is running
+ * long. It must come first for the same layer-order reason. */
+@import 'nilam/motion.css';
 @import 'nilam/tokens.css';
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
@@ -110,30 +116,39 @@
      narrower, one fewer local token, and the header, main and footer can no
      longer drift apart from each other by editing one of three copies. */
 
-  /* achroma's --wash, rebuilt on nilam tokens. Same geometry, and the colour is
-     an exact role match: achroma washed towards --bg-raised in both modes, which
-     is --surface here.
-
-     One ramp step of top-light depth, and the cost is still measured rather than
-     assumed. Where the wash is fully opaque the page reads as --surface instead
-     of --neutral-1, so:
+  /* achroma's --wash, rebuilt on nilam tokens, and THE COLOUR CHANGED THIS PASS.
+     It washed towards --surface, an exact role match for achroma's --bg-raised.
+     One ramp step of top-light depth, and the old note measured the cost:
 
        --neutral-12 body text   8.02 -> 8.51 light,  8.31 -> 7.09 dark
        --neutral-11 dim text    5.14 -> 5.45 light,  5.32 -> 4.55 dark
 
-     Re-measured this pass against the installed 0.3.1 tokens: all four figures
-     still hold to two decimals, because steps 11 and 12 were already solving
-     against step 3 and 0.2.0 did not touch them.
+     Correct, and it bought the wrong thing. --surface is chroma EXACTLY ZERO in
+     both modes, so the one gradient on the page was the one object guaranteed to
+     have no brand in it — the page got lighter at the top and no warmer. Every
+     screenshot read as grey.
 
-     The direction that matters is still dark, and the worst case is dim text at
-     4.55:1. That is not luck: --surface in dark mode is L 0.2455, the same
-     lightness as --neutral-3, and step 11 is solved to 4.5:1 against step 3. The
-     wash lands exactly on nilam's proven floor with 0.05 to spare. Deepening it
-     one more step would break 1.4.3, so it stays at one.
+     Now --brand-2: oklch(0.9618 0.0030 285) light, oklch(0.2126 0.0200 285)
+     dark. Re-measured this pass with nilam's own contrast() against the
+     installed 0.6.0 tokens, worst case where the wash is fully opaque:
+
+       --neutral-12 body text   7.61 light,  7.73 dark
+       --neutral-11 dim text    4.88 light,  4.95 dark
+       --brand-11   eyebrow     4.87 light,  4.95 dark
+
+     THE DARK FLOOR IMPROVED, 4.55 -> 4.95, so this is not a contrast trade at
+     all. The old note's careful "lands exactly on nilam's proven floor with 0.05
+     to spare" was describing a tighter squeeze than the tinted wash needs:
+     --surface is L 0.2455 in dark mode and --brand-2 is L 0.2126, closer to the
+     page, so less is being asked of step 11 in the first place.
+
+     Softer geometry too — 55% -> 70% falloff over a taller 150%/85% ellipse. The
+     hard stop was a visible arc across the hero at 1280px wide; carrying it
+     further makes it light rather than a shape, which is the whole intent.
 
      Still a local token because nilam has no gradient tokens at all — it solves
      colours, not fills. That is the right scope for it and not a gap. */
-  --wash: radial-gradient(120% 70% at 50% -15%, var(--surface) 0%, transparent 55%);
+  --wash: radial-gradient(150% 85% at 50% -20%, var(--brand-2) 0%, transparent 70%);
 }
 
 body {
@@ -241,12 +256,27 @@ body {
   padding-block: var(--space-4);
 }
 
-/* A stylised eye: naina means eyes. Ink, not an accent hue. */
+/* A stylised eye: naina means eyes.
+ *
+ * IT WAS INK, AND THAT WAS THE WRONG CALL. The old note read "Ink, not an accent
+ * hue", on the same reasoning that kept the accent off first paint: hue is
+ * reserved for meaning, and a logo means nothing. Rendered, the consequence was
+ * that the only saturated pixels above the fold were a dashed border and a 40px
+ * arrow — the page read as a wireframe of itself.
+ *
+ * A logo is the one place a brand hue is the meaning. --brand-11 rather than
+ * --brand-9, because this is a 1.5px stroke and a 7px pupil at 22px: step 11 is
+ * the text role (5.14:1 on --neutral-1 light, 5.32:1 dark) and clears 1.4.11's
+ * 3:1 for a graphical object with room to spare, where step 9 is solved as a
+ * FILL and its contrast contract is about its ink, not about the page behind it.
+ * The wordmark stays --neutral-12: two brand objects side by side would make the
+ * header the loudest thing on the page, which is the mistake the offline badge
+ * used to make in green. */
 .eye {
   width: 22px;
   height: 22px;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  border: 1.5px solid var(--neutral-12);
+  border: 1.5px solid var(--brand-11);
   position: relative;
   display: inline-block;
   flex: none;
@@ -256,7 +286,7 @@ body {
   position: absolute;
   inset: 32% 34%;
   border-radius: 50%;
-  background: var(--neutral-12);
+  background: var(--brand-11);
 }
 
 .wordmark {
@@ -308,14 +338,25 @@ main {
   padding-block-end: var(--space-8);
 }
 
+/* --space-7 top, not --space-8. MEASURED, not trimmed by feel: at --space-8 the
+   drop zone's top edge landed 418px down a 900px laptop viewport and its bottom
+   edge fell below the fold, so the one object the page exists for was the one
+   object a visitor had to scroll to finish seeing. The hero is a caption for the
+   drop zone; it should not cost half a screen to read. */
 .hero {
-  padding: var(--space-8) 0 var(--space-7);
+  padding: var(--space-7) 0 var(--space-6);
   max-width: 46rem;
 }
 
+/* The eyebrow takes the brand hue too. Same argument as .eye: it is a label for
+   the product, not a status, and --brand-11 is the text role at the same 5.14 /
+   5.32 the neutral it replaces was measured at — .label is --text-000 uppercase,
+   which is small text, so 1.4.3's 4.5:1 applies at full strength and step 11 is
+   the step solved for exactly that. */
 .hero .label {
   display: block;
   margin: 0 0 var(--space-4);
+  color: var(--brand-11);
 }
 
 /* Thin and huge, against the tiny wide label above it. This pairing is the
@@ -443,19 +484,50 @@ main {
 .drop {
   border: var(--line-2) dashed var(--brand-7);
   border-radius: var(--r-5);
-  background: var(--surface);
-  /* --rim, not a shadow. The zone is --surface sitting on a --neutral-1 page,
-     which is the same relationship .n-card has, so it earns the same top light.
-     Transparent in light mode by construction; in dark mode it is what stops a
-     --surface panel dissolving into the page. */
+  /* --brand-2, NOT --surface, AND THIS IS THE FIX FOR DARK MODE RATHER THAN A
+     TINT FOR ITS OWN SAKE. --surface in dark mode is oklch(0.2455 0 285) with
+     chroma flat zero, on a --neutral-1 page of oklch(0.1750 0.0070 285). Two
+     achromatic greys 0.07 L apart, behind a dashed border: screenshotted, the
+     zone read as a hole punched in the page rather than as a panel on it.
+
+     --brand-2 is oklch(0.2126 0.0200 285) dark / oklch(0.9618 0.0030 285) light.
+     Dark mode gains chroma 0.020 against the page's 0.007, so the fill is
+     visibly of the brand instead of absent; light mode is a 0.018 L step under
+     --surface, which is a tint rather than a panel, and that is correct — a
+     light page does not need the depth, it needs the hue.
+
+     A GRADIENT, NOT A FLAT FILL, and light mode is the reason. The flat --brand-2
+     version of this rule was screenshotted in both modes and only worked in one:
+     --brand-2 is chroma 0.0200 dark but chroma 0.0030 light, so the dark panel
+     picked up a real violet cast and the light one stayed grey. That asymmetry
+     is in the palette, not in this file — nilam solves light steps close to a
+     white page and there is simply less room for chroma up there — so the fix
+     has to add tint without adding lightness contrast.
+
+     Running step 3 into step 2 from the top does exactly that. --brand-3 is
+     chroma 0.0079 light, 2.6x step 2's, and the falloff means the strongest tint
+     sits behind the disc where the eye already is. In dark mode the same
+     gradient reads as top-light, which is the same thing --rim below is doing.
+
+     Step 3 is still the HOVER fill and this does not spend it: at rest it is one
+     end of a gradient that is mostly step 2, and on hover the whole zone becomes
+     flat step 3. Both channels still move. Measured on the strongest end, so the
+     worst case for text sitting on it: --neutral-12 7.10 light / 7.10 dark,
+     --neutral-11 4.55 / 4.55, which is nilam's floor exactly. */
+  background: radial-gradient(120% 130% at 50% 0%, var(--brand-3) 0%, var(--brand-2) 65%);
+  /* --rim, not a shadow. The zone is a raised fill sitting on a --neutral-1
+     page, which is the same relationship .n-card has, so it earns the same top
+     light. Transparent in light mode by construction; in dark mode it is what
+     stops the panel dissolving into the page. */
   box-shadow: var(--rim);
-  /* --space-8, not --space-9. 96px was tried first and rendered a 310px box that
-     was 200px of nothing: "the most confident thing on the page" is not the same
-     as "the tallest", and an empty target that large reads as an unfinished
-     layout rather than as an invitation. The confidence comes from the --line-2
-     brand border, the --r-5 radius, the 40px icon and a --text-3 title. 64px
-     gives ~230px, still comfortably the heaviest object here. */
-  padding: var(--space-8) var(--space-5);
+  /* --space-7, DOWN FROM --space-8, and the old note's own argument is why.
+     It said 96px "rendered a 310px box that was 200px of nothing" and settled on
+     64px for ~230px. Screenshotted at 1280x900, 64px still renders ~250px around
+     a 130px cluster of icon-title-hint: 120px of nothing, and the emptiness is
+     what made the zone read as an unfinished layout. 48px gives ~205px, and the
+     icon below now carries a filled --brand-9 disc, so the confidence comes from
+     colour rather than from acreage. Still the heaviest object on the page. */
+  padding: var(--space-7) var(--space-5);
   text-align: center;
   cursor: pointer;
   transition:
@@ -490,12 +562,47 @@ main {
    margin-inline is load-bearing. nilam's base sets svg to display:block
    (achroma left it inline), and a block box does not answer to the parent's
    text-align — without this the arrow sits hard against the left edge. */
+/* THE ONE SATURATED OBJECT ON THE PAGE, and the reason the rest can stay quiet.
+ *
+ * It was a 40px --brand-11 stroke on nothing. That is the same weight as the
+ * dashed border around it and the same hue, so the zone had no focal point —
+ * just violet line-work at three sizes. Now the arrow sits in a filled
+ * --brand-9 disc, which is nilam's "brand moment": step 9 inverts polarity by
+ * mode (dark violet with white ink on a light page, the L 0.66 glow with
+ * near-black ink on a dark one), so the disc is the same OBJECT in both modes
+ * rather than the same colour.
+ *
+ * --brand-ink, never a hardcoded white — nilam's README calls that the most
+ * common contrast defect in comparable systems, and at hue 285 the ink really
+ * does flip. Measured, --brand-ink on --brand-9 is 4.57:1 light / 5.92:1 dark.
+ *
+ * content-box so the padding grows the disc around a 28px glyph rather than
+ * shrinking the glyph inside a 40px box: 28 + 2*14 = 56px. The soft --shadow-2
+ * in the brand's own --shadow-colour is what makes it read as resting on the
+ * zone rather than stamped into it; that softness is the whole point, a hard
+ * edge here would be a button and this is an invitation.
+ *
+ * margin-inline is still load-bearing: nilam's base sets svg to display:block,
+ * and a block box does not answer to the parent's text-align. */
 .drop-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
+  padding: 14px;
+  box-sizing: content-box;
   margin-inline: auto;
-  color: var(--brand-11);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+  color: var(--brand-ink);
+  background: var(--brand-9);
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-2);
+  transition: transform var(--dur-2) var(--ease-spring);
+}
+/* The disc lifts, the zone does not. A 2px rise on a 56px object is a breath;
+   the same 2px on the whole 200px zone (which .is-over still does, below) is a
+   shove. Calm is the brief here. */
+.drop:hover .drop-icon,
+.drop:focus-visible .drop-icon {
+  transform: translateY(-2px);
 }
 
 .drop-title {
@@ -603,6 +710,12 @@ main {
 .error {
   margin: var(--space-5) 0 0;
 }
+/* Same spacing as the other three notes. .n-note-ok is --ok-2 fill, --ok-6 edge,
+   --ok-12 text and an --ok-9 glyph disc — all solved by nilam, nothing to set
+   here but the margin a component cannot know. */
+.success {
+  margin: var(--space-5) 0 0;
+}
 
 /* One local rule the note needs. nilam's base underlines every <a> in
    --neutral-8, which is a neutral line under warn-hued text; inside a coloured
@@ -682,38 +795,22 @@ main {
   font-family: var(--font-mono);
 }
 
-/* .n-SKELETON IS INVISIBLE ON A CARD IN DARK MODE, and this is a real bug rather
-   than a taste adjustment. Its gradient runs --neutral-3 -> --neutral-4 ->
-   --neutral-3, which nilam solved against the PAGE. These sit on a .n-card.
-   Measured against --surface with nilam's own contrast():
+/* THE LOCAL #skeleton .n-skeleton OVERRIDE IS GONE — nilam 0.7.0 fixed it
+   upstream, and fixed it one step harder than this app did.
 
-     --neutral-3  its rest step     1.198 light / 1.001 dark
-     --neutral-4  its shimmer peak  1.272 light / 1.084 dark
+   The bug was real: nilam's skeleton ran --neutral-3 -> --neutral-4 -> --neutral-3,
+   solved against the PAGE, and these sit on a .n-card. Measured against --surface,
+   the rest step was 1.001:1 in dark mode — not "faint", the same colour — because
+   --neutral-3 and --surface are both L 0.2455 there by construction. Dark mode
+   showed two blank panes that occasionally breathed. This file worked around it
+   with --neutral-4 -> --neutral-6.
 
-   1.001 is not "faint", it is the same colour. --neutral-3 and --surface are both
-   L 0.2455 in dark mode by construction — which is the very coincidence the
-   --wash comment at the top of this file relies on for its contrast floor. So in
-   dark mode the placeholder's rest state does not exist and only the peak of the
-   shimmer shows, which reads as an empty card that occasionally breathes.
-   Found by screenshotting the dark in-progress state and seeing two blank panes.
-
-   One step up at each stop: --neutral-4 -> --neutral-6, so 1.272 -> 1.644 light
-   and 1.084 -> 1.324 dark. Never equal in either mode, and still well under the
-   1.644 that nilam itself considers a decorative hairline — a placeholder has to
-   be quieter than content or it reads as content.
-
-   background-IMAGE, not background. The shorthand would reset nilam's own
-   `background-size: 200% 100%` to auto and the shimmer would stop travelling.
-   Scoped to #skeleton so this does not silently redefine .n-skeleton for anything
-   else that might use it later. */
-#skeleton .n-skeleton {
-  background-image: linear-gradient(
-    90deg,
-    var(--neutral-4) 25%,
-    var(--neutral-6) 50%,
-    var(--neutral-4) 75%
-  );
-}
+   0.7.0 ships --neutral-5 -> --neutral-7, and its own comment describes exactly
+   this defect ("fatal for anything drawn ON one out of step 3", visible "in this
+   file's own showcase for several releases"). 1.18:1 on a dark card with a 2.59:1
+   travelling stop, against the local fix's 1.324:1 — quieter at rest and more
+   present in motion. Keeping the override would now pin the skeleton one step
+   BELOW what upstream proved. Deleted, not kept as a no-op. */
 
 /* The skeleton's shape. Percentages and aspect ratios rather than tokens, and
    deliberately: these are the proportions of the content that is arriving, the
@@ -954,10 +1051,22 @@ canvas {
 
 /* ── notes ──────────────────────────────────────────────────────────── */
 
+/* --space-8 plus --space-7 of padding, down from --space-9 plus --space-7.
+   Screenshotted full-page: the caveat's bottom edge to the "How this works" rule
+   was 150px of nothing, which is not calm, it is a page that has stopped. The
+   rule itself is the separator; the gap only has to let it breathe.
+
+   --neutral-6, down from --neutral-7. Step 7 is the CONTROL boundary — it is
+   solved to 3:1 because 1.4.11 governs things you can click. A section divider
+   is decorative, 1.4.11 does not reach it, and step 6 is the step nilam solves
+   for exactly that (1.64:1 light / 1.32:1 dark on the page). At step 7 this hair-
+   line was drawn at the same strength as the <select> borders below it and read
+   as a hard stop across the page. Same correction the drop border got, in the
+   opposite direction: reach for the role, not for the weight. */
 .notes {
-  margin: var(--space-9) 0 0;
+  margin: var(--space-8) 0 0;
   padding-top: var(--space-7);
-  border-top: var(--line-1) solid var(--neutral-7);
+  border-top: var(--line-1) solid var(--neutral-6);
 }
 
 .notes > h2 {
@@ -990,6 +1099,33 @@ canvas {
 }
 .notes .n-prose p {
   color: var(--neutral-11);
+}
+
+/* Four identical white rectangles was what the full-page screenshot showed, and
+   at a glance the grid read as one undifferentiated block of text rather than as
+   four answers. A short brand rule above each heading gives the eye a place to
+   land and repeats the hue a fourth time, which is what makes the accent read as
+   a system instead of as one violet disc in the middle of a grey page.
+
+   Decorative by construction — it carries no meaning the heading does not
+   already carry in words, so there is nothing here for 1.4.1 to govern and no
+   glyph is owed. That is the distinction the failed page chip and the status
+   notes turn on: those signal STATE by colour and must add a shape; this is
+   ornament attached to text that already says the same thing.
+
+   --brand-9 rather than a step 6 hairline: at 2px over 24px it is a mark, not an
+   edge, and step 9 is the one step whose polarity flips by mode, so it stays
+   equally present on both pages (4.31:1 light / 5.79:1 dark against --neutral-1,
+   4.09 / 5.38 against the card). --r-full so the ends are round; a square 2px
+   bar reads as a broken border. */
+.notes .n-prose h3::before {
+  content: '';
+  display: block;
+  inline-size: var(--space-6);
+  block-size: var(--line-2);
+  margin-block-end: var(--space-3);
+  background: var(--brand-9);
+  border-radius: var(--r-full);
 }
 
 /* Level 3. Was --text-00 at --neutral-11 with no other differentiation, which
@@ -1064,67 +1200,5 @@ footer p {
 @media print {
   .grain {
     display: none;
-  }
-}
-
-/* ── reduced motion: a bug in nilam 0.3.1, worked around ─────────────────
- *
- * NILAM'S LOADER EXEMPTION DOES NOT WORK, and on this page that matters more
- * than on most, because the thing it governs is a 40-second wait.
- *
- * nilam.components.css has a careful block for prefers-reduced-motion whose own
- * comment says exactly the right thing: "a FROZEN spinner does not read as
- * 'reduced motion', it reads as 'this app has hung'... WCAG 2.3.3 governs
- * non-essential animation, and a loading indicator is essential by definition."
- * It then sets animation-duration: 1.4s !important and
- * animation-iteration-count: infinite !important to keep the loaders breathing.
- *
- * nilam.base.css has the usual blanket rule in the same media query:
- * animation-duration: 0.01ms !important, animation-iteration-count: 1 !important
- * on *, *::before, *::after.
- *
- * Both are !important, and FOR !important DECLARATIONS CASCADE LAYER ORDER IS
- * REVERSED — the earlier layer wins. nilam.base is declared before
- * nilam.components, so the blanket rule beats the exemption written to escape it.
- * The loaders freeze. animation-name survives as n-breathe, because base does not
- * set a name, which makes the failure look deliberate: the right keyframes, run
- * once, for 0.01ms.
- *
- * Measured in Chrome on the built page with reducedMotion: 'reduce':
- *   .n-bar::after   animation-name n-breathe, duration 1e-05s, iterations 1
- *   .n-skeleton     animation-name n-breathe, duration 1e-05s, iterations 1
- *
- * This is the class of bug nilam's own README names: "an assertion that shares
- * its premise with the thing it audits is not an audit." The comment states the
- * intent, the CSS states the intent, and nothing checks that the intent survives
- * the cascade.
- *
- * WHY THIS IS IN A LAYER AND NOT UNLAYERED. nilam's README says "anything you
- * write unlayered beats all of it. No !important needed" — which is true for
- * normal declarations and false for !important ones, where unlayered author
- * styles are the LOWEST priority, below every layer. Both were tried against a
- * reduction of nilam's structure:
- *
- *   as shipped                          duration 1e-05s   iterations 1
- *   unlayered !important in this file   duration 1e-05s   iterations 1   (loses)
- *   layer declared before nilam.base    duration 1.4s     infinite      (wins)
- *
- * Hence @layer naina.motion at the top of this file, declared ahead of nilam's
- * own layer statement. This is the only rule in it, and if the upstream bug is
- * fixed the layer and this block can both be deleted with no other change.
- *
- * Scoped to the two loaders naina actually uses. .n-spinner, .n-dots and
- * .n-btn[aria-busy] have the same bug and are not on this page; adding them here
- * would be fixing nilam from the wrong file. */
-@layer naina.motion {
-  @media (prefers-reduced-motion: reduce) {
-    .n-bar::after,
-    .n-skeleton {
-      /* Opacity only — n-breathe moves nothing across the screen, so there is
-         nothing here for a vestibular disorder to react to. The duration and the
-         count are all that were lost; nilam's own animation-name gets through. */
-      animation-duration: 1.4s !important;
-      animation-iteration-count: infinite !important;
-    }
   }
 }

@@ -131,8 +131,16 @@
         <div class="n-field">
           <label class="n-label" for="language">Script</label>
           <select class="n-select" id="language">
-            <option value="auto" selected>Auto — detect the script</option>
-            <option value="">Latin, Chinese, Japanese</option>
+            <!-- DEFAULT IS LATIN, NOT AUTO — changed on request, because English
+                 scans are the common case. The tradeoff is real and belongs on
+                 the record: Auto also reads English correctly, so this default
+                 buys a skipped probe pass, and it costs correctness on every
+                 NON-Latin page. A Hindi scan now returns fluent Latin fiction at
+                 high confidence instead of a correct read — the exact failure the
+                 warn note below describes, and the first row of CLAUDE.md's bug
+                 table. Auto remains one click away and the caveat points at it. -->
+            <option value="" selected>Latin, Chinese, Japanese</option>
+            <option value="auto">Auto — detect the script</option>
             <option value="arabic">Arabic, Persian, Urdu</option>
             <option value="cyrillic">Russian, Bulgarian, Serbian</option>
             <option value="devanagari">Hindi, Marathi, Nepali, Sanskrit</option>
@@ -172,6 +180,20 @@
         <div id="bar" class="n-bar" role="progressbar" aria-label="Working" hidden></div>
         <p id="status-text" class="status-text faint" role="status"></p>
       </section>
+
+      <!-- The one place ok-green is earned. Every other status on this page is a
+           capability or a caveat; this one reports the outcome of an operation
+           that actually happened, which is what the ok family is for. The offline
+           badge was moved off green precisely because it claimed a success that
+           never occurred — this does not have that problem.
+           role="status" is a polite live region: it announces after the read
+           rather than interrupting, unlike the error note's role="alert". The ✓
+           glyph is the required non-hue channel; ok and danger are the same
+           colour to a deuteranope, so the shape is the real signal. -->
+      <div id="success" class="success n-note n-note-ok" role="status" hidden>
+        <span class="n-note-glyph" aria-hidden="true">✓</span>
+        <div><span class="n-note-title">Read complete.</span><span id="success-text"></span></div>
+      </div>
 
       <!-- "Content shaped like THIS is coming." Only shown when there is nothing
            on screen yet; a re-read keeps its real result and uses the bar. -->
