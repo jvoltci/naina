@@ -4,16 +4,16 @@
 
 <p align="center">
   <a href="https://github.com/jvoltci/naina/actions/workflows/ci.yml"><img src="https://github.com/jvoltci/naina/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
+  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-1634C2.svg" alt="License"></a>
   <a href="https://github.com/jvoltci/naina/stargazers"><img src="https://img.shields.io/github/stars/jvoltci/naina.svg?style=social" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/naina/"><img src="https://img.shields.io/pypi/v/naina?label=pypi&color=3775A9" alt="PyPI"></a>
-  <a href="https://www.npmjs.com/package/@jvoltci/naina"><img src="https://img.shields.io/npm/v/@jvoltci/naina?label=npm&color=CB3837" alt="npm"></a>
-  <a href="https://www.npmjs.com/package/@jvoltci/naina-wasm"><img src="https://img.shields.io/npm/v/@jvoltci/naina-wasm?label=npm%20wasm&color=654FF0" alt="npm wasm"></a>
-  <a href="https://pub.dev/packages/naina"><img src="https://img.shields.io/pub/v/naina?label=pub.dev&color=0175C2" alt="pub.dev"></a>
-  <a href="https://crates.io/crates/naina"><img src="https://img.shields.io/crates/v/naina?label=crates.io&color=E43717" alt="crates.io"></a>
+  <a href="https://pypi.org/project/naina/"><img src="https://img.shields.io/pypi/v/naina?label=pypi&color=1634C2" alt="PyPI"></a>
+  <a href="https://www.npmjs.com/package/@jvoltci/naina"><img src="https://img.shields.io/npm/v/@jvoltci/naina?label=npm&color=1634C2" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@jvoltci/naina-wasm"><img src="https://img.shields.io/npm/v/@jvoltci/naina-wasm?label=npm%20wasm&color=1634C2" alt="npm wasm"></a>
+  <a href="https://pub.dev/packages/naina"><img src="https://img.shields.io/pub/v/naina?label=pub.dev&color=1634C2" alt="pub.dev"></a>
+  <a href="https://crates.io/crates/naina"><img src="https://img.shields.io/crates/v/naina?label=crates.io&color=1634C2" alt="crates.io"></a>
 </p>
 
 <h3 align="center">Read any document. One C++ core, everywhere.</h3>

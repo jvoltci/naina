@@ -9,6 +9,8 @@ import type { NainaPage, TierName } from '@jvoltci/naina-wasm';
 import { toPages, toProbeBitmap, toRgb, type SourcePage } from './pages';
 import type { WorkerRequest, WorkerResponse } from './ocr.worker';
 import './styles.css';
+import './theme/altrusian.css';
+import { wireThemeToggles } from './theme/theme.js';
 
 interface Result {
   page: SourcePage;
@@ -89,7 +91,7 @@ worker.addEventListener('message', (event: MessageEvent<WorkerResponse>) => {
   // Progress and stage are broadcasts, not replies — they arrive many times per
   // request and must not settle the promise.
   if (msg.kind === 'progress') {
-    setStatus(`Fetching weights — ${msg.name} (${msg.done} of ${msg.total})`, msg.done / msg.total);
+    setStatus(`Fetching weights: ${msg.name} (${msg.done} of ${msg.total})`, msg.done / msg.total);
     return;
   }
   if (msg.kind === 'stage') {
@@ -359,9 +361,9 @@ function renderPager() {
       }
       // aria-label rather than only title: title is not reliably announced, and
       // for a failed page the reason is the whole point of the chip.
-      b.setAttribute('aria-label', r.error ? `${r.page.label} — ${r.error}` : r.page.label);
+      b.setAttribute('aria-label', r.error ? `${r.page.label}: ${r.error}` : r.page.label);
       if (i === current) b.setAttribute('aria-current', 'page');
-      b.title = r.error ? `${r.page.label} — ${r.error}` : r.page.label;
+      b.title = r.error ? `${r.page.label}: ${r.error}` : r.page.label;
       b.addEventListener('click', () => {
         current = i;
         render();
@@ -663,3 +665,5 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       });
   });
 }
+
+wireThemeToggles();

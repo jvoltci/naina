@@ -1,0 +1,39 @@
+/* Altrusian theme, on nilam. Copied whole into every surface; changed in all or none.
+ *
+ * Load order: nilam's layers, then design/altrusian.tokens.css, then this file.
+ * It is unlayered on purpose: unlayered rules beat every nilam.* layer without
+ * !important, and a surface's own unlayered CSS loaded after it still wins.
+ *
+ * Fonts are loaded by each surface from npm, latin subset, self-hosted:
+ *   @fontsource-variable/inter           48.3 kB   (the one face)
+ *   @fontsource-variable/jetbrains-mono  40.4 kB   (only where code is shown)
+ * Their family names are "Inter Variable" and "JetBrains Mono Variable", which
+ * nilam.voice does not name, so the stacks are restated here. Display is the
+ * same face, tighter: nilam's tracking ramp does the rest.
+ */
+:root {
+  --font-ui: 'Inter Variable', 'Inter var', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-ui);
+  --font-sans: var(--font-ui);
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* The page is step 1, in both modes. Cards are --surface. */
+html {
+  background: var(--neutral-1);
+  color: var(--neutral-12);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The theme switch. The OS decides until the reader does; the choice is a class on
+ * <html>, which nilam already honours (.light and .dark set color-scheme). */
+.theme-toggle {
+  display: inline-grid; place-items: center;
+  inline-size: 2rem; block-size: 2rem; padding: 0;
+  border: 0; border-radius: var(--r-full, 9999px);
+  background: transparent; color: var(--neutral-11); cursor: pointer;
+}
+.theme-toggle:hover { background: var(--neutral-3); color: var(--neutral-12); }
+.theme-toggle svg { inline-size: 1rem; block-size: 1rem; }

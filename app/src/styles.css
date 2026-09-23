@@ -73,7 +73,9 @@
  * timings, so a reduced-motion reader is not told a 200ms request is running
  * long. It must come first for the same layer-order reason. */
 @import 'nilam/motion.css';
-@import 'nilam/tokens.css';
+/* The Altrusian theme (src/theme, copied whole from altrusian/design): nilam's
+ * tokens solved from #1634C2 instead of the default violet 285. */
+@import './theme/altrusian.tokens.css';
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
 @import 'nilam/components.css';
@@ -89,17 +91,19 @@
  * and inlines the @font-face URLs, and unicode-range means only the subsets the
  * page actually uses get fetched. Same-origin, so sw.js caches them for offline.
  */
-@import '@fontsource-variable/geist';
-@import '@fontsource-variable/geist-mono';
+/* 2026-09-24: Geist replaced by the Altrusian face, Inter, which also has a real
+ * 200 weight, so the thin hero keeps its instance. Mono is JetBrains Mono. */
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/jetbrains-mono/wght.css';
 
 :root {
   /* Geist first, then nilam's own stacks verbatim. A custom property cannot
      reference itself, so the tail has to be repeated rather than composed. */
   --font-sans:
-    'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
+    'Inter Variable', 'Inter var', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
     Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
   --font-mono:
-    'Geist Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
     Consolas, 'Liberation Mono', monospace;
 
   /* --weight-thin IS GONE FROM HERE, and that is the point. It used to read:

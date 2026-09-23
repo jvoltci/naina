@@ -1,5 +1,5 @@
 site_name: naina
-site_description: Embeddable document-reading runtime. OCR from one C++ core — server, laptop, phone, Pi, browser.
+site_description: "Embeddable document-reading runtime. OCR from one C++ core: server, laptop, phone, Pi, browser."
 site_url: https://jvoltci.github.io/naina/doc/
 repo_url: https://github.com/jvoltci/naina
 repo_name: jvoltci/naina
@@ -15,24 +15,26 @@ exclude_docs: |
 theme:
   name: material
   language: en
+  logo: brand/naina-mark.svg
+  favicon: brand/naina-mark.svg
   palette:
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: black
-      accent: blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: black
-      accent: blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Dark mode
-  font:
-    text: Outfit
-    code: JetBrains Mono
+  # No Google Fonts request: Inter and JetBrains Mono are self-hosted in
+  # docs/assets/fonts and declared by stylesheets/mkdocs.css (the Altrusian theme).
+  font: false
   features:
     - navigation.instant
     - navigation.tracking
@@ -83,4 +85,6 @@ extra:
       link: https://github.com/jvoltci/naina
 
 extra_css:
+  - stylesheets/altrusian.tokens.css
+  - stylesheets/mkdocs.css
   - assets/extra.css

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>naina — free OCR in your browser, no upload</title>
+    <title>naina: free OCR in your browser, no upload</title>
     <meta
       name="description"
       content="Extract text and structure from PDFs and images entirely in your browser. No upload, no account, no limits. Works offline after the first visit."
@@ -16,15 +16,17 @@
          the oklch in nilam.tokens.css rather than eyeballed. Both carry the
          brand's C 0.007, which is why neither is a pure grey any more.
          Re-verified against the installed 0.3.1 tokens this pass. -->
-    <meta name="theme-color" content="#f8f8fd" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#101014" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f8fd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1014" media="(prefers-color-scheme: dark)" />
+    <!-- The saved theme choice, applied before paint (src/theme/theme.js). -->
+    <script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.classList.add(t)}catch(e){}</script>
     <!-- Link previews. Absolute URLs on purpose: unfurlers do not resolve relative
          paths, and the card must be a PNG because most of them will not render
          SVG (and GitHub raw serves .svg as text/plain regardless). -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="naina" />
     <meta property="og:url" content="https://jvoltci.github.io/naina/" />
-    <meta property="og:title" content="naina — free OCR that runs in your browser" />
+    <meta property="og:title" content="naina: free OCR that runs in your browser" />
     <meta
       property="og:description"
       content="Read text out of PDFs and images entirely on your device. No upload, no account, no limits. Ten scripts including Devanagari. Works offline after the first visit."
@@ -38,7 +40,7 @@
     />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="naina — free OCR that runs in your browser" />
+    <meta name="twitter:title" content="naina: free OCR that runs in your browser" />
     <meta
       name="twitter:description"
       content="PDFs and images, read on your device. No upload, no account, no limits. Ten scripts. Works offline."
@@ -65,6 +67,7 @@
           <span id="offline-badge" class="n-badge n-badge-info" hidden>
             <i class="n-badge-glyph" aria-hidden="true">i</i>offline ready
           </span>
+          <button type="button" class="theme-toggle" data-theme-toggle></button>
         </nav>
       </div>
     </header>
@@ -75,7 +78,7 @@
         <h1>Extract text from any document.</h1>
         <p class="sub">
           PDFs and images, in your browser, free and without limits.
-          <strong>Your file never leaves this tab</strong> — there is no server to
+          <strong>Your file never leaves this tab.</strong> There is no server to
           send it to.
         </p>
       </section>
@@ -103,7 +106,7 @@
             />
           </svg>
           <p class="drop-title">Drop a PDF or image, paste, or click to choose</p>
-          <p class="drop-hint faint">PDF, PNG, JPEG, WebP — several files at once is fine</p>
+          <p class="drop-hint faint">PDF, PNG, JPEG, WebP. Several files at once is fine</p>
         </div>
       </section>
 
@@ -114,7 +117,7 @@
         <span class="n-note-glyph" aria-hidden="true">i</span>
         <div>
           <span class="n-note-title">Nothing leaves this tab.</span>
-          There is no server to upload to — detection, recognition and markdown
+          There is no server to upload to. Detection, recognition and markdown
           assembly all run here, in WebAssembly. Open your network panel and
           watch: once the weights are cached there is no traffic at all.
         </div>
@@ -124,23 +127,23 @@
         <div class="n-field">
           <label class="n-label" for="tier">Model size</label>
           <select class="n-select" id="tier">
-            <option value="tiny" selected>Tiny — 11 MB, fastest</option>
-            <option value="small">Small — 54 MB, more accurate</option>
+            <option value="tiny" selected>Tiny: 11 MB, fastest</option>
+            <option value="small">Small: 54 MB, more accurate</option>
           </select>
         </div>
         <div class="n-field">
           <label class="n-label" for="language">Script</label>
           <select class="n-select" id="language">
-            <!-- DEFAULT IS LATIN, NOT AUTO — changed on request, because English
+            <!-- DEFAULT IS LATIN, NOT AUTO: changed on request, because English
                  scans are the common case. The tradeoff is real and belongs on
                  the record: Auto also reads English correctly, so this default
                  buys a skipped probe pass, and it costs correctness on every
                  NON-Latin page. A Hindi scan now returns fluent Latin fiction at
-                 high confidence instead of a correct read — the exact failure the
+                 high confidence instead of a correct read, the exact failure the
                  warn note below describes, and the first row of CLAUDE.md's bug
                  table. Auto remains one click away and the caveat points at it. -->
             <option value="" selected>Latin, Chinese, Japanese</option>
-            <option value="auto">Auto — detect the script</option>
+            <option value="auto">Auto: detect the script</option>
             <option value="arabic">Arabic, Persian, Urdu</option>
             <option value="cyrillic">Russian, Bulgarian, Serbian</option>
             <option value="devanagari">Hindi, Marathi, Nepali, Sanskrit</option>
@@ -174,7 +177,7 @@
       </div>
 
       <!-- Status. Two loaders, and which one shows is decided by whether a
-           proportion is known — see the loader note in styles.css. -->
+           proportion is known. See the loader note in styles.css. -->
       <section id="status" class="status" hidden>
         <progress id="progress" class="n-progress" value="0" max="1" hidden></progress>
         <div id="bar" class="n-bar" role="progressbar" aria-label="Working" hidden></div>
@@ -185,7 +188,7 @@
            capability or a caveat; this one reports the outcome of an operation
            that actually happened, which is what the ok family is for. The offline
            badge was moved off green precisely because it claimed a success that
-           never occurred — this does not have that problem.
+           never occurred, and this does not have that problem.
            role="status" is a polite live region: it announces after the read
            rather than interrupting, unlike the error note's role="alert". The ✓
            glyph is the required non-hue channel; ok and danger are the same
@@ -268,7 +271,7 @@
               <h3>Nothing is uploaded</h3>
               <p>
                 The whole pipeline runs in this tab, including PDF rendering. Open
-                your network panel and watch — once the weights are cached, there
+                your network panel and watch: once the weights are cached, there
                 is no traffic at all. No account, no quota, no upload.
               </p>
             </div>
@@ -288,7 +291,7 @@
               <p>
                 Detection post-processing, text decoding, reading order and
                 markdown assembly are the same C++ that naina's Python and Node
-                packages run — compiled to WebAssembly, not rewritten in
+                packages run, compiled to WebAssembly, not rewritten in
                 JavaScript.
               </p>
             </div>

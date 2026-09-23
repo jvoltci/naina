@@ -1,0 +1,95 @@
+/* Altrusian theme for Material for MkDocs sites (naina/doc, and any docs to come).
+ * Copied whole with the other design/ files; changed in all or none.
+ *
+ * mkdocs.yml, in this order:
+ *   theme.palette: primary: custom, accent: custom (both schemes)
+ *   theme.font: false            no Google Fonts request; the faces are self-hosted
+ *   extra_css: [stylesheets/altrusian.tokens.css, stylesheets/mkdocs.css]
+ *   fonts copied to docs/assets/fonts/ from @fontsource-variable/inter and
+ *   @fontsource-variable/jetbrains-mono (latin wght files)
+ *
+ * Material declares its palette on <body> via [data-md-color-scheme], so this
+ * redeclares on the same selector, later in source order. The mapping follows
+ * nilam's own docs site (nilam/docs/stylesheets/extra.css). One change for the
+ * first glance: the header is the page, not a blue bar, with a hairline under it.
+ */
+@font-face { font-family: 'Inter Variable'; font-style: normal; font-display: swap; font-weight: 100 900; src: url('../assets/fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono Variable'; font-style: normal; font-display: swap; font-weight: 100 800; src: url('../assets/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root {
+  --md-text-font: 'Inter Variable';
+  --md-code-font: 'JetBrains Mono Variable';
+  --md-text-font-family: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --md-code-font-family: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Material switches scheme with an attribute on <body>; nilam's tokens switch with
+ * color-scheme. Tie the two, or the slate scheme paints light tokens. */
+[data-md-color-scheme="default"] { color-scheme: light; }
+[data-md-color-scheme="slate"] { color-scheme: dark; }
+
+[data-md-color-scheme] {
+  --md-default-bg-color: var(--neutral-1);
+  --md-default-bg-color--light: color-mix(in oklab, var(--neutral-1) 54%, transparent);
+  --md-default-bg-color--lighter: color-mix(in oklab, var(--neutral-1) 26%, transparent);
+  --md-default-bg-color--lightest: color-mix(in oklab, var(--neutral-1) 7%, transparent);
+  --md-default-fg-color: var(--neutral-12);
+  --md-default-fg-color--light: var(--neutral-11);
+  --md-default-fg-color--lighter: var(--neutral-8);
+  --md-default-fg-color--lightest: var(--neutral-6);
+
+  --md-primary-fg-color: var(--brand-9);
+  --md-primary-fg-color--light: var(--brand-8);
+  --md-primary-fg-color--dark: var(--brand-10);
+  --md-primary-bg-color: var(--brand-ink);
+  --md-primary-bg-color--light: color-mix(in oklab, var(--brand-ink) 85%, transparent);
+  --md-accent-fg-color: var(--brand-10);
+  --md-accent-fg-color--transparent: color-mix(in oklab, var(--brand-9) 10%, transparent);
+  --md-accent-bg-color: var(--brand-ink);
+
+  --md-typeset-color: var(--neutral-12);
+  --md-typeset-a-color: var(--brand-11);
+  --md-typeset-mark-color: var(--warn-3);
+  --md-typeset-kbd-color: var(--neutral-3);
+  --md-typeset-kbd-accent-color: var(--surface);
+  --md-typeset-kbd-border-color: var(--neutral-7);
+  --md-typeset-table-color: var(--neutral-6);
+  --md-typeset-table-color--light: var(--neutral-2);
+
+  --md-code-bg-color: var(--neutral-2);
+  --md-code-fg-color: var(--neutral-12);
+  --md-code-hl-color: var(--brand-9);
+  --md-code-hl-color--light: color-mix(in oklab, var(--brand-9) 12%, transparent);
+  --md-code-hl-keyword-color: var(--brand-11);
+  --md-code-hl-function-color: var(--brand-11);
+  --md-code-hl-variable-color: var(--neutral-12);
+  --md-code-hl-string-color: var(--ok-11);
+  --md-code-hl-number-color: var(--danger-11);
+  --md-code-hl-special-color: var(--danger-11);
+  --md-code-hl-constant-color: var(--warn-11);
+  --md-code-hl-name-color: var(--neutral-12);
+  --md-code-hl-operator-color: var(--neutral-11);
+  --md-code-hl-punctuation-color: var(--neutral-11);
+  --md-code-hl-comment-color: var(--neutral-11);
+  --md-code-hl-generic-color: var(--neutral-11);
+
+  --md-admonition-fg-color: var(--neutral-12);
+  --md-admonition-bg-color: var(--surface);
+  --md-footer-bg-color: var(--neutral-2);
+  --md-footer-bg-color--dark: var(--neutral-3);
+  --md-footer-fg-color: var(--neutral-12);
+  --md-footer-fg-color--light: var(--neutral-11);
+  --md-footer-fg-color--lighter: var(--neutral-8);
+}
+
+/* The header and tabs are the page. The one blue stays for links and actions. */
+.md-header, .md-tabs {
+  background-color: var(--neutral-1);
+  color: var(--neutral-12);
+  box-shadow: none;
+  border-bottom: 1px solid var(--neutral-6);
+}
+.md-header--shadow { box-shadow: none; }
+.md-search__form { background-color: var(--neutral-3); }
+.md-search__input, .md-search__input::placeholder, .md-search__icon { color: var(--neutral-11); }
+.md-typeset h1, .md-typeset h2 { color: var(--neutral-12); font-weight: 600; letter-spacing: -0.015em; }
