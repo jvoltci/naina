@@ -6,7 +6,7 @@
   "description": "In-browser OCR demo for naina. Reads a document image entirely client-side using naina's C++ core compiled to WebAssembly.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/first-glance.mjs && node scripts/check-dashes.mjs dist/index.html dist/assets/*.js",
     "preview": "vite preview"
   },
   "dependencies": {
