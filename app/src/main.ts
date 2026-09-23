@@ -649,6 +649,19 @@ function reReadOnSelectorChange() {
 tierEl.addEventListener('change', reReadOnSelectorChange);
 langEl.addEventListener('change', reReadOnSelectorChange);
 
+/* The options line under the drop zone says what is set without being opened:
+ * "Tiny · Latin, Chinese, Japanese". The tier option text is "Tiny: 11 MB,
+ * fastest", so only the word before the colon is shown. */
+const optsSummary = document.getElementById('opts-summary') as HTMLElement;
+function paintOptionsSummary() {
+  const tier = tierEl.options[tierEl.selectedIndex]?.text.split(':')[0] ?? tierEl.value;
+  const lang = langEl.options[langEl.selectedIndex]?.text ?? langEl.value;
+  optsSummary.textContent = `${tier} · ${lang}`;
+}
+paintOptionsSummary();
+tierEl.addEventListener('change', paintOptionsSummary);
+langEl.addEventListener('change', paintOptionsSummary);
+
 // ── offline ────────────────────────────────────────────────────────────
 
 // The service worker caches the app shell and naina.wasm. Model weights are

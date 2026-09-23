@@ -37,8 +37,8 @@ try {
 }
 ```
 
-`close()` matters. The context holds loaded models — tens to hundreds of
-megabytes — and it is not released by garbage collection.
+`close()` matters. The context holds loaded models, tens to hundreds of
+megabytes, and it is not released by garbage collection.
 
 ## Raw pixels
 
@@ -73,5 +73,5 @@ Reads the same environment variables as every other binding: `NAINA_CACHE`,
 !!! note "Setting them from Node"
     The native addon reads these with `getenv()` at load time. Writing
     `process.env.NAINA_CACHE` from inside a worker thread does not always reach
-    it — under vitest's default thread pool it does not. Set them in the
+    it, under vitest's default thread pool it does not. Set them in the
     environment before the process starts, or use `pool: 'forks'`.

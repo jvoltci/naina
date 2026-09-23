@@ -39,7 +39,7 @@ pointless.
 What no OCR library ships is **one engine that runs the same way everywhere**.
 PaddleOCR needs Python and a 300 MB dependency tree. Browser libraries
 reimplement the pipeline in TypeScript. Mobile gets a different SDK again. Each
-of those is a separate implementation that can — and does — disagree with the
+of those is a separate implementation that can, and does, disagree with the
 others.
 
 naina is one C++ core behind a stable C ABI, with thin bindings on top:
@@ -59,7 +59,7 @@ the core.
 ## What that buys you
 
 **Python, Node and Rust produce byte-identical output** for a fixed backend,
-device and tier. Not "similar" — identical.
+device and tier. Not "similar", identical.
 
 The browser is close but not bit-exact, and that is stated plainly rather than
 glossed: `onnxruntime-web` is a different build of ONNX Runtime with different
@@ -85,6 +85,6 @@ anything and naina keeps working.
 
 ## Where to go next
 
-- **[Install](install.md)** — pip, npm, or nothing at all in a browser
-- **[Tiers](tiers.md)** — 11 MB, 54 MB or 269 MB, and how to pick
-- **[What it cannot do](limits.md)** — read this before deploying anything
+- **[Install](install.md)**, pip, npm, or nothing at all in a browser
+- **[Tiers](tiers.md)**, 11 MB, 54 MB or 269 MB, and how to pick
+- **[What it cannot do](limits.md)**, read this before deploying anything

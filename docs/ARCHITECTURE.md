@@ -1,4 +1,4 @@
-# naina — Architecture
+# naina: Architecture
 
 > A high-performance, embeddable document-reading runtime. C++ core, thin
 > bindings, runs on edge → server, one API.
@@ -17,7 +17,7 @@
   accuracy + latency numbers per target. README shows both *default
   (commercial-OK)* and *research (max accuracy)* columns.
 - **Open source first-class**: Apache-2.0 code, permissive default weights,
-  opt-in research weights. Adoption > bragging rights — but we get both.
+  opt-in research weights. Adoption > bragging rights, but we get both.
 
 ## Layered design
 
@@ -45,7 +45,7 @@
 │  │  └────────┴─────────┴─────┴─────┴───────┴──────────┘ │   │
 │  └──────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  HAL  —  CPU SIMD │ GPU │ NPU │ Hailo │ Coral │ ANE │   │
+│  │  HAL, CPU SIMD │ GPU │ NPU │ Hailo │ Coral │ ANE │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -59,20 +59,20 @@
 | Backend selection | **Runtime, not compile-time** | Probe what's available, pick best, fall back. Build flags toggle *availability*, not *use*. |
 | Model loading | **Manifest-driven** | YAML registry: URL, hash, preprocessing, postprocessing, license, benchmarks. New SOTA = new YAML entry. |
 
-## Module modularity — why v1 isn't vaporware
+## Module modularity, why v1 isn't vaporware
 
 Each task module is independently shippable:
 
 ```
-v0.2  — Text spotting:  detect + rectify + recognise        (shipped)
-v0.3  — Structure:      layout + reading order + markdown
-v0.4  — Browser:        WASM target + client-side PWA
-v1.0  — Guarantees:     cross-binding parity, benchmarks, MCP
+v0.2  Text spotting:  detect + rectify + recognise        (shipped)
+v0.3  Structure:      layout + reading order + markdown
+v0.4  Browser:        WASM target + client-side PWA
+v1.0  Guarantees:     cross-binding parity, benchmarks, MCP
 ```
 
 Same API. Modules light up over time. No big-bang release.
 
-Two of the five modules — `TextRectify` and `DocAssemble` — touch no model at
+Two of the five modules, `TextRectify` and `DocAssemble`, touch no model at
 all. They are deterministic pure functions. That is deliberate: it makes the
 cross-binding identity guarantee provable with plain equality assertions rather
 than float-tolerance comparisons.
@@ -86,7 +86,7 @@ actually varies is size and the hardware it suits.
 ```yaml
 - id: text_recognize.tiny
   task: text_recognize
-  tier: tiny              # ~6 MB with det — browser, phone, Pi Zero
+  tier: tiny              # ~6 MB with det, browser, phone, Pi Zero
   arch: pp_ocrv6_rec
   license: Apache-2.0
   files:
@@ -103,7 +103,7 @@ actually varies is size and the hardware it suits.
 Three properties of this that matter:
 
 **`url` points at naina's own release, not upstream.** The sha256 already meant
-an upstream swap failed closed rather than corrupting output — but it would
+an upstream swap failed closed rather than corrupting output, but it would
 still have broken. Mirroring removes the third-party runtime dependency
 entirely. `source_url` records provenance and is never fetched.
 
@@ -117,7 +117,7 @@ Hardcoding one value shifts every decoded character.
 
 ## Hot-path discipline (the engineering moat)
 
-This is where naina earns the "super fast" claim — these are non-negotiable
+This is where naina earns the "super fast" claim, these are non-negotiable
 for the C++ implementation phase:
 
 1. **Zero allocations per frame** in steady state. Arena allocator per pipeline.
@@ -139,14 +139,14 @@ for the C++ implementation phase:
 | Android phone | NCNN Vulkan | ONNX Runtime NNAPI |
 | Hailo-8 / Coral Edge TPU | vendor SDK | ONNX Runtime CPU |
 | x86 server w/ NVIDIA GPU | TensorRT | ONNX Runtime CUDA |
-| Browser (stretch) | ONNX Runtime Web (WASM SIMD) | — |
+| Browser (stretch) | ONNX Runtime Web (WASM SIMD) | |
 
 ## Out of scope (by design, not by accident)
 
-- **Identity database / vector store** — return embeddings, integrators choose Faiss/Milvus/hnswlib.
-- **UI / dashboards** — naina is a runtime, not an app.
-- **Authentication / authorization** — concerns above the library.
-- **Government ID linkage / "crime prediction"** — biometric ID against
+- **Identity database / vector store**, return embeddings, integrators choose Faiss/Milvus/hnswlib.
+- **UI / dashboards**, naina is a runtime, not an app.
+- **Authentication / authorization**, concerns above the library.
+- **Government ID linkage / "crime prediction"**, biometric ID against
   state databases is regulated (EU AI Act high-risk, India DPDP). Library
   stays identity-agnostic; that's an integrator concern with its own
   legal review.

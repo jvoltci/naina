@@ -22,7 +22,7 @@ for line in page.lines:
 ## Reuse the context
 
 `naina.read` builds a context, loads models and tears it down. For more than one
-page, keep one around — model loading is the expensive part.
+page, keep one around, model loading is the expensive part.
 
 ```python
 with naina.Reader(tier="small") as reader:
@@ -48,7 +48,7 @@ Kinds: `title`, `text`, `list`, `table`, `figure`, `caption`, `formula`,
 `header`, `footer`, `pagenum`, `unknown`.
 
 `header`, `footer` and `pagenum` are page furniture and are omitted from
-`page.markdown` — they are not part of the document's reading flow.
+`page.markdown`, they are not part of the document's reading flow.
 
 ## Raw pixels
 
@@ -63,7 +63,7 @@ page = reader.read_rgb(rgb)
 ```
 
 This is the path to use with OpenCV, a camera feed, or a PDF you have already
-rasterised — no re-encoding round trip.
+rasterised, no re-encoding round trip.
 
 ## Stages on their own
 

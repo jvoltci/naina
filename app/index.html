@@ -73,8 +73,10 @@
     </header>
 
     <main id="main" class="n-container">
-      <section class="hero">
-        <p class="label">In-browser OCR · nothing uploaded</p>
+      <!-- 2026-09-24: the hero is read by search engines and screen readers and no
+           longer painted. The first glance is the drop zone alone (design/DESIGN.md,
+           "one chromatic thing", "less or no verbose"). The blue eyebrow is gone. -->
+      <section class="hero n-sr-only">
         <h1>Extract text from any document.</h1>
         <p class="sub">
           PDFs and images, in your browser, free and without limits.
@@ -105,21 +107,26 @@
               stroke-linejoin="round"
             />
           </svg>
-          <p class="drop-title">Drop a PDF or image, paste, or click to choose</p>
-          <p class="drop-hint faint">PDF, PNG, JPEG, WebP. Several files at once is fine</p>
+          <p class="drop-title">Drop a document</p>
+          <p class="drop-hint faint">PDF or image, paste, or click to choose</p>
         </div>
       </section>
 
       <!-- The strongest claim naina has, placed where the question gets asked
            rather than in the notes at the bottom. info is the achromatic status
            family: "nothing is wrong" needs no hue. -->
+      <!-- Everything below the drop zone is one quiet line until opened: the model
+           size, the script, the privacy note and the caveat. Every control is one
+           click away; none of them is in the first glance. The summary text is
+           kept current by main.ts. -->
+      <details class="opts" id="opts">
+        <summary id="opts-summary">Options</summary>
       <div class="privacy n-note n-note-info">
         <span class="n-note-glyph" aria-hidden="true">i</span>
         <div>
           <span class="n-note-title">Nothing leaves this tab.</span>
-          There is no server to upload to. Detection, recognition and markdown
-          assembly all run here, in WebAssembly. Open your network panel and
-          watch: once the weights are cached there is no traffic at all.
+          There is no server. The reading runs here, in your browser. Once the
+          models are cached there is no network traffic at all.
         </div>
       </div>
 
@@ -168,15 +175,14 @@
       <div class="caveat n-note n-note-warn">
         <span class="n-note-glyph" aria-hidden="true">!</span>
         <div>
-          <span class="n-note-title">Script detection is automatic.</span>
-          Leave it on Auto unless you know better. Set it explicitly and choosing
-          wrong returns plausible-looking wrong text, not an error, because the
-          model reads confidently in whichever alphabet you give it. Handwriting
-          is unreliable. <a href="./doc/limits/">Full limitations</a>.
+          <span class="n-note-title">Pick the right script.</span>
+          A wrong script gives wrong text that looks right, not an error. Auto
+          detects it for you. Handwriting is unreliable. <a href="./doc/limits/">Full limitations</a>.
         </div>
       </div>
 
-      <!-- Status. Two loaders, and which one shows is decided by whether a
+            </details>
+<!-- Status. Two loaders, and which one shows is decided by whether a
            proportion is known. See the loader note in styles.css. -->
       <section id="status" class="status" hidden>
         <progress id="progress" class="n-progress" value="0" max="1" hidden></progress>
@@ -270,9 +276,8 @@
             <div class="n-prose">
               <h3>Nothing is uploaded</h3>
               <p>
-                The whole pipeline runs in this tab, including PDF rendering. Open
-                your network panel and watch: once the weights are cached, there
-                is no traffic at all. No account, no quota, no upload.
+                Everything runs in this tab, PDF rendering included. No account,
+                no quota, no upload.
               </p>
             </div>
           </div>
@@ -280,8 +285,7 @@
             <div class="n-prose">
               <h3>Works offline</h3>
               <p>
-                Weights are cached by content hash on first use. Come back with no
-                connection and it still reads.
+                The models are cached on first use. It reads with no connection.
               </p>
             </div>
           </div>
@@ -289,10 +293,8 @@
             <div class="n-prose">
               <h3>The same code as the server</h3>
               <p>
-                Detection post-processing, text decoding, reading order and
-                markdown assembly are the same C++ that naina's Python and Node
-                packages run, compiled to WebAssembly, not rewritten in
-                JavaScript.
+                The browser runs the same C++ core as the Python and Node
+                packages, compiled to WebAssembly.
               </p>
             </div>
           </div>
@@ -300,9 +302,9 @@
             <div class="n-prose">
               <h3>What it cannot do</h3>
               <p>
-                Handwriting is weak, and scripts outside PP-OCRv6's character set
-                (Devanagari among them) come back as confident nonsense rather
-                than an error. Latin and CJK print are its strengths.
+                Printed Latin, Chinese, Japanese and Korean read well. Handwriting
+                is weak. Scripts it was not trained on, Devanagari among them,
+                come back as confident nonsense.
               </p>
             </div>
           </div>

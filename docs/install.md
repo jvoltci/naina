@@ -39,7 +39,7 @@ console.log(page.markdown);
 
 ## Browser
 
-Nothing to install — [use the tool](https://jvoltci.github.io/naina/).
+Nothing to install, [use the tool](https://jvoltci.github.io/naina/).
 
 To embed it in your own page:
 
@@ -76,7 +76,7 @@ Weights download on first use and are cached under
 `~/.cache/naina/models` (override with `NAINA_CACHE`).
 
 Every file is verified against the sha256 in `models/registry.yaml`. A mismatch
-is an error, not a warning — a corrupted cache entry will not be used.
+is an error, not a warning, a corrupted cache entry will not be used.
 
 To pre-fetch, or to run air-gapped:
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://jvoltci.github.io/naina/doc/assets/hero.svg" alt="naina — reads any document, one C++ core, every language" width="100%">
+  <img src="https://jvoltci.github.io/naina/doc/assets/hero.svg" alt="naina, reads any document, one C++ core, every language" width="100%">
 </p>
 
 <p align="center">
@@ -53,11 +53,11 @@ are script-agnostic and shared, so a language costs one 8 MB model rather than
 three.
 
 > **Choosing wrong is silent.** Read a Hindi page with the default alphabet and it
-> returns fluent-looking Latin at ~0.75 confidence, not an error — confidence
+> returns fluent-looking Latin at ~0.75 confidence, not an error, confidence
 > measures certainty *within* the model's own alphabet and cannot express "wrong
 > alphabet". An unrecognised `language` value **does** raise.
 
-> **v0.2.1 is out on all five registries** — PyPI, npm ×2, crates.io and pub.dev.
+> **v0.2.1 is out on all five registries**: PyPI, npm ×2, crates.io and pub.dev.
 > The web app and docs are live.
 
 ## Packages
@@ -68,8 +68,8 @@ three.
 | `naina` | [crates.io](https://crates.io/crates/naina) | Rust over the C ABI | ✅ **published** |
 | `@jvoltci/naina` | [npm](https://www.npmjs.com/package/@jvoltci/naina) | Node, inference off the event loop | ✅ **published** |
 | `@jvoltci/naina-wasm` | [npm](https://www.npmjs.com/package/@jvoltci/naina-wasm) | Browser, 143 KB brotli | ✅ **published** |
-| `naina` | [pub.dev](https://pub.dev/packages/naina) | Flutter, FFI | ✅ **published** — Android verified on a device, iOS unproven |
-| — | — | [MCP server](mcp/) for LLM tools | works, in-repo |
+| `naina` | [pub.dev](https://pub.dev/packages/naina) | Flutter, FFI | ✅ **published**, Android verified on a device, iOS unproven |
+| | | [MCP server](mcp/) for LLM tools | works, in-repo |
 
 Packages are scoped because unscoped `naina` on npm belongs to another project.
 
@@ -124,7 +124,7 @@ because a 300 MB dependency tree would defeat the point of an 11 MB tier.
 
 ## What you get
 
-**Three device tiers.** A size axis, not a licence axis — every model naina ships
+**Three device tiers.** A size axis, not a licence axis, every model naina ships
 is Apache-2.0 and safe for commercial use.
 
 | Tier | det | rec | layout | Total | Target | Charset |
@@ -134,7 +134,7 @@ is Apache-2.0 and safe for commercial use.
 | `medium` | 62.0 MB | 76.6 MB | 130.5 MB | **≈ 269 MB** | Server, desktop | 18,708 (50 languages) |
 
 PaddleOCR ships no ONNX build of the small layout models, so naina converts them
-itself — byte-deterministically, and verified per-column against the Paddle
+itself, byte-deterministically, and verified per-column against the Paddle
 original. Without that, layout would exist only at the 269 MB tier and an 11 MB
 browser build could not describe document structure. See
 [`tools/paddle2onnx_layout.py`](tools/paddle2onnx_layout.py).
@@ -143,13 +143,13 @@ browser build could not describe document structure. See
 
 | Binding | Status | Install |
 | --- | --- | --- |
-| C / C++ | ✅ | `naina.h` — the contract every other binding targets |
+| C / C++ | ✅ | `naina.h`, the contract every other binding targets |
 | Python | ✅ published | `pip install naina` |
 | Rust | ✅ published | `cargo add naina` |
-| Flutter | ✅ published | `flutter pub add naina` — Android verified on device, iOS unproven |
-| WASM / browser | ✅ published | `npm i @jvoltci/naina-wasm` — or [use it online](https://jvoltci.github.io/naina/) |
-| Node / TypeScript | ✅ published | `npm i @jvoltci/naina` — needs a local toolchain to build on install |
-| MCP (for LLM tools) | ✅ | [`mcp/`](mcp/) — two tools, ten scripts, verified over stdio |
+| Flutter | ✅ published | `flutter pub add naina`, Android verified on device, iOS unproven |
+| WASM / browser | ✅ published | `npm i @jvoltci/naina-wasm`, or [use it online](https://jvoltci.github.io/naina/) |
+| Node / TypeScript | ✅ published | `npm i @jvoltci/naina`, needs a local toolchain to build on install |
+| MCP (for LLM tools) | ✅ | [`mcp/`](mcp/), two tools, ten scripts, verified over stdio |
 
 **Weights are mirrored, not borrowed.** naina fetches from
 [its own release](https://github.com/jvoltci/naina/releases/tag/models-v1), not
@@ -162,7 +162,7 @@ is recorded in [`NOTICE`](NOTICE) and as a `source_url` in the manifest.
 
 Real measurements, not vendor claims.
 
-**End-to-end, `tiny` tier, Apple M3 Pro** — rendered text fixture, 480×140:
+**End-to-end, `tiny` tier, Apple M3 Pro**, rendered text fixture, 480×140:
 
 | Line | Recognised | Recognition conf | Detection score |
 | --- | --- | --- | --- |
@@ -171,7 +171,7 @@ Real measurements, not vendor claims.
 
 Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 
-**Full pages, measured during development** — same core, four platforms:
+**Full pages, measured during development**, same core, four platforms:
 
 | Where | Page | Result |
 | --- | --- | --- |
@@ -179,7 +179,7 @@ Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 | Browser (WASM + ort-web), `tiny` | the same page | 33 lines @ 0.99, correct `#`/`##` structure |
 | Browser, `devanagari` | Sanskrit/Hindi page, 1585×2353 | 87 lines @ 0.93, 2731 Devanagari codepoints |
 | Android arm64 emulator, `tiny` | the A4 page | 33 lines @ 0.992 |
-| Browser, `el` / `cyrillic` | rendered text | `Ελληνικά κείμενο 2026`, `Русский текст 2026` — exact |
+| Browser, `el` / `cyrillic` | rendered text | `Ελληνικά κείμενο 2026`, `Русский текст 2026`, exact |
 
 **Browser is close to native, not bit-identical**, and that boundary is measured:
 on the A4 page at `tiny`, native produced 35 lines and WASM 33, with 33
@@ -199,18 +199,18 @@ Details in [what it cannot do](https://jvoltci.github.io/naina/doc/limits/).
 
 | Component | Status |
 | --- | --- |
-| C ABI — `naina_read`, page accessors, staging plan, stage-level access | ✅ |
-| Model registry — manifest-driven, sha256-verified, tier + language fallback | ✅ |
-| Detection — PP-OCRv6 det, DBNet decode | ✅ |
-| Recognition — PP-OCRv6/v5 rec, CTC greedy decode, **ten alphabets** | ✅ |
+| C ABI, `naina_read`, page accessors, staging plan, stage-level access | ✅ |
+| Model registry, manifest-driven, sha256-verified, tier + language fallback | ✅ |
+| Detection, PP-OCRv6 det, DBNet decode | ✅ |
+| Recognition, PP-OCRv6/v5 rec, CTC greedy decode, **ten alphabets** | ✅ |
 | Layout → structured markdown, column-aware reading order | ✅ |
-| Geometry — convex hull, min-area rect, polygon offset, no OpenCV | ✅ |
-| Browser — WASM core + onnxruntime-web, PDF, offline | ✅ |
+| Geometry, convex hull, min-area rect, polygon offset, no OpenCV | ✅ |
+| Browser, WASM core + onnxruntime-web, PDF, offline | ✅ |
 | Web app + docs live at [jvoltci.github.io/naina](https://jvoltci.github.io/naina/) | ✅ |
 | ONNX Runtime backend | ✅ |
 | Android on-device (Flutter) | ✅ 33 lines at 0.992 on a real page |
 | iOS | ⚠️ podspec written, never built or run |
-| WebGPU | ⚠️ off by default — it silently drops layout, see [limits](https://jvoltci.github.io/naina/doc/limits/) |
+| WebGPU | ⚠️ off by default, it silently drops layout, see [limits](https://jvoltci.github.io/naina/doc/limits/) |
 | NCNN backend | ⚠️ compiles, but `FindNCNN.cmake` does not locate a brew install |
 | Recognition batching (one strip per call today) | ⚠️ correct but unoptimised |
 | Detecting a script mismatch rather than trusting the caller | ❌ |
@@ -230,7 +230,7 @@ chart/formula semantic extraction.
 
 ## Install
 
-Not yet on PyPI or npm — see the note at the top. Build from source:
+Not yet on PyPI or npm, see the note at the top. Build from source:
 
 ```bash
 cmake --preset macos-arm64           # or linux-x86_64, linux-arm64, windows-x86_64
@@ -240,7 +240,7 @@ ctest --preset macos-arm64
 
 Requires CMake ≥ 3.24, a C++20 compiler, `yaml-cpp`, `libcurl`, and ONNX Runtime.
 
-naina ships **no image decoder** on purpose — it takes raw pixels. Use Pillow,
+naina ships **no image decoder** on purpose, it takes raw pixels. Use Pillow,
 OpenCV, `sharp`, or anything else that hands you a buffer.
 
 ## Environment
@@ -266,16 +266,16 @@ An agent can read documents through naina directly:
 Two tools: `read_document` (markdown) and `read_document_detailed` (per-line
 text, confidence, quads). See [`mcp/README.md`](mcp/README.md).
 
-Reading a page carries no session state, so the server is written stateless —
+Reading a page carries no session state, so the server is written stateless,
 which is what MCP spec revision 2026-07-28 formalised. Note that the current
 SDK (`1.30.0`) only negotiates up to `2025-11-25`; the newer revision is a
 dependency bump away, not a rewrite.
 
 ## Documentation
 
-- [**Architecture**](docs/ARCHITECTURE.md) — the C ABI, backends, model registry
-- [**Roadmap**](docs/ROADMAP.md) — what ships when
-- [**Design spec**](docs/design/specs/2026-07-28-naina-ocr-design.md) — why naina is shaped this way
+- [**Architecture**](docs/ARCHITECTURE.md), the C ABI, backends, model registry
+- [**Roadmap**](docs/ROADMAP.md), what ships when
+- [**Design spec**](docs/design/specs/2026-07-28-naina-ocr-design.md), why naina is shaped this way
 - [**Contributing**](CONTRIBUTING.md)
 
 ## The name
@@ -284,8 +284,8 @@ dependency bump away, not a rewrite.
 
 It began as a face-recognition runtime under the same name. That work is
 preserved on the [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack)
-branch, and the engine it produced — C ABI, backend abstraction, manifest-driven
-model loader — is what made this pivot cheap.
+branch, and the engine it produced, C ABI, backend abstraction, manifest-driven
+model loader, is what made this pivot cheap.
 
 ## Contributing
 
@@ -294,4 +294,4 @@ anything beyond a small fix.
 
 ## License
 
-Apache-2.0. Redistributed model weights are also Apache-2.0 — see [`NOTICE`](NOTICE).
+Apache-2.0. Redistributed model weights are also Apache-2.0, see [`NOTICE`](NOTICE).

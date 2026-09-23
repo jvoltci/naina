@@ -32,7 +32,7 @@ Or by hand, in your MCP client's config:
 
 ### `read_document`
 
-Returns markdown. This is the one to reach for by default — it is what you want
+Returns markdown. This is the one to reach for by default, it is what you want
 in a context window.
 
 | Argument | Type | Notes |
@@ -45,7 +45,7 @@ in a context window.
 Returns JSON: every line with its confidence and its quad, plus layout regions
 and reading order.
 
-Use this when the model needs to reason about *where* something is — checking a
+Use this when the model needs to reason about *where* something is, checking a
 signature block, pulling a figure caption, or deciding whether a low-confidence
 line is trustworthy.
 
@@ -59,8 +59,8 @@ read well, at almost no token cost.
 
 The server speaks MCP `2025-11-25`.
 
-The newer `2026-07-28` revision suits naina well — it is stateless
-request/response, and this server holds no session state — but
+The newer `2026-07-28` revision suits naina well, it is stateless
+request/response, and this server holds no session state, but
 `@modelcontextprotocol/sdk@1.30.0` (the newest published) tops out at
 `2025-11-25`, and a client asking for the newer revision negotiates down.
 Measured, not assumed. Moving up should be a dependency bump rather than a

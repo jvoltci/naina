@@ -486,51 +486,22 @@ main {
    left to escalate to — which is why the old rule had to escalate with
    border-style alone. Now both channels move. */
 .drop {
-  border: var(--line-2) dashed var(--brand-7);
+  border: var(--line-1) solid var(--neutral-6);
   border-radius: var(--r-5);
-  /* --brand-2, NOT --surface, AND THIS IS THE FIX FOR DARK MODE RATHER THAN A
-     TINT FOR ITS OWN SAKE. --surface in dark mode is oklch(0.2455 0 285) with
-     chroma flat zero, on a --neutral-1 page of oklch(0.1750 0.0070 285). Two
-     achromatic greys 0.07 L apart, behind a dashed border: screenshotted, the
-     zone read as a hole punched in the page rather than as a panel on it.
-
-     --brand-2 is oklch(0.2126 0.0200 285) dark / oklch(0.9618 0.0030 285) light.
-     Dark mode gains chroma 0.020 against the page's 0.007, so the fill is
-     visibly of the brand instead of absent; light mode is a 0.018 L step under
-     --surface, which is a tint rather than a panel, and that is correct — a
-     light page does not need the depth, it needs the hue.
-
-     A GRADIENT, NOT A FLAT FILL, and light mode is the reason. The flat --brand-2
-     version of this rule was screenshotted in both modes and only worked in one:
-     --brand-2 is chroma 0.0200 dark but chroma 0.0030 light, so the dark panel
-     picked up a real violet cast and the light one stayed grey. That asymmetry
-     is in the palette, not in this file — nilam solves light steps close to a
-     white page and there is simply less room for chroma up there — so the fix
-     has to add tint without adding lightness contrast.
-
-     Running step 3 into step 2 from the top does exactly that. --brand-3 is
-     chroma 0.0079 light, 2.6x step 2's, and the falloff means the strongest tint
-     sits behind the disc where the eye already is. In dark mode the same
-     gradient reads as top-light, which is the same thing --rim below is doing.
-
-     Step 3 is still the HOVER fill and this does not spend it: at rest it is one
-     end of a gradient that is mostly step 2, and on hover the whole zone becomes
-     flat step 3. Both channels still move. Measured on the strongest end, so the
-     worst case for text sitting on it: --neutral-12 7.10 light / 7.10 dark,
-     --neutral-11 4.55 / 4.55, which is nilam's floor exactly. */
-  background: radial-gradient(120% 130% at 50% 0%, var(--brand-3) 0%, var(--brand-2) 65%);
-  /* --rim, not a shadow. The zone is a raised fill sitting on a --neutral-1
-     page, which is the same relationship .n-card has, so it earns the same top
-     light. Transparent in light mode by construction; in dark mode it is what
-     stops the panel dissolving into the page. */
-  box-shadow: var(--rim);
-  /* --space-7, DOWN FROM --space-8, and the old note's own argument is why.
-     It said 96px "rendered a 310px box that was 200px of nothing" and settled on
-     64px for ~230px. Screenshotted at 1280x900, 64px still renders ~250px around
-     a 130px cluster of icon-title-hint: 120px of nothing, and the emptiness is
-     what made the zone read as an unfinished layout. 48px gives ~205px, and the
-     icon below now carries a filled --brand-9 disc, so the confidence comes from
-     colour rather than from acreage. Still the heaviest object on the page. */
+  /* 2026-09-24, the Altrusian theme (design/DESIGN.md): matte. The zone is a card
+     on the page, --surface with a --neutral-6 hairline, no gradient, no rim, no
+     dashed border. The long argument for the tinted gradient and the dashed
+     brand border is in git history (styles.css before this date); it was written
+     for a violet palette and for a page that also carried a headline. Now the
+     zone is the only object on the first screen and the filled --brand-9 disc
+     inside it is the one chromatic thing, so the zone itself stays quiet. Hover
+     and drag still move the border and the fill to the brand steps below. */
+  background: var(--surface);
+  max-inline-size: 36rem;
+  min-block-size: 16rem;
+  margin: var(--space-8) auto 0;
+  display: grid;
+  place-items: center;
   padding: var(--space-7) var(--space-5);
   text-align: center;
   cursor: pointer;
@@ -611,7 +582,7 @@ main {
 
 .drop-title {
   margin: 0 0 var(--space-2);
-  font-size: var(--text-3);
+  font-size: var(--text-2);
   font-weight: var(--weight-normal);
   color: var(--neutral-12);
   letter-spacing: var(--tracking-tight);
@@ -705,6 +676,28 @@ main {
 .caveat {
   margin: var(--space-5) 0 0;
 }
+
+/* The options line (2026-09-24). One quiet sentence under the zone, centred, in
+   the low text step; open, it holds the controls and both notes at the zone's
+   width. No marker: the text is the affordance, and the hover step says so. */
+.opts {
+  max-inline-size: 36rem;
+  margin: var(--space-4) auto 0;
+}
+.opts > summary {
+  list-style: none;
+  cursor: pointer;
+  text-align: center;
+  color: var(--neutral-11);
+  font-size: var(--text-0);
+  padding: var(--space-2);
+  border-radius: var(--r-2);
+}
+.opts > summary::-webkit-details-marker { display: none; }
+.opts > summary:hover { color: var(--neutral-12); }
+.opts > summary:focus-visible { outline: var(--ring-width, 2px) solid var(--brand-9); outline-offset: 2px; }
+.opts[open] > .controls { margin-top: var(--space-5); justify-content: center; }
+main.n-container > .notes { margin-top: var(--space-9); }
 /* The error note is the same component again — .n-note n-note-danger, with the ×
    glyph as the non-hue channel. Worth seeing why the glyph is load-bearing here
    and not decorative: --danger-2 is oklch(0.962 0.003 22) and --warn-2 is

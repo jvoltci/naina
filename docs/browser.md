@@ -18,7 +18,7 @@ import { createReader } from '@jvoltci/naina-wasm';
 
 const reader = await createReader({
   tier: 'tiny',
-  modelBaseUrl: '/models',                       // see below — required
+  modelBaseUrl: '/models',                       // see below, required
   onProgress: (done, total) => console.log(`${done}/${total}`),
 });
 
@@ -30,7 +30,7 @@ const page = await reader.readJson(rgb, width, height);
     `modelBaseUrl` is not optional in practice.
 
     naina's registry points at GitHub release assets, which is correct for
-    Python, Node and native builds — they make ordinary server-side requests. **A
+    Python, Node and native builds, they make ordinary server-side requests. **A
     browser cannot fetch them.** A release download 302s to
     `release-assets.githubusercontent.com`, and neither hop sends an
     `Access-Control-Allow-Origin` header, so `fetch` is blocked by CORS.
@@ -44,7 +44,7 @@ const page = await reader.readJson(rgb, width, height);
 
 ## Getting RGB bytes
 
-naina ships no image decoder — the browser has one.
+naina ships no image decoder, the browser has one.
 
 ```js
 const bitmap = await createImageBitmap(fileOrBlob);
@@ -62,7 +62,7 @@ for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
 ```
 
 Decode at native resolution and let naina resize. If you scale with `drawImage`
-first, the result depends on the browser's scaling filter — the HTML spec leaves
+first, the result depends on the browser's scaling filter, the HTML spec leaves
 it implementation-defined, and Chrome, Safari and Firefox differ. naina's own
 resize is the same code on every platform.
 
@@ -96,7 +96,7 @@ multi-megabyte download.
 
 `ISession::run` is synchronous C++, but `onnxruntime-web`'s `run()` returns a
 Promise. Emscripten's ASYNCIFY suspends and resumes the WASM stack across that
-await, so the core stays unaware it is in a browser — which is why
+await, so the core stays unaware it is in a browser, which is why
 `readMarkdown` returns a Promise even though nothing inside naina is async.
 
 The alternative, `SharedArrayBuffer` + `Atomics.wait` in a worker, needs COOP and
@@ -105,7 +105,7 @@ COEP response headers. GitHub Pages cannot set headers, so it was not an option.
 ## Execution providers
 
 Defaults to `['wasm']`. WebGPU is opt-in because it is currently broken in a way
-that is worse than a crash — it silently drops layout detection. See
+that is worse than a crash, it silently drops layout detection. See
 [what it cannot do](limits.md#webgpu-is-off-by-default-because-it-silently-breaks-layout).
 
 ```js

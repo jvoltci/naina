@@ -20,7 +20,7 @@ And on Latin input every alphabet ties near 0.98 because they all contain Latin,
 so the default has to be displaced by a margin rather than merely beaten.
 
 !!! warning "`auto` only considers alphabets already cached"
-    It will not download every model to answer the question — that would mean
+    It will not download every model to answer the question, that would mean
     88 MB where a named language needs 11 MB. On a build with no network in the
     core (browser, Android), stage the candidates first or name the language.
 
@@ -35,7 +35,7 @@ name:
 page = naina.read("hindi.png", language="devanagari")
 ```
 
-Read a Devanagari page with the default alphabet and it does **not** fail — it
+Read a Devanagari page with the default alphabet and it does **not** fail, it
 returns plausible-looking Latin. Measured on a real page: `3rarearanlus
 Tarafaaa: f:` at **0.758 confidence**. With `language="devanagari"` the same page
 returns `अयोध्याकाण्डे नवनवतितम: सग्गः` at 0.93.
@@ -63,7 +63,7 @@ PP-OCRv6 is trained on print. Claiming handwriting support would be dishonest.
 
 ## Layout degrades outside its training distribution
 
-PP-DocLayout is trained on papers and reports and is excellent on them — 14 of 14
+PP-DocLayout is trained on papers and reports and is excellent on them, 14 of 14
 regions correctly labelled on an A4 academic page. On an unusual layout it can
 mislabel a body paragraph as a title, which puts a whole paragraph under a `##`
 heading in the markdown.
@@ -98,7 +98,7 @@ Same rule: regions get found and labelled, contents are not read.
 
 ## The browser is close to native, not bit-identical
 
-naina guarantees **byte-identical output across bindings for one backend build** —
+naina guarantees **byte-identical output across bindings for one backend build**:
 Python, Node and Rust run the same core against the same kernels.
 
 WebAssembly is outside that guarantee, and this is measured rather than assumed.
@@ -109,7 +109,7 @@ On an A4 page at `tiny`:
 | | Native macOS arm64 | Browser (WASM) |
 |---|---|---|
 | Text lines | 35 | 33 |
-| Character-identical | — | 33 |
+| Character-identical | | 33 |
 
 One marginal blob landed on the other side of DBNet's 0.3 binarize threshold,
 which changed line segmentation. Because a split fragment takes its own
@@ -139,7 +139,7 @@ WebGPU is opt-in until there are real numbers.
 
 - **Training or fine-tuning.** naina is inference only.
 - **Autoregressive VLM parsing** (PaddleOCR-VL, DeepSeek-OCR). These need a
-  tokenizer, KV cache and sampling loop — a different engine, not a module.
+  tokenizer, KV cache and sampling loop, a different engine, not a module.
 - **Face and person understanding.** naina v0.1 was this. It is preserved on the
   [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack) branch.
 - Vector stores, dashboards, UI frameworks.
