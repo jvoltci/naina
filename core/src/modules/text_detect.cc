@@ -59,7 +59,7 @@ naina_status detect(backend::ISession* session,
         db_postprocess::decode(prob.data(), plan.out_w, plan.out_h, cfg.db);
 
     // 4) Map back to source coordinates. Scale is per-axis because the resize
-    //    rounds each dimension independently — using one scale skews every box
+    //    rounds each dimension independently: using one scale skews every box
     //    on non-square input.
     const float inv_x = plan.scale_x != 0.0F ? 1.0F / plan.scale_x : 1.0F;
     const float inv_y = plan.scale_y != 0.0F ? 1.0F / plan.scale_y : 1.0F;

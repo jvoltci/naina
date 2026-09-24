@@ -1,4 +1,4 @@
-// naina — C ABI implementation.
+// naina: C ABI implementation.
 //
 // Owns the runtime context, lazy-loads inference sessions per task, and glues
 // the OCR modules to the backend abstraction.
@@ -117,7 +117,7 @@ struct naina_ctx {
     }
 
     // Resolve and parse the charset that belongs to the recognition model for
-    // the active tier. Returns nullptr with a status on failure — without a
+    // the active tier. Returns nullptr with a status on failure: without a
     // charset, decoding cannot map class indices to characters at all.
     const naina::internal::charset::Charset* charset_for_recognize(naina_status* out_status,
                                                                    const std::string& lang) {
@@ -324,8 +324,8 @@ struct naina_ctx {
         std::lock_guard<std::mutex> lk(sess_mu);
 
         // Language applies to recognition only. Detection and layout are
-        // script-agnostic — measured on a Devanagari page, DBNet located all 82
-        // lines correctly — so they resolve with no language and are shared
+        // script-agnostic (measured on a Devanagari page, DBNet located all 82
+        // lines correctly), so they resolve with no language and are shared
         // across alphabets rather than loaded once per script.
         const std::string task_lang = (task == "text_recognize")
                                           ? (lang_override != nullptr ? *lang_override : language)
@@ -434,7 +434,7 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
 
         // models_root means "keep the models here", not merely "find the
         // manifest here". Without this the manifest's own cache_root wins, which
-        // defaults to ~/.cache — unusable in a sandboxed app, where HOME is
+        // defaults to ~/.cache, unusable in a sandboxed app, where HOME is
         // unset and "~" stays literal on a read-only filesystem.
         if (cfg != nullptr && cfg->models_root != nullptr && cfg->models_root[0] != '\0') {
             ctx->registry.set_cache_root(cfg->models_root);
@@ -603,7 +603,7 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
     }
 
     // Layout analysis is best-effort. If its weights are unavailable the page
-    // still returns recognised text, just without structure — degrading to
+    // still returns recognised text, just without structure: degrading to
     // text-only beats failing the whole read.
     std::vector<naina_region> regions;
     naina_status ls = NAINA_OK;
@@ -891,7 +891,7 @@ extern "C" naina_status naina_staging_plan(const char* registry_path,
     }
 
     // Detection and layout match every language, so an unknown language still
-    // produces a non-empty plan — one with no recogniser in it. Staging that and
+    // produces a non-empty plan, one with no recogniser in it. Staging that and
     // then failing at init would be a confusing way to learn the language was
     // wrong, and returning OK for it is worse: measured, "klingon" returned ok.
     if (!have_recognizer) {

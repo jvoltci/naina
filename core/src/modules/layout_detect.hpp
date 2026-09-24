@@ -1,4 +1,4 @@
-// Layout analysis — PP-DocLayout region detection.
+// Layout analysis: PP-DocLayout region detection.
 //
 // Emits labelled regions (title, paragraph, table, figure, ...) which
 // doc_assemble uses to establish reading order and structure.
@@ -12,7 +12,7 @@
 //
 // They DO all emit the same [N, 6] rows of [class_id, score, x1, y1, x2, y2],
 // so post-processing is uniform. Inputs are therefore fed BY NAME from
-// session->inputs(), never positionally — a positional feed silently
+// session->inputs(), never positionally: a positional feed silently
 // mis-assigns tensors on two of the four models.
 #ifndef NAINA_INTERNAL_LAYOUT_DETECT_HPP
 #define NAINA_INTERNAL_LAYOUT_DETECT_HPP
@@ -40,7 +40,7 @@ struct Config {
 
     float score_thresh = 0.5F;
 
-    // Regions thinner than this in either dimension are discarded — they are
+    // Regions thinner than this in either dimension are discarded: they are
     // never real document structure and only confuse reading order.
     float min_side = 4.0F;
 

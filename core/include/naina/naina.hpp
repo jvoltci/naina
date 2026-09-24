@@ -1,4 +1,4 @@
-// naina — C++ ergonomic wrapper over the C ABI.
+// naina: C++ ergonomic wrapper over the C ABI.
 // RAII, std::vector/std::array, exceptions on construction, status on hot paths.
 #ifndef NAINA_HPP
 #define NAINA_HPP
@@ -26,7 +26,7 @@ struct Point {
     float x, y;
 };
 
-// Device tier — model size, not licence. See naina.h for the byte budgets.
+// Device tier: model size, not licence. See naina.h for the byte budgets.
 enum class Tier { Auto, Tiny, Small, Medium };
 
 struct Config {
@@ -68,7 +68,7 @@ private:
 };
 
 // One recognised line of text. Values are copied out of the page, so a Line
-// outlives the Page it came from — unlike the borrowed pointers in the C ABI.
+// outlives the Page it came from, unlike the borrowed pointers in the C ABI.
 struct Line {
     std::string text;
     float confidence = 0.0F;

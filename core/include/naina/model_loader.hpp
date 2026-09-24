@@ -1,8 +1,8 @@
-// naina — model registry & loader.
+// naina: model registry & loader.
 //
 // Parses models/registry.yaml, resolves an entry by (task, tier), and
 // returns a verified local path to a weights file. Downloads from the
-// manifest URL are NOT YET IMPLEMENTED — for now the loader either uses
+// manifest URL are NOT YET IMPLEMENTED. For now the loader either uses
 // a file already in the cache (and verifies its sha256) or returns
 // NAINA_E_MODEL_NOT_FOUND with the expected cache path so callers can
 // pre-place the file.
@@ -22,9 +22,9 @@ namespace naina {
 
 // Device tier, not a licence tier. Every OCR model naina ships is
 // Apache-2.0; what differs is size and the hardware it suits.
-//   Tiny   ~11 MB total  — browser, phone, Pi Zero
-//   Small  ~54 MB total  — laptop, Pi 5, mobile app
-//   Medium ~269 MB total — server, desktop
+//   Tiny   ~11 MB total: browser, phone, Pi Zero
+//   Small  ~54 MB total: laptop, Pi 5, mobile app
+//   Medium ~269 MB total: server, desktop
 enum class Tier { Tiny, Small, Medium };
 
 // Parse a manifest tier string. Unknown values map to Small so a registry
@@ -39,7 +39,7 @@ struct FileEntry {
     std::string sha256;  // hex, lowercase. The literal "TBD..." means unverified.
     int64_t bytes = 0;
 
-    // Provenance only — NEVER fetched. Records the upstream artifact these
+    // Provenance only, NEVER fetched. Records the upstream artifact these
     // mirrored bytes came from, so the chain of custody stays auditable.
     // naina serves weights from its own release so an upstream re-tag or
     // deletion cannot break installs; see NOTICE.
@@ -90,7 +90,7 @@ public:
     // Resolve by task, tier and language.
     //
     // `lang` empty selects the entry with no `lang` (the default alphabet). A
-    // non-empty `lang` matches only an entry declaring exactly that language —
+    // non-empty `lang` matches only an entry declaring exactly that language:
     // there is deliberately NO fallback to the default, because silently
     // recognising Devanagari with a Latin alphabet is the bug this exists to
     // fix. Callers get nullopt and should surface NAINA_E_UNSUPPORTED.
@@ -100,7 +100,7 @@ public:
 
     // Compute the local cache path for a given model's file kind ("onnx",
     // "ncnn_param", "ncnn_bin", etc). The path is deterministic from the
-    // sha256 (or, while sha256 is "TBD…", from the URL basename) — same
+    // sha256 (or, while sha256 is "TBD…", from the URL basename), so the same
     // file is cached at the same path across runs.
     std::filesystem::path cache_path_for(const ModelEntry& m, const std::string& file_kind) const;
 
@@ -119,7 +119,7 @@ public:
     //
     // Needed because `models_root` in naina_config is what callers actually mean
     // by "put the models here", while the manifest's cache_root defaults to
-    // ~/.cache — which on Android expands to a literal "~" on a read-only
+    // ~/.cache, which on Android expands to a literal "~" on a read-only
     // filesystem, since there is no HOME.
     void set_cache_root(std::filesystem::path root) { cache_root_ = std::move(root); }
     const std::vector<ModelEntry>& all() const { return models_; }

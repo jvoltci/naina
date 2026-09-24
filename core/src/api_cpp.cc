@@ -1,4 +1,4 @@
-// C++ ergonomic wrapper — thin glue over the C ABI defined in naina.h.
+// C++ ergonomic wrapper: thin glue over the C ABI defined in naina.h.
 
 #include "naina/naina.hpp"
 

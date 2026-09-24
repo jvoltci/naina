@@ -39,8 +39,8 @@ set(NAINA_SOURCES
 # which is the default for redistributable builds (wheels, npm addons). A
 # system yaml-cpp leaves the extension linked against e.g.
 # /opt/homebrew/opt/yaml-cpp/lib/libyaml-cpp.0.9.dylib, so anyone without that
-# exact install — including every Intel Mac, where the Homebrew prefix
-# differs — gets an ImportError. Static linking removes the runtime dependency
+# exact install, including every Intel Mac, where the Homebrew prefix
+# differs, gets an ImportError. Static linking removes the runtime dependency
 # outright rather than bundling another shared object.
 if(NAINA_VENDOR_YAMLCPP)
     include(FetchContent)
@@ -87,7 +87,7 @@ endif()
 # stages them, and the core reads them off disk.
 #
 # sha256 verification still happens in the shared core, so a staged file is
-# checked exactly as a downloaded one would be — the integrity guarantee does not
+# checked exactly as a downloaded one would be: the integrity guarantee does not
 # depend on who did the fetching.
 if(EMSCRIPTEN OR ANDROID)
     set(NAINA_NO_CURL ON)
@@ -177,8 +177,8 @@ endif()
 
 # cargo, not CMake, issues the final link for the Rust crate, and a static
 # libnaina.a records nothing about what it needs. build.rs passes a path in;
-# CMake — the only party that knows where ONNX Runtime was found, where the
-# vendored yaml-cpp archive landed and which libcurl was linked — writes the
+# CMake, the only party that knows where ONNX Runtime was found, where the
+# vendored yaml-cpp archive landed and which libcurl was linked, writes the
 # answer there. Without it build.rs has to restate every transitive dependency
 # of this file by hand, which is how the rust CI job shipped naming one of three.
 #

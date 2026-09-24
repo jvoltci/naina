@@ -1,4 +1,4 @@
-// Internal SHA-256 utility — used by the model loader to verify downloaded
+// Internal SHA-256 utility, used by the model loader to verify downloaded
 // weights against the manifest. Not part of the public API.
 #ifndef NAINA_INTERNAL_SHA256_HPP
 #define NAINA_INTERNAL_SHA256_HPP

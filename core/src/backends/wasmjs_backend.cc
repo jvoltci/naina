@@ -5,7 +5,7 @@
 // This exists because onnxruntime-web is a JavaScript library and cannot be
 // static-linked into a WASM module. The alternative would have been to port
 // naina's preprocessing, DB decode, rectification, CTC decode, layout mapping
-// and document assembly to TypeScript — roughly 1,950 lines of arithmetic whose
+// and document assembly to TypeScript, roughly 1,950 lines of arithmetic whose
 // every knob (rounding mode, corner ordering, blank handling, score-before-
 // unclip) fails *silently* when it diverges. Two implementations of that would
 // make naina's one-core guarantee unenforceable.
@@ -22,7 +22,7 @@
 // Measured on an A4 page at the tiny tier: native macOS arm64 produced 35 text
 // lines, this backend 33, with 33 character-identical. The two extra native
 // lines were fragments where DBNet split a line at a blob that sits within
-// float noise of the 0.3 binarize threshold — arm64 NEON kernels and WASM SIMD
+// float noise of the 0.3 binarize threshold: arm64 NEON kernels and WASM SIMD
 // kernels land on opposite sides of it. Line segmentation can therefore differ,
 // and because a fragment gets its own reading-order slot, word order can differ
 // with it.
@@ -109,8 +109,8 @@ EM_JS(char*, js_session_io_json, (int handle, int want_outputs), {
 //   in_dtypes[i] naina DType as int
 //   in_shapes    all input shapes concatenated, with in_ranks[i] dims each
 //
-// Outputs are pre-allocated by the caller — the same contract every other
-// naina backend honours — so JS copies results into existing buffers and never
+// Outputs are pre-allocated by the caller, the same contract every other
+// naina backend honours, so JS copies results into existing buffers and never
 // allocates on naina's behalf.
 EM_ASYNC_JS(int,
             js_session_run,

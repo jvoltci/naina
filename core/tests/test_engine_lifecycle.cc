@@ -2,7 +2,7 @@
 // honours its argument contracts.
 //
 // No model weights are on disk in a fresh build, and NAINA_OFFLINE=1 prevents
-// fetching them — so the lazy session loader returns NAINA_E_MODEL_NOT_FOUND.
+// fetching them, so the lazy session loader returns NAINA_E_MODEL_NOT_FOUND.
 // That is the expected behaviour for a weights-absent build, and asserting it
 // keeps a silent "succeeded without a model" regression from slipping through.
 
@@ -130,7 +130,7 @@ int main() {
     const naina_status init_rc = naina_init(&cfg, &ctx);
 
     // A build with no backend compiled in is legitimate (the "core-only"
-    // matrix entry), but it cannot run inference — so skipping here means this
+    // matrix entry), but it cannot run inference, so skipping here means this
     // test validates nothing. Set NAINA_REQUIRE_BACKEND=1 to turn that into a
     // hard failure. CI and the dev presets set it, because a silent skip once
     // hid the fact that a whole clean rebuild had dropped ONNX Runtime and
@@ -200,7 +200,7 @@ int main() {
     }
     naina_page_release(page);
 
-    // A config declaring version 1 is still accepted — the header's ABI rule
+    // A config declaring version 1 is still accepted: the header's ABI rule
     // is that fields may only be added, never required.
     naina_config old_cfg{};
     old_cfg.version = 1;

@@ -82,8 +82,8 @@ static void test_line_matching_no_region_is_kept_unassigned() {
 }
 
 static void test_region_smaller_than_line_still_captures_it() {
-    // A page-number region is barely wider than its digit, so the text quad —
-    // which DBNet unclips outward — ends up larger than the region. Measured on
+    // A page-number region is barely wider than its digit, so the text quad,
+    // which DBNet unclips outward, ends up larger than the region. Measured on
     // a real page: region 6x14 at (612,1704) against a 20x22 quad. Judged by
     // line area alone that overlap is well under min_overlap, so the line
     // orphaned and the page number leaked into the markdown tail, defeating
@@ -97,7 +97,7 @@ static void test_region_smaller_than_line_still_captures_it() {
 static void test_small_region_does_not_steal_a_well_matched_line() {
     // The containment fallback must not outrank a genuine match. A sliver
     // region sitting inside a long line is fully covered by it, so scored by
-    // region area it reaches 1.0 — the line's true home must still win.
+    // region area it reaches 1.0: the line's true home must still win.
     std::vector<naina_region> regions = {
         region(0, 0, 200, 20, NAINA_REGION_TEXT),    // the true home
         region(190, 5, 4, 4, NAINA_REGION_PAGENUM),  // sliver inside the line

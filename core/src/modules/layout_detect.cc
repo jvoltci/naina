@@ -10,7 +10,7 @@
 // feed reading order, not text extraction, so that is well inside tolerance.
 //
 // scale_factor is passed as the REAL resize ratio rather than [1, 1], because
-// the graph divides its predictions by it — so the boxes come back already in
+// the graph divides its predictions by it, so the boxes come back already in
 // source-image coordinates instead of resized space.
 
 #include "layout_detect.hpp"
@@ -49,7 +49,7 @@ naina_region_kind kind_from_class_id(int32_t class_id) {
         case 10:  // reference
         case 14:  // algorithm
         case 22:  // aside_text
-        case 12:  // footnote — real prose, so TEXT rather than page furniture
+        case 12:  // footnote: real prose, so TEXT rather than page furniture
             return NAINA_REGION_TEXT;
 
         case 8:  // table
@@ -77,7 +77,7 @@ naina_region_kind kind_from_class_id(int32_t class_id) {
         case 15:  // footer
             return NAINA_REGION_FOOTER;
 
-        case 3:  // number — a page number
+        case 3:  // number: a page number
             return NAINA_REGION_PAGENUM;
 
         default:
@@ -102,8 +102,8 @@ void dedupe_overlapping(float iou_thresh, std::vector<naina_region>* regions) {
         return (*regions)[a].bbox.score > (*regions)[b].bbox.score;
     });
 
-    // IoU, not containment. A small region fully inside a big one — a title in a
-    // text block, a formula in a paragraph — has containment 1.0 but low IoU,
+    // IoU, not containment. A small region fully inside a big one (a title in a
+    // text block, a formula in a paragraph) has containment 1.0 but low IoU,
     // and both are real regions that must survive.
     const auto iou = [](const naina_bbox& a, const naina_bbox& b) -> float {
         const float x1 = std::max(a.x, b.x);
@@ -210,7 +210,7 @@ naina_status detect(backend::ISession* session,
 
     // Outputs: [N, 6] detections plus a count. The backend copies into
     // caller-allocated buffers and discards shapes, so a buffer that is too
-    // small is rejected outright — allocate for the largest top-k any variant
+    // small is rejected outright, so allocate for the largest top-k any variant
     // emits (300) with headroom.
     //
     // Exactly two outputs is a hard requirement, not an assumption. A third
@@ -276,7 +276,7 @@ naina_status detect(backend::ISession* session,
     }
 
     // PaddleDetection's NMS is per class, so the same physical box arrives once
-    // per plausible label. Drop the extras before doc_assemble sees them —
+    // per plausible label. Drop the extras before doc_assemble sees them:
     // otherwise one box competes with itself for line assignment.
     dedupe_overlapping(cfg.dedupe_iou, out_regions);
 

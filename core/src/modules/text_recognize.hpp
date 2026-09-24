@@ -1,4 +1,4 @@
-// Text recognition — PP-OCRv6 rec (CTC head) over rectified strips.
+// Text recognition: PP-OCRv6 rec (CTC head) over rectified strips.
 //
 // Each detected quad is perspective-warped to a fixed-height strip, run through
 // the recogniser, and CTC-decoded to UTF-8. One strip per session call: batching
@@ -34,7 +34,7 @@ struct Line {
 };
 
 // Recognise every quad. Quads whose strip cannot be built, or whose decode
-// fails, are still returned with empty text rather than dropped — the caller
+// fails, are still returned with empty text rather than dropped, since the caller
 // may want the geometry regardless.
 naina_status recognize(backend::ISession* session,
                        const ImageView& src,

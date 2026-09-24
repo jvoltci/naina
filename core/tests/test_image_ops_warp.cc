@@ -34,7 +34,7 @@ static void test_det_resize_rounds_to_multiple_of_32() {
     EXPECT(std::fabs(a.scale_x - 0.96F) < 1e-5F);
     EXPECT(std::fabs(a.scale_y - 0.96F) < 1e-5F);
 
-    // 100x50 is under the limit, so no downscale — but both dims round to
+    // 100x50 is under the limit, so no downscale, but both dims round to
     // the nearest multiple of 32: 100 -> 96, 50 -> 64.
     const DetResize b = plan_det_resize(100, 50, 960, 32);
     EXPECT(b.out_w == 96);
@@ -56,7 +56,7 @@ static void test_det_resize_rounds_to_multiple_of_32() {
 }
 
 static void test_det_resize_is_idempotent_on_aligned_input() {
-    // 640x320 is already aligned and under the limit — nothing should move.
+    // 640x320 is already aligned and under the limit: nothing should move.
     const DetResize r = plan_det_resize(640, 320, 960, 32);
     EXPECT(r.out_w == 640);
     EXPECT(r.out_h == 320);

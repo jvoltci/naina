@@ -157,7 +157,7 @@ public:
             out_names.emplace_back(n);
         }
 
-        // NCNN doesn't expose shapes statically — defer until the first run
+        // NCNN doesn't expose shapes statically, so defer until the first run
         // populates concrete dims. For TensorDesc we record dtype=F32 and an
         // empty shape (meaning "dynamic").
         auto desc_for = [](const std::string& name) {

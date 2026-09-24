@@ -25,7 +25,7 @@ public:
     // page; the returned naina_textline::text points into that copy.
     void add_line(const naina_textbox& box, const std::string& text, float confidence);
 
-    // Append a layout region. v0.2 never calls this — layout analysis is v0.3 —
+    // Append a layout region. v0.2 never calls this (layout analysis is v0.3),
     // but the accessor exists so the ABI shape is stable.
     void add_region(const naina_bbox& bbox, naina_region_kind kind, int32_t order);
 

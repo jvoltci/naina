@@ -193,7 +193,7 @@ std::vector<naina_textbox> decode(const float* prob,
             continue;
         }
 
-        // Score on the RAW box, before unclip — unclip deliberately spills
+        // Score on the RAW box, before unclip: unclip deliberately spills
         // into background, so scoring after it would depress every score.
         const float score = box_score(prob, width, height, quad);
         if (score < cfg.box_thresh) {

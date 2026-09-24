@@ -1,4 +1,4 @@
-// naina — pluggable inference backend interface.
+// naina: pluggable inference backend interface.
 //
 // Each backend (ONNX Runtime, NCNN, OpenVINO, CoreML, TensorRT, ...) implements
 // IBackend and ISession. Backends self-register at static-init time via the

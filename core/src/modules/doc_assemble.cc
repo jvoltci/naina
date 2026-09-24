@@ -145,7 +145,7 @@ void assign_lines_to_regions(const std::vector<naina_region>& regions,
         }
 
         // Fallback, applied only when nothing matched by line area. A region
-        // smaller than the text quad can never reach min_overlap that way — a
+        // smaller than the text quad can never reach min_overlap that way: a
         // page number's box is a few pixels wider than its digit, while DBNet
         // unclips the quad outward. Scoring by region area instead lets such a
         // region claim its line, so page furniture stays furniture rather than

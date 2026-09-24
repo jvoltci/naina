@@ -7,7 +7,7 @@ namespace naina::internal {
 namespace {
 
 // Escape a UTF-8 string for a JSON string literal. Multibyte sequences pass
-// through untouched — JSON permits raw UTF-8 — so only the structural
+// through untouched (JSON permits raw UTF-8), so only the structural
 // characters and C0 controls need handling.
 void append_json_escaped(const std::string& in, std::string* out) {
     for (const char c : in) {
@@ -95,7 +95,7 @@ const char* Page::markdown() const {
         for (const auto& line : lines_) {
             if (line.text == nullptr || line.text[0] == '\0') {
                 // A box that recognised to nothing must not leave a blank
-                // line — that would read as a paragraph break that isn't there.
+                // line: that would read as a paragraph break that isn't there.
                 continue;
             }
             if (!first) {

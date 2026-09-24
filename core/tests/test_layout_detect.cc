@@ -1,6 +1,6 @@
 // Layout post-processing: class mapping and cross-class duplicate suppression.
 //
-// Pure logic — no model, no session. The class-id table and the dedupe threshold
+// Pure logic: no model, no session. The class-id table and the dedupe threshold
 // are both places where a wrong value produces plausible-looking output rather
 // than an error, so both are pinned here.
 
@@ -90,7 +90,7 @@ static void test_caption_touching_its_figure_is_kept() {
     // against its figure and the boxes share an edge; they are different
     // regions and both belong in the output. Their IoU is 0, but a naive
     // "any overlap" rule or a low threshold applied to nested boxes would be
-    // tempting — this pins that both survive.
+    // tempting. This pins that both survive.
     std::vector<naina_region> regions = {
         reg(100, 100, 400, 300, 0.90F, NAINA_REGION_FIGURE),
         reg(100, 400, 400, 40, 0.80F, NAINA_REGION_CAPTION),
@@ -101,7 +101,7 @@ static void test_caption_touching_its_figure_is_kept() {
 
 static void test_region_nested_inside_a_larger_one_is_kept() {
     // A title inside a text block, or a formula inside a paragraph. The small
-    // box is fully contained, so intersection / smaller_area is 1.0 — but IoU is
+    // box is fully contained, so intersection / smaller_area is 1.0, but IoU is
     // only 0.04, which is why IoU is the right metric here and containment is
     // not.
     std::vector<naina_region> regions = {
@@ -126,7 +126,7 @@ static void test_near_identical_boxes_are_deduped() {
 
 static void test_survivors_keep_input_order() {
     // Reading order is computed later from geometry, but dedupe must not shuffle
-    // the list underneath it — a stable result makes output reproducible.
+    // the list underneath it: a stable result makes output reproducible.
     std::vector<naina_region> regions = {
         reg(0, 0, 100, 20, 0.60F, NAINA_REGION_TITLE),
         reg(0, 100, 100, 20, 0.95F, NAINA_REGION_TEXT),

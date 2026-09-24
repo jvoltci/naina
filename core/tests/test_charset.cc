@@ -80,7 +80,7 @@ static void test_rejects_missing_or_malformed_files() {
     Charset cs;
     EXPECT(!load_from_yaml("/nonexistent/naina/definitely-not-here.yml", &cs));
 
-    // Valid YAML with no PostProcess.character_dict is a hard failure —
+    // Valid YAML with no PostProcess.character_dict is a hard failure:
     // silently returning an empty charset would decode every page to "".
     const fs::path p = write_temp("naina_charset_bad.yml", "Global:\n  model_name: x\n");
     EXPECT(!load_from_yaml(p, &cs));

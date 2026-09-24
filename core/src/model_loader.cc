@@ -107,14 +107,14 @@ std::string lower(std::string s) {
 #ifdef NAINA_NO_CURL
 
 // Builds with no network layer in the core: Emscripten (no sockets) and Android
-// (the NDK ships no libcurl). On both, the host owns fetching — JS through the
-// Cache API, or Dart through http — and writes the bytes into the path
+// (the NDK ships no libcurl). On both, the host owns fetching (JS through the
+// Cache API, or Dart through http) and writes the bytes into the path
 // cache_path_for() produces. ensure_local then finds the file present and runs
 // the SAME sha256 verification as every other platform, so these targets get the
 // same integrity guarantee rather than a weaker one.
 //
 // Reaching here means the host did not stage the file, which is a caller error
-// rather than a network condition — so report it as a missing model.
+// rather than a network condition, so report it as a missing model.
 naina_status download_atomic(const std::string&, const fs::path&) {
     return NAINA_E_MODEL_NOT_FOUND;
 }
@@ -385,7 +385,7 @@ std::optional<ModelEntry> ModelRegistry::resolve(const std::string& task,
         }
     }
 
-    // A language-specific model may exist at only one tier — upstream ships
+    // A language-specific model may exist at only one tier: upstream ships
     // Devanagari in a "mobile" size only. Rather than fail, fall back across
     // TIERS for the same language, which changes model size but never the
     // alphabet. Falling back across LANGUAGES is what we must never do.
@@ -464,7 +464,7 @@ naina_status ModelRegistry::ensure_local(const ModelEntry& m,
         return NAINA_E_MODEL_NOT_FOUND;
     }
 
-    // NAINA_OFFLINE=1 disables network — useful for tests and air-gapped runs.
+    // NAINA_OFFLINE=1 disables network, useful for tests and air-gapped runs.
     if (const char* off = std::getenv("NAINA_OFFLINE"); off != nullptr && off[0] != '0') {
         return NAINA_E_MODEL_NOT_FOUND;
     }

@@ -1,7 +1,7 @@
 // Pure 2D polygon geometry for detection post-processing.
 //
 // PaddleOCR leans on OpenCV for these. naina has no OpenCV dependency and
-// will not take one — the whole point is a small portable core — so the
+// will not take one (the whole point is a small portable core), so the
 // handful of primitives actually needed live here.
 #ifndef NAINA_INTERNAL_GEOMETRY_HPP
 #define NAINA_INTERNAL_GEOMETRY_HPP
@@ -35,7 +35,7 @@ bool min_area_quad(const std::vector<naina_point>& pts, naina_point out[4]);
 // whose u axis is whichever hull edge minimised the area. That axis can point
 // left or upward, so corner[0] is NOT reliably top-left. Recognition warps the
 // quad assuming it is, and a mis-ordered quad reads the strip mirrored or
-// upside down — which surfaces as plausible-looking garbage text rather than an
+// upside down, which surfaces as plausible-looking garbage text rather than an
 // error, so it is easy to miss.
 //
 // This is PaddleOCR's order_points_clockwise: split by x into a left and a

@@ -37,7 +37,7 @@ int main() {
     EXPECT_EQ(sha256_hex("abc"),
               std::string("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
 
-    // 56-byte input — exercises padding boundary.
+    // 56-byte input: exercises padding boundary.
     EXPECT_EQ(sha256_hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
               std::string("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"));
 

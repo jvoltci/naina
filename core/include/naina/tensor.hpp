@@ -1,7 +1,7 @@
-// naina — Tensor, DType, Span.
+// naina: Tensor, DType, Span.
 //
 // Internal types used by the backend layer and module code. NOT part of the
-// public C ABI — bindings should not touch these directly.
+// public C ABI: bindings should not touch these directly.
 #ifndef NAINA_TENSOR_HPP
 #define NAINA_TENSOR_HPP
 
@@ -109,9 +109,9 @@ private:
 // to feed sessions; postprocessing consumes outputs.
 //
 // Two construction modes:
-//   - `Tensor::view(...)` — wraps external memory, lib does not own.
-//   - `Tensor::owned(...)` — heap-allocated, freed on destruction.
-//   - `Tensor::in_arena(...)` — bump-allocated from an Arena, no per-tensor free.
+//   - `Tensor::view(...)`: wraps external memory, lib does not own.
+//   - `Tensor::owned(...)`: heap-allocated, freed on destruction.
+//   - `Tensor::in_arena(...)`: bump-allocated from an Arena, no per-tensor free.
 class Tensor {
 public:
     Tensor() = default;

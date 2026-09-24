@@ -1,4 +1,4 @@
-// Text detection — PP-OCRv6 det (DBNet head) + DB post-processing.
+// Text detection: PP-OCRv6 det (DBNet head) + DB post-processing.
 //
 // Pipeline: resize source to a multiple of 32 (longest side <= 960), normalise
 // to planar BGR float32, run the session, then decode the single-channel

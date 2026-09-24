@@ -1,4 +1,4 @@
-// doc_assemble — lines + regions -> reading order + structured markdown.
+// doc_assemble: lines + regions -> reading order + structured markdown.
 //
 // Pure logic: no model, no session, no randomness. That is deliberate. It makes
 // the whole structure layer testable from hand-built inputs, and it makes the
@@ -37,7 +37,7 @@ struct Config {
 
 // Assign each line to the region it best overlaps, writing region_id.
 // Lines matching no region keep region_id == -1 and are still emitted, at the
-// end — dropping them would silently lose text that layout simply missed.
+// end: dropping them would silently lose text that layout simply missed.
 void assign_lines_to_regions(const std::vector<naina_region>& regions,
                              const Config& cfg,
                              std::vector<Line>* lines);

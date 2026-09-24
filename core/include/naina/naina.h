@@ -1,4 +1,4 @@
-/* naina — C ABI
+/* naina: C ABI
  *
  * This header is the contract. Every binding (Python, Node, Rust, Swift,
  * Kotlin, WASM) targets this surface. C++ users may prefer naina.hpp,
@@ -88,11 +88,11 @@ typedef enum {
     NAINA_PIXFMT_GRAY8,
 } naina_pixfmt;
 
-/* Device tier. Selects model size, not licence — every model naina ships is
+/* Device tier. Selects model size, not licence: every model naina ships is
  * Apache-2.0.
- *   TINY    ~11 MB  — browser, phone, Pi Zero
- *   SMALL   ~54 MB  — laptop, Pi 5, mobile app
- *   MEDIUM  ~269 MB — server, desktop
+ *   TINY    ~11 MB: browser, phone, Pi Zero
+ *   SMALL   ~54 MB: laptop, Pi 5, mobile app
+ *   MEDIUM  ~269 MB: server, desktop
  * AUTO resolves to SMALL today; it exists so a future release can choose by
  * probing available memory without an ABI change. */
 typedef enum {
@@ -127,7 +127,7 @@ typedef struct {
 } naina_point;
 
 /* A detected text quad. Corners are clockwise from top-left, in SOURCE image
- * coordinates. Quads are not necessarily axis-aligned — skewed and rotated
+ * coordinates. Quads are not necessarily axis-aligned: skewed and rotated
  * text produces genuinely rotated quads. */
 typedef struct {
     naina_point corners[4];
@@ -135,7 +135,7 @@ typedef struct {
 } naina_textbox;
 
 /* A recognised line of text. `text` is UTF-8, NUL-terminated, and owned by
- * the naina_page_t that produced it — it dangles after naina_page_release. */
+ * the naina_page_t that produced it, and it dangles after naina_page_release. */
 typedef struct {
     naina_textbox box;
     const char* text;
@@ -253,7 +253,7 @@ NAINA_API const char* naina_region_kind_str(naina_region_kind k);
  *   [{"path":"<absolute cache path>","url":"...","bytes":N}, ...]
  *
  * The caller downloads each `url` to its `path`, then naina_init finds the files
- * present and sha256-verifies them exactly as if it had fetched them itself — so
+ * present and sha256-verifies them exactly as if it had fetched them itself, so
  * a host doing the fetching does not weaken the integrity check.
  *
  * Computed here rather than by each host because the cache layout

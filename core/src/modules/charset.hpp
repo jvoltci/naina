@@ -25,7 +25,7 @@ public:
     int32_t num_classes() const { return static_cast<int32_t>(entries_.size()); }
 
     // Character for a class index. Returns an empty string for the blank
-    // class and for any out-of-range index — callers skip empties.
+    // class and for any out-of-range index, and callers skip empties.
     const std::string& at(int32_t cls) const;
 
     // Replace the character list. `chars` excludes blank and space; this
@@ -39,7 +39,7 @@ private:
 
 // Parse PostProcess.character_dict out of a PaddleOCR inference.yml.
 // Returns false if the file cannot be read, has no character_dict, or that
-// list is empty — a silent empty charset would decode every page to "".
+// list is empty: a silent empty charset would decode every page to "".
 bool load_from_yaml(const std::filesystem::path& yaml_path, Charset* out);
 
 }  // namespace naina::internal::charset

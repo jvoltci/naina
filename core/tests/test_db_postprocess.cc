@@ -66,7 +66,7 @@ static void test_single_rectangle_blob() {
         EXPECT(p.x >= 1.0F && p.x <= 4.0F);
         EXPECT(p.y >= 1.0F && p.y <= 2.0F);
     }
-    // A 4x2 block is all border: 8 pixels (verified by simulation — with
+    // A 4x2 block is all border: 8 pixels (verified by simulation: with
     // only 2 rows, every pixel has a vertical neighbour outside the block).
     EXPECT(blobs[0].size() >= 6);
 }
@@ -189,7 +189,7 @@ static void test_decode_finds_one_box_and_unclips_it() {
     // Not absurdly, either. The min-area quad's corner-to-corner span is
     // 29x9 (inclusive pixel coords 10..39 and 10..19 span 29 and 9, not the
     // pixel counts 30 and 10), so area=261, perimeter=76, and
-    // distance = 261*1.4/76 = ~4.81 px per side — verified by simulating
+    // distance = 261*1.4/76 = ~4.81 px per side, verified by simulating
     // the exact hull/min-area-quad/unclip pipeline in Python. That number,
     // not the naively-counted 5.25, is what bounds these two checks, but
     // both are well inside [0, 59] so either estimate would pass.
@@ -213,7 +213,7 @@ static void test_decode_rejects_slivers() {
     // A 20x1 sliver: below min_box_side of 3. (In practice this is a
     // 1-pixel-tall row of border points, which are all collinear, so
     // min_area_quad's internal convex_hull collapses to 2 points and it
-    // returns false before the min_box_side check even runs — either path
+    // returns false before the min_box_side check even runs, and either path
     // yields the same observable result: no box.)
     const auto p = prob_with_rect(w, h, 5, 10, 24, 10, 0.95F);
     Config cfg;

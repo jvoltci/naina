@@ -40,7 +40,7 @@ Letterbox letterbox_to_bgr_planar_f32(const ImageView& src, int size, float pad_
 struct DetResize {
     int32_t out_w;
     int32_t out_h;
-    float scale_x;  // out_w / src_w — divide model coords by this to invert
+    float scale_x;  // out_w / src_w. Divide model coords by this to invert
     float scale_y;  // out_h / src_h
 };
 

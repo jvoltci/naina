@@ -31,7 +31,7 @@ static void test_empty_page_is_valid_not_null() {
     Page p;
     EXPECT(p.lines().empty());
     EXPECT(p.regions().empty());
-    // An empty page still returns usable C strings, never nullptr — the ABI
+    // An empty page still returns usable C strings, never nullptr: the ABI
     // promises naina_page_markdown never returns null.
     EXPECT(p.markdown() != nullptr);
     EXPECT(p.json() != nullptr);
@@ -116,7 +116,7 @@ static void test_markdown_skips_empty_lines() {
     p.add_line(box_at(0.0F, 10.0F, 10.0F, 5.0F, 0.9F), "", 0.0F);
     p.add_line(box_at(0.0F, 20.0F, 10.0F, 5.0F, 0.9F), "also", 0.9F);
     // A box that recognised to nothing should not leave a blank line in the
-    // markdown — that would read as a paragraph break that isn't there.
+    // markdown: that would read as a paragraph break that isn't there.
     EXPECT(std::string(p.markdown()) == "kept\nalso");
 }
 
