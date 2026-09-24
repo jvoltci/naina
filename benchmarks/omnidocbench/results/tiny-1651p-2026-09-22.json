@@ -1,0 +1,17 @@
+{
+ "date": "2026-09-22",
+ "tier": "tiny",
+ "formula_metric": "edit only",
+ "naina_version": "0.2.1",
+ "device": "Apple M5 Pro, Darwin 25.5.0",
+ "pages": 1651,
+ "cold_first_page_ms": 1379.3,
+ "warm_median_ms": 649.3,
+ "warm_p95_ms": 2949.9,
+ "empty_outputs": 0,
+ "text_block_edit": 0.2477,
+ "display_formula_edit": 0.799,
+ "table_edit": 1.0,
+ "table_TEDS": 0.0,
+ "reading_order_edit": 0.492
+}

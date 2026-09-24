@@ -1,0 +1,20 @@
+{
+ "date": "2026-09-22",
+ "tier": "TINY",
+ "formula_metric": "edit only",
+ "naina_version": null,
+ "device": null,
+ "pages": 18,
+ "cold_first_page_ms": null,
+ "warm_median_ms": null,
+ "warm_p95_ms": null,
+ "empty_outputs": null,
+ "text_block_edit": 0.1846,
+ "display_formula_edit": 0.8636,
+ "table_edit": 1.0,
+ "table_TEDS": 0.0,
+ "reading_order_edit": 0.4183,
+ "text_text_en_ch_mixed": 0.343,
+ "text_text_english": 0.239,
+ "text_text_simplified_chinese": 0.1249
+}

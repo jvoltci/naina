@@ -12,6 +12,8 @@ using naina::internal::plan_det_resize;
 using naina::internal::plan_quad_strip;
 using naina::internal::QuadStrip;
 using naina::internal::resize_det_bgr_planar_f32;
+using naina::internal::ShrinkFilter;
+using naina::internal::shrink_filter_from_string;
 
 static int failures = 0;
 
@@ -234,6 +236,124 @@ static void test_warp_quad_extracts_the_right_pixels() {
     }
 }
 
+// A 4x shrink must average the area it covers, not read every fourth pixel.
+// Columns repeat 0, 0, 0, 255: the area mean is 63.75; plain bilinear at the
+// mapped centre (source x = 1.5) read the two zero columns and returned 0,
+// which is how the medium detector lost whole newspaper pages (2026-09-23).
+static void test_resize_det_shrink_is_an_area_average() {
+    const int32_t W = 16, H = 8;
+    std::vector<uint8_t> px(static_cast<size_t>(W * H * 3));
+    for (int32_t y = 0; y < H; ++y) {
+        for (int32_t x = 0; x < W; ++x) {
+            const uint8_t v = (x % 4 == 3) ? 255 : 0;
+            for (int32_t c = 0; c < 3; ++c) {
+                px[static_cast<size_t>((y * W + x) * 3 + c)] = v;
+            }
+        }
+    }
+    const ImageView src{px.data(), W, H, W * 3, NAINA_PIXFMT_BGR8};
+    DetResize plan{};
+    plan.out_w = 4;
+    plan.out_h = 2;
+    plan.scale_x = 0.25F;
+    plan.scale_y = 0.25F;
+    const float one[3] = {1.0F, 1.0F, 1.0F};
+    const float zero[3] = {0.0F, 0.0F, 0.0F};
+    std::vector<float> out(3U * 4U * 2U, -1.0F);
+    resize_det_bgr_planar_f32(src, plan, one, zero, one, out.data());
+    for (float v : out) {
+        EXPECT(std::fabs(v - 63.75F) < 1e-3F);
+    }
+}
+
+// Shrinking by a non-integer factor splits boundary pixels by exact overlap:
+// 3 -> 2 in x covers [0, 1.5) and [1.5, 3), so with columns 0, 90, 180 the
+// outputs are (0 + 0.5*90) / 1.5 = 30 and (0.5*90 + 180) / 1.5 = 150.
+static void test_resize_det_fractional_shrink_splits_boundary_pixels() {
+    const uint8_t px[9] = {0, 0, 0, 90, 90, 90, 180, 180, 180};
+    const ImageView src{px, 3, 1, 9, NAINA_PIXFMT_BGR8};
+    DetResize plan{};
+    plan.out_w = 2;
+    plan.out_h = 1;
+    plan.scale_x = 2.0F / 3.0F;
+    plan.scale_y = 1.0F;
+    const float one[3] = {1.0F, 1.0F, 1.0F};
+    const float zero[3] = {0.0F, 0.0F, 0.0F};
+    float out[6] = {0};
+    resize_det_bgr_planar_f32(src, plan, one, zero, one, out);
+    for (int32_t c = 0; c < 3; ++c) {
+        EXPECT(std::fabs(out[c * 2 + 0] - 30.0F) < 1e-3F);
+        EXPECT(std::fabs(out[c * 2 + 1] - 150.0F) < 1e-3F);
+    }
+}
+
+// Enlarging keeps the old bilinear-at-centre behaviour, edge-clamped: a
+// 2-pixel row 0, 100 stretched to 4 gives 0, 25, 75, 100. GRAY8 feeds its one
+// channel to all three planes, and mixing axes (x up, y down) works.
+static void test_resize_det_enlarge_is_bilinear_and_gray_replicates() {
+    const uint8_t px[4] = {0, 100, 0, 100};  // 2 wide, 2 tall, identical rows
+    const ImageView src{px, 2, 2, 2, NAINA_PIXFMT_GRAY8};
+    DetResize plan{};
+    plan.out_w = 4;
+    plan.out_h = 1;
+    plan.scale_x = 2.0F;
+    plan.scale_y = 0.5F;
+    const float one[3] = {1.0F, 1.0F, 1.0F};
+    const float zero[3] = {0.0F, 0.0F, 0.0F};
+    float out[12] = {0};
+    resize_det_bgr_planar_f32(src, plan, one, zero, one, out);
+    const float want[4] = {0.0F, 25.0F, 75.0F, 100.0F};
+    for (int32_t c = 0; c < 3; ++c) {
+        for (int32_t x = 0; x < 4; ++x) {
+            EXPECT(std::fabs(out[c * 4 + x] - want[x]) < 1e-3F);
+        }
+    }
+}
+
+// The old behaviour is still reachable by name, so a tier that measures better
+// on it can ask for it: under Bilinear the 0, 0, 0, 255 stripe shrunk 4x reads
+// the two zero columns at source x = 1.5 and returns 0, the aliasing that
+// emptied the newspaper pages.
+static void test_resize_det_bilinear_filter_reproduces_the_old_aliasing() {
+    const int32_t W = 16, H = 8;
+    std::vector<uint8_t> px(static_cast<size_t>(W * H * 3));
+    for (int32_t y = 0; y < H; ++y) {
+        for (int32_t x = 0; x < W; ++x) {
+            const uint8_t v = (x % 4 == 3) ? 255 : 0;
+            for (int32_t c = 0; c < 3; ++c) {
+                px[static_cast<size_t>((y * W + x) * 3 + c)] = v;
+            }
+        }
+    }
+    const ImageView src{px.data(), W, H, W * 3, NAINA_PIXFMT_BGR8};
+    DetResize plan{};
+    plan.out_w = 4;
+    plan.out_h = 2;
+    plan.scale_x = 0.25F;
+    plan.scale_y = 0.25F;
+    const float one[3] = {1.0F, 1.0F, 1.0F};
+    const float zero[3] = {0.0F, 0.0F, 0.0F};
+    std::vector<float> out(3U * 4U * 2U, -1.0F);
+    resize_det_bgr_planar_f32(src, plan, one, zero, one, out.data(), ShrinkFilter::Bilinear);
+    for (float v : out) {
+        EXPECT(std::fabs(v) < 1e-3F);
+    }
+    // Lanczos3 keeps the mean of a periodic pattern close to the area mean
+    // (63.75) but not equal: it is a different filter, and the difference is
+    // the point of measuring them against each other.
+    resize_det_bgr_planar_f32(src, plan, one, zero, one, out.data(), ShrinkFilter::Lanczos3);
+    EXPECT(std::fabs(out[5] - 63.75F) < 20.0F);
+    EXPECT(std::fabs(out[5]) > 1e-3F);
+
+    EXPECT(shrink_filter_from_string("area", ShrinkFilter::Bilinear) == ShrinkFilter::Area);
+    EXPECT(shrink_filter_from_string("bilinear", ShrinkFilter::Area) == ShrinkFilter::Bilinear);
+    EXPECT(shrink_filter_from_string("lanczos3", ShrinkFilter::Area) == ShrinkFilter::Lanczos3);
+    EXPECT(shrink_filter_from_string("triangle", ShrinkFilter::Area) == ShrinkFilter::Triangle);
+    EXPECT(shrink_filter_from_string("", ShrinkFilter::Area) == ShrinkFilter::Area);
+    EXPECT(shrink_filter_from_string(nullptr, ShrinkFilter::Lanczos3) == ShrinkFilter::Lanczos3);
+    EXPECT(shrink_filter_from_string("nearest", ShrinkFilter::Area) == ShrinkFilter::Area);
+}
+
 int main() {
     test_det_resize_rounds_to_multiple_of_32();
     test_det_resize_is_idempotent_on_aligned_input();
@@ -244,6 +364,10 @@ int main() {
     test_quad_strip_clamps_max_width();
     test_quad_strip_degenerate_quad_is_safe();
     test_warp_quad_extracts_the_right_pixels();
+    test_resize_det_shrink_is_an_area_average();
+    test_resize_det_fractional_shrink_splits_boundary_pixels();
+    test_resize_det_enlarge_is_bilinear_and_gray_replicates();
+    test_resize_det_bilinear_filter_reproduces_the_old_aliasing();
     if (failures == 0) {
         std::printf("test_image_ops_warp: all passed\n");
     }

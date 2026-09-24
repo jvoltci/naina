@@ -96,6 +96,9 @@ struct naina_ctx {
     // automatic script selection does. Detection and layout are script-agnostic
     // and always key with an empty language, so they are loaded once and shared.
     std::unordered_map<std::string, std::unique_ptr<naina::backend::ISession>> sessions;
+    // The registry entry each session was loaded from, same key, so the
+    // detector can read its manifest parameters (see det_config()).
+    std::unordered_map<std::string, naina::ModelEntry> entries;
 
     // Charsets, one per alphabet, parsed from each recognition model's own
     // charset_yaml artifact. Also keyed by language for the same reason.
@@ -144,6 +147,17 @@ struct naina_ctx {
     // variant: 480 for PP-DocLayout-S, 640 for -M, 800 for V3. Read it from the
     // loaded session rather than hardcoding, so a registry change cannot
     // silently feed the wrong resolution.
+    // The layout model's shrink filter, from its registry entry; Area when unset.
+    naina::internal::ShrinkFilter layout_filter() {
+        std::lock_guard<std::mutex> lk(sess_mu);
+        const auto it = entries.find(cache_key("layout_detect", std::string()));
+        if (it == entries.end() || it->second.det.filter.empty()) {
+            return naina::internal::ShrinkFilter::Area;
+        }
+        return naina::internal::shrink_filter_from_string(it->second.det.filter.c_str(),
+                                                          naina::internal::ShrinkFilter::Area);
+    }
+
     int32_t layout_input_side() {
         naina_status s = NAINA_OK;
         auto* sess = session_for("layout_detect", &s);
@@ -268,6 +282,34 @@ struct naina_ctx {
         return (!best.empty() && best_score >= baseline + kAutoMargin) ? best : std::string();
     }
 
+    // The detector's configuration: the loaded text_detect model's manifest
+    // values. Until 2026-09-23 detect() was handed a default Config and the
+    // manifest's resize and threshold blocks were parsed by nobody. Call after
+    // session_for("text_detect") has succeeded; before that it is the default.
+    naina::internal::text_detect::Config det_config() {
+        naina::internal::text_detect::Config cfg;
+        std::lock_guard<std::mutex> lk(sess_mu);
+        const auto it = entries.find(cache_key("text_detect", std::string()));
+        if (it == entries.end()) {
+            return cfg;
+        }
+        const naina::ModelEntry::Detection& d = it->second.det;
+        cfg.limit_side = d.limit;
+        cfg.multiple_of = d.multiple_of;
+        cfg.filter = naina::internal::shrink_filter_from_string(
+            d.filter.empty() ? nullptr : d.filter.c_str(), cfg.filter);
+        for (int32_t i = 0; i < 3; ++i) {
+            cfg.scale[i] = d.scale[i];
+            cfg.mean[i] = d.mean[i];
+            cfg.std_[i] = d.std_[i];
+        }
+        cfg.db.thresh = d.thresh;
+        cfg.db.box_thresh = d.box_thresh;
+        cfg.db.unclip_ratio = d.unclip_ratio;
+        cfg.db.max_candidates = d.max_candidates;
+        return cfg;
+    }
+
     naina::backend::ISession* session_for(const std::string& task,
                                           naina_status* out_status,
                                           const std::string* lang_override = nullptr) {
@@ -342,6 +384,7 @@ struct naina_ctx {
             }
             auto* raw = sess.get();
             sessions.emplace(key, std::move(sess));
+            entries.emplace(key, *entry);
             *out_status = NAINA_OK;
             return raw;
         }
@@ -497,7 +540,7 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
     // candidate. Measured on a Devanagari page: DBNet located all 82 lines
     // correctly even while the wrong recogniser produced garbage.
     std::vector<naina_textbox> boxes;
-    s = naina::internal::text_detect::detect(det, view, {}, &boxes);
+    s = naina::internal::text_detect::detect(det, view, ctx->det_config(), &boxes);
     if (s != NAINA_OK) {
         return s;
     }
@@ -533,6 +576,7 @@ extern "C" naina_status naina_read(naina_ctx_t* ctx,
     if (auto* lay = ctx->session_for("layout_detect", &ls); lay != nullptr) {
         naina::internal::layout_detect::Config lcfg;
         lcfg.input_side = ctx->layout_input_side();
+        lcfg.filter = ctx->layout_filter();
         if (naina::internal::layout_detect::detect(lay, view, lcfg, &regions) != NAINA_OK) {
             regions.clear();
         }
@@ -624,7 +668,7 @@ extern "C" naina_status naina_text_detect(naina_ctx_t* ctx,
     }
 
     std::vector<naina_textbox> boxes;
-    s = naina::internal::text_detect::detect(session, view_of(image), {}, &boxes);
+    s = naina::internal::text_detect::detect(session, view_of(image), ctx->det_config(), &boxes);
     if (s != NAINA_OK) {
         return s;
     }
@@ -663,6 +707,7 @@ extern "C" naina_status naina_layout_detect(naina_ctx_t* ctx,
     }
     naina::internal::layout_detect::Config cfg;
     cfg.input_side = ctx->layout_input_side();
+    cfg.filter = ctx->layout_filter();
     std::vector<naina_region> regions;
     s = naina::internal::layout_detect::detect(session, view_of(image), cfg, &regions);
     if (s != NAINA_OK) {

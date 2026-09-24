@@ -172,7 +172,7 @@ naina_status detect(backend::ISession* session,
     plan.scale_y = static_cast<float>(side) / static_cast<float>(src.height);
 
     std::vector<float> chw(3U * plane);
-    resize_det_bgr_planar_f32(src, plan, cfg.scale, cfg.mean, cfg.std_, chw.data());
+    resize_det_bgr_planar_f32(src, plan, cfg.scale, cfg.mean, cfg.std_, chw.data(), cfg.filter);
 
     // The det path produces planar BGR; layout wants RGB, so swap planes 0 and 2
     // in place rather than adding a second resize implementation.

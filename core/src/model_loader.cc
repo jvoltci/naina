@@ -132,6 +132,41 @@ size_t curl_write_to_file(void* buf, size_t size, size_t nmemb, void* user) {
     return std::fwrite(buf, size, nmemb, fp);
 }
 
+// Progress to stderr, one line per 4 MiB and one at the end.
+//
+// Why this exists: on 2026-09-22 a medium-tier read looked hung for twenty
+// minutes. It was not hung. The host was serving at 16 KB/s, which is above
+// curl's 1 KB/s low-speed floor, so a 129 MB model was a two-hour download
+// with no output at all. A silent two-hour wait is indistinguishable from a
+// crash, which is this repository's oldest failure mode.
+//
+// Set NAINA_QUIET=1 to suppress. Nothing is printed for files under 4 MiB, so
+// charsets and tiny weights stay silent.
+struct ProgressState {
+    std::string name;
+    curl_off_t last_reported = 0;
+    bool announced = false;
+};
+
+int curl_progress(void* user, curl_off_t dltotal, curl_off_t dlnow, curl_off_t, curl_off_t) {
+    auto* st = static_cast<ProgressState*>(user);
+    constexpr curl_off_t kStep = 4LL * 1024 * 1024;
+    if (dltotal > 0 && !st->announced && dltotal >= kStep) {
+        std::fprintf(stderr, "[naina] downloading %s, %.1f MB\n", st->name.c_str(),
+                     static_cast<double>(dltotal) / (1024.0 * 1024.0));
+        st->announced = true;
+    }
+    if (st->announced && dlnow - st->last_reported >= kStep) {
+        st->last_reported = dlnow;
+        const double pct = dltotal > 0 ? (100.0 * static_cast<double>(dlnow) /
+                                          static_cast<double>(dltotal)) : 0.0;
+        std::fprintf(stderr, "[naina]   %s %.0f%% (%.1f of %.1f MB)\n", st->name.c_str(), pct,
+                     static_cast<double>(dlnow) / (1024.0 * 1024.0),
+                     static_cast<double>(dltotal) / (1024.0 * 1024.0));
+    }
+    return 0;  // never abort from here; the low-speed limit does that
+}
+
 // Download `url` → `dest` atomically (writes to dest+".part", renames on
 // success). Returns NAINA_OK or an error code.
 naina_status download_atomic(const std::string& url, const fs::path& dest) {
@@ -163,13 +198,44 @@ naina_status download_atomic(const std::string& url, const fs::path& dest) {
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1024L);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "naina/0.1 (+https://github.com/jvoltci/naina)");
 
+    char errbuf[CURL_ERROR_SIZE] = {0};
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+
+    ProgressState progress{dest.filename().string(), 0, false};
+    const bool quiet = std::getenv("NAINA_QUIET") != nullptr;
+    if (!quiet) {
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_progress);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &progress);
+    }
+
     const CURLcode rc = curl_easy_perform(curl);
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(curl);
     std::fclose(fp);
 
     if (rc != CURLE_OK) {
+        // Say what failed and where. The previous version returned the same
+        // code from both branches of a ternary and threw the URL, the HTTP
+        // status and curl's own message away, which left the caller with
+        // "an IO error happened somewhere".
+        std::fprintf(stderr, "[naina] download failed: %s\n[naina]   url: %s\n"
+                             "[naina]   curl: %s%s%s\n",
+                     dest.filename().string().c_str(), url.c_str(),
+                     curl_easy_strerror(rc),
+                     errbuf[0] != 0 ? ": " : "", errbuf);
+        if (http_code != 0) {
+            std::fprintf(stderr, "[naina]   http: %ld\n", http_code);
+        }
         std::remove(tmp.string().c_str());
-        return rc == CURLE_OPERATION_TIMEDOUT ? NAINA_E_IO : NAINA_E_IO;
+        // Both cases are NAINA_E_IO because the C ABI has no timeout code and
+        // adding one is an ABI change. The distinction now lives in the
+        // message above, where a person can read it.
+        return NAINA_E_IO;
+    }
+    if (!quiet && progress.announced) {
+        std::fprintf(stderr, "[naina] downloaded %s\n", dest.filename().string().c_str());
     }
 
     // Atomic move into final location.
@@ -258,6 +324,41 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
                 fe.sha256 = lower(kv.second["sha256"].as<std::string>(""));
                 fe.bytes = kv.second["bytes"].as<int64_t>(0);
                 entry.files.emplace(kind, std::move(fe));
+            }
+        }
+        // Detection parameters. Absent keys keep the struct's defaults, which
+        // equal the values every text_detect entry has carried since v0.1.
+        if (entry.task == "text_detect") {
+            const YAML::Node pre = m["input"] ? m["input"]["preprocess"] : YAML::Node();
+            if (pre) {
+                if (const YAML::Node rs = pre["resize"]; rs) {
+                    entry.det.limit = rs["limit"].as<int32_t>(entry.det.limit);
+                    entry.det.multiple_of = rs["multiple_of"].as<int32_t>(entry.det.multiple_of);
+                    entry.det.filter = rs["filter"].as<std::string>("");
+                }
+                const auto triple = [](const YAML::Node& n, float out[3]) {
+                    if (n && n.IsSequence() && n.size() == 3) {
+                        for (std::size_t i = 0; i < 3; ++i) {
+                            out[i] = n[i].as<float>();
+                        }
+                    }
+                };
+                triple(pre["scale"], entry.det.scale);
+                triple(pre["mean"], entry.det.mean);
+                triple(pre["std"], entry.det.std_);
+            }
+            const YAML::Node post = m["output"] ? m["output"]["postprocess"] : YAML::Node();
+            if (post) {
+                entry.det.thresh = post["thresh"].as<float>(entry.det.thresh);
+                entry.det.box_thresh = post["box_thresh"].as<float>(entry.det.box_thresh);
+                entry.det.unclip_ratio = post["unclip_ratio"].as<float>(entry.det.unclip_ratio);
+                entry.det.max_candidates = post["max_candidates"].as<int32_t>(entry.det.max_candidates);
+            }
+        }
+        if (entry.task == "layout_detect") {
+            const YAML::Node pre = m["input"] ? m["input"]["preprocess"] : YAML::Node();
+            if (pre && pre["resize"]) {
+                entry.det.filter = pre["resize"]["filter"].as<std::string>("");
             }
         }
         reg.models_.push_back(std::move(entry));

@@ -11,6 +11,7 @@
 
 #include "../src/sha256.hpp"
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -98,6 +99,16 @@ int main() {
             EXPECT(url.find("github.com/jvoltci/naina/releases") != std::string::npos);
             EXPECT(url.find("${release_base}") == std::string::npos);
             EXPECT(url.find("${hf}") == std::string::npos);
+            // The detection blocks are parsed, not skipped: these are the
+            // manifest's own values, which until 2026-09-23 reached nobody.
+            EXPECT(det->det.limit == 960);
+            EXPECT(det->det.multiple_of == 32);
+            EXPECT(std::fabs(det->det.thresh - 0.2F) < 1e-6F);
+            EXPECT(std::fabs(det->det.box_thresh - 0.4F) < 1e-6F);
+            EXPECT(std::fabs(det->det.unclip_ratio - 1.4F) < 1e-6F);
+            EXPECT(det->det.max_candidates == 3000);
+            EXPECT(std::fabs(det->det.mean[0] - 0.485F) < 1e-6F);
+            EXPECT(std::fabs(det->det.std_[2] - 0.225F) < 1e-6F);
             // Upstream provenance is retained for auditability, and is never
             // what gets fetched.
             EXPECT(!det->files.at("onnx").source_url.empty());

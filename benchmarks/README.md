@@ -1,40 +1,18 @@
 # naina benchmarks
 
-End-to-end latency timings for face detection and embedding. The harness
-uses the Python binding, so any backend / platform that supports
-`pip install naina` can produce comparable numbers.
+Every number naina publishes is produced here, and every one of them says which
+tier, which device and which date. The rule from the main README holds: measured
+numbers with the harness in the repository, or nothing.
 
-## Run
+| Suite | What it measures | Where |
+|---|---|---|
+| [`omnidocbench/`](omnidocbench/) | text, tables, formulas and reading order on 1,651 real PDF pages | OmniDocBench v1.6, run with the maintainers' own evaluator |
+| `indic/` | Devanagari, Tamil, Telugu and the other scripts naina ships | word crops, synthetic renders and real photographed pages |
 
-```bash
-# 1. Install naina (one-time).
-pip install -e .
+Speed, memory and energy per page are recorded alongside accuracy by the same
+harness, because a reader that is right and too slow to use is not finished.
 
-# 2. Time the default tier on the current host.
-python benchmarks/latency.py --target my-laptop
-
-# 3. Time the research tier (opt-in, non-commercial weights).
-python benchmarks/latency.py --target my-laptop --research
-
-# 4. Regenerate the README benchmark table from all collected JSONs.
-python benchmarks/runner.py --update-readme
-```
-
-Each `latency.py` invocation writes `benchmarks/results/<target>-<tier>.json`
-with p50 / p95 / p99 for detect + embed, plus host / system info. Commit
-those files to publish results.
-
-## Conventions
-
-- `--target` is a free-form label — use something stable and unique
-  (`pi5`, `jetson-orin-nano`, `m3-pro`, `x86-rtx4090`, etc).
-- Pass `--image path/to/face.jpg` to time on a real face. Without it the
-  benchmark uses synthetic noise, which still measures inference latency
-  accurately but skips embed timing (no face found).
-- Embed numbers are *per face*; detect numbers are *per frame*.
-
-## Accuracy (planned)
-
-Accuracy benchmarks (WIDERFACE, IJB-C, LFW) are scoped for the eval phase
-and require dataset downloads that we don't yet automate. The README
-benchmark section shows latency only for v0.1.
+> **What used to be here.** A face-detection latency template (`latency.py`,
+> `runner.py`) that measured nothing naina does. It came from the project
+> scaffold and was removed on 2026-09-22, along with the one result file it had
+> ever produced.

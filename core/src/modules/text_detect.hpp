@@ -17,9 +17,11 @@
 namespace naina::internal::text_detect {
 
 struct Config {
-    // Resize, from the manifest's preprocess.resize block.
+    // Resize, from the manifest's preprocess.resize block. The filter is per
+    // model because the tiers disagree: measured 2026-09-23 on OmniDocBench.
     int32_t limit_side = 960;
     int32_t multiple_of = 32;
+    ShrinkFilter filter = ShrinkFilter::Area;
 
     // NormalizeImage, from the manifest. Values are PP-OCRv6 det's own.
     float scale[3] = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F / 255.0F};

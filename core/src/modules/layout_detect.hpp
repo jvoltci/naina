@@ -30,6 +30,9 @@ struct Config {
     // Square input side. Read from the manifest; differs per variant
     // (480 for S, 640 for M/L, 800 for V3).
     int32_t input_side = 800;
+    // How the stretch to input_side x input_side is filtered when shrinking.
+    // Per model, from the registry, for the same reason as text_detect's.
+    ShrinkFilter filter = ShrinkFilter::Area;
 
     float scale[3] = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F / 255.0F};
     float mean[3] = {0.485F, 0.456F, 0.406F};

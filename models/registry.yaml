@@ -57,7 +57,11 @@ models:
         scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
         mean:  [0.485, 0.456, 0.406]
         std:   [0.229, 0.224, 0.225]
-        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+        # filter: bilinear, the reference behaviour. A 30-page subset (2026-09-23) suggested lanczos3
+        # (0.2215 against 0.2428 reweighted); the full 1,651-page run overturned it: 0.3115 against
+        # 0.2477, worse in every document type (newspapers 0.836 vs 0.577, scihub 0.259 vs 0.090).
+        # The tiny model wants sharp aliased strokes. See the lab's private note on the detector resampler (2026-09-23).
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32, filter: bilinear}
     output:
       type: db_probability_map
       postprocess:
@@ -86,7 +90,8 @@ models:
         scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
         mean:  [0.485, 0.456, 0.406]
         std:   [0.229, 0.224, 0.225]
-        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+        # filter measured 2026-09-23: bilinear 0.1895 beat box 0.1952, triangle 0.1950 and lanczos3 0.2016; every antialiased filter lost 9 or 10 of 14 paired ordinary pages. The reference behaviour stays for this tier.
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32, filter: bilinear}
     output:
       type: db_probability_map
       postprocess:
@@ -115,7 +120,8 @@ models:
         scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
         mean:  [0.485, 0.456, 0.406]
         std:   [0.229, 0.224, 0.225]
-        resize: {mode: limit_max_side, limit: 960, multiple_of: 32}
+        # filter measured 2026-09-23: triangle 0.1540 against bilinear 0.1868 (which emptied 5 dense newspaper pages), box 0.1598, lanczos3 0.1670; 12 ordinary pages won to 4 lost, zero empties. Plain bilinear at a 4.4x shrink aliased 5 px text into nothing this detector could see.
+        resize: {mode: limit_max_side, limit: 960, multiple_of: 32, filter: triangle}
     output:
       type: db_probability_map
       postprocess:
@@ -940,7 +946,8 @@ models:
         scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
         mean:  [0.485, 0.456, 0.406]
         std:   [0.229, 0.224, 0.225]
-        resize: {mode: fixed, target: [480, 480]}
+        # filter follows text_detect.tiny (bilinear after the full-set run of 2026-09-23)
+        resize: {mode: fixed, target: [480, 480], filter: bilinear}
     output:
       type: layout_regions
       postprocess:
@@ -965,7 +972,8 @@ models:
         scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
         mean:  [0.485, 0.456, 0.406]
         std:   [0.229, 0.224, 0.225]
-        resize: {mode: fixed, target: [640, 640]}
+        # filter follows text_detect.small: the 2026-09-23 experiment ran one kernel through both models
+        resize: {mode: fixed, target: [640, 640], filter: bilinear}
     output:
       type: layout_regions
       postprocess:
@@ -990,7 +998,8 @@ models:
         scale: [0.00392156862745098, 0.00392156862745098, 0.00392156862745098]
         mean:  [0.485, 0.456, 0.406]
         std:   [0.229, 0.224, 0.225]
-        resize: {mode: fixed, target: [640, 640]}
+        # filter follows text_detect.medium: the 2026-09-23 experiment ran one kernel through both models
+        resize: {mode: fixed, target: [640, 640], filter: triangle}
     output:
       type: layout_regions
       postprocess:

@@ -4,6 +4,8 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <string>
+#include <vector>
 
 namespace naina::internal {
 
@@ -323,32 +325,238 @@ float bilinear_u8(const ImageView& src, float fx, float fy, int32_t ch) {
 
 }  // namespace
 
+namespace {
+
+// One axis of the detector resize: for each destination index, the first
+// source index it draws from and its weights over consecutive source pixels.
+struct AxisTaps {
+    std::vector<int32_t> start;
+    std::vector<int32_t> count;
+    std::vector<int32_t> offset;  // index into `weights` per destination index
+    std::vector<float> weights;   // sum to 1 for each destination index
+};
+
+// `scale` is dst / src. Shrinking (scale < 1) uses `kern`: Area is the exact
+// area average of the covered source interval, fractional at both ends
+// (OpenCV's INTER_AREA); Triangle and Lanczos3 are PIL's antialiased filters;
+// Bilinear is two taps at the mapped centre, edge-clamped, which is what
+// every path did before 2026-09-23. Enlarging is always the bilinear pair. Plain bilinear at a 4x shrink reads two of every four
+// source pixels and misses the rest; on a 2200 x 4250 newspaper shrunk to
+// 512 x 960 that aliasing collapsed the medium DBNet's probability map to a
+// maximum of 0.02 and zero boxes, while the same page pre-shrunk with an
+// area average gave 350 boxes. PaddleOCR's own cv2.resize INTER_LINEAR has
+// the same aliasing except at an exact 2x, so this is a deliberate departure
+// from the reference pipeline, measured before it was kept.
+float sinc(float x) {
+    if (std::fabs(x) < 1e-6F) {
+        return 1.0F;
+    }
+    const float px = 3.14159265358979F * x;
+    return std::sin(px) / px;
+}
+
+// Taps for a windowed kernel of radius `radius` (in destination pixels) whose
+// support is scaled by the shrink factor. Taps falling off the image are
+// dropped and the rest renormalised, which is PIL's edge handling.
+void windowed_taps(AxisTaps& t, int32_t src_n, int32_t dst_n, double span, float radius,
+                   float (*kernel)(float)) {
+    for (int32_t i = 0; i < dst_n; ++i) {
+        const double centre = (static_cast<double>(i) + 0.5) * span - 0.5;
+        int32_t j0 = static_cast<int32_t>(std::ceil(centre - static_cast<double>(radius) * span));
+        int32_t j1 = static_cast<int32_t>(std::floor(centre + static_cast<double>(radius) * span));
+        if (j0 < 0) {
+            j0 = 0;
+        }
+        if (j1 > src_n - 1) {
+            j1 = src_n - 1;
+        }
+        if (j1 < j0) {
+            j0 = j1 = std::clamp(static_cast<int32_t>(std::lround(centre)), 0, src_n - 1);
+        }
+        t.start[static_cast<size_t>(i)] = j0;
+        t.offset[static_cast<size_t>(i)] = static_cast<int32_t>(t.weights.size());
+        t.count[static_cast<size_t>(i)] = j1 - j0 + 1;
+        double sum = 0.0;
+        for (int32_t j = j0; j <= j1; ++j) {
+            const float w = kernel(static_cast<float>((static_cast<double>(j) - centre) / span));
+            t.weights.push_back(w);
+            sum += static_cast<double>(w);
+        }
+        if (std::fabs(sum) > 1e-9) {
+            for (int32_t k = 0; k < t.count[static_cast<size_t>(i)]; ++k) {
+                t.weights[static_cast<size_t>(t.offset[static_cast<size_t>(i)] + k)] /=
+                    static_cast<float>(sum);
+            }
+        }
+    }
+}
+
+float triangle_kernel(float x) {
+    const float a = std::fabs(x);
+    return a < 1.0F ? 1.0F - a : 0.0F;
+}
+float lanczos3_kernel(float x) {
+    return std::fabs(x) < 3.0F ? sinc(x) * sinc(x / 3.0F) : 0.0F;
+}
+
+AxisTaps make_axis_taps(int32_t src_n, int32_t dst_n, float scale, ShrinkFilter kern) {
+    AxisTaps t;
+    t.start.resize(static_cast<size_t>(dst_n));
+    t.count.resize(static_cast<size_t>(dst_n));
+    t.offset.resize(static_cast<size_t>(dst_n));
+    if (scale < 1.0F && kern != ShrinkFilter::Bilinear) {
+        const double span = static_cast<double>(src_n) / static_cast<double>(dst_n);
+        if (kern == ShrinkFilter::Triangle) {
+            windowed_taps(t, src_n, dst_n, span, 1.0F, triangle_kernel);
+            return t;
+        }
+        if (kern == ShrinkFilter::Lanczos3) {
+            windowed_taps(t, src_n, dst_n, span, 3.0F, lanczos3_kernel);
+            return t;
+        }
+        for (int32_t i = 0; i < dst_n; ++i) {
+            const double lo = static_cast<double>(i) * span;
+            double hi = lo + span;
+            if (hi > static_cast<double>(src_n)) {
+                hi = static_cast<double>(src_n);
+            }
+            int32_t j0 = static_cast<int32_t>(std::floor(lo));
+            int32_t j1 = static_cast<int32_t>(std::ceil(hi)) - 1;
+            if (j1 >= src_n) {
+                j1 = src_n - 1;
+            }
+            if (j1 < j0) {
+                j1 = j0;
+            }
+            t.start[static_cast<size_t>(i)] = j0;
+            t.offset[static_cast<size_t>(i)] = static_cast<int32_t>(t.weights.size());
+            double sum = 0.0;
+            for (int32_t j = j0; j <= j1; ++j) {
+                const double a = lo > static_cast<double>(j) ? lo : static_cast<double>(j);
+                const double b = hi < static_cast<double>(j + 1) ? hi : static_cast<double>(j + 1);
+                const double w = b > a ? (b - a) : 0.0;
+                t.weights.push_back(static_cast<float>(w));
+                sum += w;
+            }
+            t.count[static_cast<size_t>(i)] = j1 - j0 + 1;
+            if (sum > 0.0) {
+                for (int32_t k = 0; k < t.count[static_cast<size_t>(i)]; ++k) {
+                    t.weights[static_cast<size_t>(t.offset[static_cast<size_t>(i)] + k)] /=
+                        static_cast<float>(sum);
+                }
+            }
+        }
+        return t;
+    }
+    const float inv = 1.0F / (scale != 0.0F ? scale : 1.0F);
+    for (int32_t i = 0; i < dst_n; ++i) {
+        const float f = (static_cast<float>(i) + 0.5F) * inv - 0.5F;
+        const int32_t x0 = static_cast<int32_t>(std::floor(f));
+        const float a = f - static_cast<float>(x0);
+        t.offset[static_cast<size_t>(i)] = static_cast<int32_t>(t.weights.size());
+        if (x0 < 0) {
+            t.start[static_cast<size_t>(i)] = 0;
+            t.count[static_cast<size_t>(i)] = 1;
+            t.weights.push_back(1.0F);
+        } else if (x0 >= src_n - 1) {
+            t.start[static_cast<size_t>(i)] = src_n - 1;
+            t.count[static_cast<size_t>(i)] = 1;
+            t.weights.push_back(1.0F);
+        } else {
+            t.start[static_cast<size_t>(i)] = x0;
+            t.count[static_cast<size_t>(i)] = 2;
+            t.weights.push_back(1.0F - a);
+            t.weights.push_back(a);
+        }
+    }
+    return t;
+}
+
+// Reduce one source row across x for all three output planes. `row` holds
+// 3 * dst_w floats, plane-major. GRAY8 feeds its one channel to all three.
+void reduce_row(const ImageView& src, int32_t sy, const AxisTaps& tx, int32_t dst_w, float* row) {
+    const int32_t nch = (src.fmt == NAINA_PIXFMT_GRAY8) ? 1 : 3;
+    const uint8_t* line = src.data + static_cast<size_t>(sy) * static_cast<size_t>(src.stride);
+    for (int32_t ch = 0; ch < 3; ++ch) {
+        const int32_t c = (nch == 1) ? 0 : ch;
+        float* out = row + static_cast<size_t>(ch) * static_cast<size_t>(dst_w);
+        for (int32_t x = 0; x < dst_w; ++x) {
+            const int32_t j0 = tx.start[static_cast<size_t>(x)];
+            const int32_t n = tx.count[static_cast<size_t>(x)];
+            const float* w = tx.weights.data() + tx.offset[static_cast<size_t>(x)];
+            float acc = 0.0F;
+            for (int32_t k = 0; k < n; ++k) {
+                acc += w[k] * static_cast<float>(
+                                  line[static_cast<size_t>(j0 + k) * static_cast<size_t>(nch) +
+                                       static_cast<size_t>(c)]);
+            }
+            out[x] = acc;
+        }
+    }
+}
+
+}  // namespace
+
+ShrinkFilter shrink_filter_from_string(const char* name, ShrinkFilter fallback) {
+    if (name == nullptr) {
+        return fallback;
+    }
+    const std::string v(name);
+    if (v == "bilinear") {
+        return ShrinkFilter::Bilinear;
+    }
+    if (v == "area" || v == "box") {
+        return ShrinkFilter::Area;
+    }
+    if (v == "triangle") {
+        return ShrinkFilter::Triangle;
+    }
+    if (v == "lanczos" || v == "lanczos3") {
+        return ShrinkFilter::Lanczos3;
+    }
+    return fallback;
+}
+
 void resize_det_bgr_planar_f32(const ImageView& src,
                                const DetResize& plan,
                                const float scale[3],
                                const float mean[3],
                                const float std_[3],
-                               float* dst) {
-    if (src.data == nullptr || dst == nullptr || plan.out_w <= 0 || plan.out_h <= 0) {
+                               float* dst,
+                               ShrinkFilter filter) {
+    if (src.data == nullptr || dst == nullptr || plan.out_w <= 0 || plan.out_h <= 0 ||
+        src.width <= 0 || src.height <= 0) {
         return;
     }
     const size_t plane = static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h);
-    // Map destination pixel centres back into source space.
-    const float inv_x = 1.0F / (plan.scale_x != 0.0F ? plan.scale_x : 1.0F);
-    const float inv_y = 1.0F / (plan.scale_y != 0.0F ? plan.scale_y : 1.0F);
+    const AxisTaps tx = make_axis_taps(src.width, plan.out_w, plan.scale_x, filter);
+    const AxisTaps ty = make_axis_taps(src.height, plan.out_h, plan.scale_y, filter);
 
-    for (int32_t ch = 0; ch < 3; ++ch) {
-        const float s = scale[ch];
-        const float m = mean[ch];
-        const float d = (std_[ch] != 0.0F) ? std_[ch] : 1.0F;
-        float* out = dst + static_cast<size_t>(ch) * plane;
-        for (int32_t y = 0; y < plan.out_h; ++y) {
-            const float fy = (static_cast<float>(y) + 0.5F) * inv_y - 0.5F;
+    // Separable: every source row is reduced across x once (twice where two
+    // destination rows share a boundary row), then rows are combined with the
+    // y weights. Memory is two rows, not a full intermediate image.
+    std::vector<float> row(3U * static_cast<size_t>(plan.out_w));
+    std::vector<float> acc(3U * static_cast<size_t>(plan.out_w));
+    for (int32_t y = 0; y < plan.out_h; ++y) {
+        std::fill(acc.begin(), acc.end(), 0.0F);
+        const int32_t sy0 = ty.start[static_cast<size_t>(y)];
+        const int32_t n = ty.count[static_cast<size_t>(y)];
+        const float* wy = ty.weights.data() + ty.offset[static_cast<size_t>(y)];
+        for (int32_t k = 0; k < n; ++k) {
+            reduce_row(src, sy0 + k, tx, plan.out_w, row.data());
+            for (size_t i = 0; i < acc.size(); ++i) {
+                acc[i] += wy[k] * row[i];
+            }
+        }
+        for (int32_t ch = 0; ch < 3; ++ch) {
+            const float s = scale[ch];
+            const float m = mean[ch];
+            const float d = (std_[ch] != 0.0F) ? std_[ch] : 1.0F;
+            float* out = dst + static_cast<size_t>(ch) * plane +
+                         static_cast<size_t>(y) * static_cast<size_t>(plan.out_w);
+            const float* a = acc.data() + static_cast<size_t>(ch) * static_cast<size_t>(plan.out_w);
             for (int32_t x = 0; x < plan.out_w; ++x) {
-                const float fx = (static_cast<float>(x) + 0.5F) * inv_x - 0.5F;
-                const float raw = bilinear_u8(src, fx, fy, ch);
-                out[static_cast<size_t>(y) * static_cast<size_t>(plan.out_w) +
-                    static_cast<size_t>(x)] = (raw * s - m) / d;
+                out[x] = (std::clamp(a[x], 0.0F, 255.0F) * s - m) / d;
             }
         }
     }

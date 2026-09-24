@@ -59,6 +59,24 @@ struct ModelEntry {
     std::string arch;
     std::string license;
     std::unordered_map<std::string, FileEntry> files;  // key: "onnx", "ncnn_param", ...
+
+    // Detection preprocessing and DB post-processing from the manifest's
+    // input.preprocess and output.postprocess blocks. Until 2026-09-23 these
+    // were parsed by nobody and the detector ran on compiled-in defaults; they
+    // are read now so a tier can carry its own resize filter and thresholds.
+    // Only text_detect entries fill them; other tasks keep the defaults.
+    struct Detection {
+        int32_t limit = 960;
+        int32_t multiple_of = 32;
+        std::string filter;  // "area" | "bilinear" | "triangle" | "lanczos3"; empty = module default
+        float scale[3] = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F / 255.0F};
+        float mean[3] = {0.485F, 0.456F, 0.406F};
+        float std_[3] = {0.229F, 0.224F, 0.225F};
+        float thresh = 0.2F;
+        float box_thresh = 0.4F;
+        float unclip_ratio = 1.4F;
+        int32_t max_candidates = 3000;
+    } det;
 };
 
 class ModelRegistry {

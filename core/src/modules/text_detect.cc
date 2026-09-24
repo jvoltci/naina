@@ -28,7 +28,7 @@ naina_status detect(backend::ISession* session,
     }
     const size_t plane = static_cast<size_t>(plan.out_w) * static_cast<size_t>(plan.out_h);
     std::vector<float> input(3U * plane);
-    resize_det_bgr_planar_f32(src, plan, cfg.scale, cfg.mean, cfg.std_, input.data());
+    resize_det_bgr_planar_f32(src, plan, cfg.scale, cfg.mean, cfg.std_, input.data(), cfg.filter);
 
     Tensor in =
         Tensor::view(input.data(),

@@ -4,133 +4,326 @@
   "title": "naina Model Registry",
   "description": "Schema for models/registry.yaml. Validates at CI time.",
   "type": "object",
-  "required": ["schema_version", "models"],
+  "required": [
+    "schema_version",
+    "models"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "type": "integer", "const": 1 },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
     "defaults": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "cache_root":   { "type": "string" },
-        "release_base": { "type": "string", "format": "uri-reference" },
-        "hf":           { "type": "string", "format": "uri-reference" }
+        "cache_root": {
+          "type": "string"
+        },
+        "release_base": {
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "hf": {
+          "type": "string",
+          "format": "uri-reference"
+        }
       }
     },
     "models": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/model" }
+      "items": {
+        "$ref": "#/$defs/model"
+      }
     }
   },
   "$defs": {
     "model": {
       "type": "object",
-      "required": ["id", "task", "tier", "arch", "license", "files", "input", "output"],
+      "required": [
+        "id",
+        "task",
+        "tier",
+        "arch",
+        "license",
+        "files",
+        "input",
+        "output"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id":      { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
-        "task":    { "enum": ["text_detect", "text_recognize", "layout_detect"] },
-        "tier":    { "enum": ["tiny", "small", "medium"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+        },
+        "task": {
+          "enum": [
+            "text_detect",
+            "text_recognize",
+            "layout_detect"
+          ]
+        },
+        "tier": {
+          "enum": [
+            "tiny",
+            "small",
+            "medium"
+          ]
+        },
         "lang": {
           "description": "Recognition alphabet. Absent means the default (Latin + CJK). Only text_recognize entries carry this: detection and layout are script-agnostic and shared across languages.",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*$"
         },
-        "arch":    { "type": "string" },
-        "license": { "type": "string" },
-        "paper":   { "type": "string" },
-        "files":   { "$ref": "#/$defs/files" },
-        "input":   { "$ref": "#/$defs/input" },
-        "output":  { "$ref": "#/$defs/output" },
+        "arch": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "paper": {
+          "type": "string"
+        },
+        "files": {
+          "$ref": "#/$defs/files"
+        },
+        "input": {
+          "$ref": "#/$defs/input"
+        },
+        "output": {
+          "$ref": "#/$defs/output"
+        },
         "benchmark_placeholders": {
           "type": "object",
-          "additionalProperties": { "type": "number" }
+          "additionalProperties": {
+            "type": "number"
+          }
         }
       }
     },
-
     "files": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": false,
       "properties": {
-        "onnx":       { "$ref": "#/$defs/file_entry" },
-        "ncnn_param": { "$ref": "#/$defs/file_entry" },
-        "ncnn_bin":   { "$ref": "#/$defs/file_entry" },
-        "coreml":     { "$ref": "#/$defs/file_entry" },
-        "tensorrt":   { "$ref": "#/$defs/file_entry" },
-        "openvino":   { "$ref": "#/$defs/file_entry" },
-        "charset_yaml": { "$ref": "#/$defs/file_entry" }
+        "onnx": {
+          "$ref": "#/$defs/file_entry"
+        },
+        "ncnn_param": {
+          "$ref": "#/$defs/file_entry"
+        },
+        "ncnn_bin": {
+          "$ref": "#/$defs/file_entry"
+        },
+        "coreml": {
+          "$ref": "#/$defs/file_entry"
+        },
+        "tensorrt": {
+          "$ref": "#/$defs/file_entry"
+        },
+        "openvino": {
+          "$ref": "#/$defs/file_entry"
+        },
+        "charset_yaml": {
+          "$ref": "#/$defs/file_entry"
+        }
       }
     },
     "file_entry": {
       "type": "object",
-      "required": ["url", "sha256"],
+      "required": [
+        "url",
+        "sha256"
+      ],
       "additionalProperties": false,
       "properties": {
-        "url":    { "type": "string" },
-        "sha256": { "type": "string", "pattern": "^([A-Fa-f0-9]{64}|TBD.*)$" },
-        "bytes":  { "type": "integer", "minimum": 0 },
+        "url": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^([A-Fa-f0-9]{64}|TBD.*)$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
         "source_url": {
           "type": "string",
-          "description": "Provenance only — never fetched at runtime. Records the exact upstream artifact these mirrored bytes came from, so the chain of custody stays auditable. See NOTICE."
+          "description": "Provenance only \u2014 never fetched at runtime. Records the exact upstream artifact these mirrored bytes came from, so the chain of custody stays auditable. See NOTICE."
         }
       }
     },
-
     "input": {
       "type": "object",
-      "required": ["shape", "pixfmt", "dtype"],
+      "required": [
+        "shape",
+        "pixfmt",
+        "dtype"
+      ],
       "additionalProperties": false,
       "properties": {
-        "shape":      { "type": "array", "items": { "type": "integer" }, "minItems": 1 },
-        "pixfmt":     { "enum": ["rgb", "bgr", "nv12", "yuv420p", "gray"] },
-        "dtype":      { "enum": ["f32", "f16", "u8"] },
-        "preprocess": { "$ref": "#/$defs/preprocess" }
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1
+        },
+        "pixfmt": {
+          "enum": [
+            "rgb",
+            "bgr",
+            "nv12",
+            "yuv420p",
+            "gray"
+          ]
+        },
+        "dtype": {
+          "enum": [
+            "f32",
+            "f16",
+            "u8"
+          ]
+        },
+        "preprocess": {
+          "$ref": "#/$defs/preprocess"
+        }
       }
     },
     "preprocess": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "mean":  { "type": "array", "items": { "type": "number" }, "minItems": 1 },
-        "scale": { "type": "array", "items": { "type": "number" }, "minItems": 1 },
-        "std":   { "type": "array", "items": { "type": "number" }, "minItems": 1 },
-        "height":    { "type": "integer", "minimum": 1 },
-        "max_width": { "type": "integer", "minimum": 1 },
+        "mean": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1
+        },
+        "scale": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1
+        },
+        "std": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_width": {
+          "type": "integer",
+          "minimum": 1
+        },
         "resize": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "mode":        { "enum": ["limit_max_side", "fixed", "letterbox", "stretch"] },
-            "target":      { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
-            "limit":       { "type": "integer", "minimum": 1 },
-            "multiple_of": { "type": "integer", "minimum": 1 },
-            "pad_value":   { "type": "integer" }
+            "mode": {
+              "enum": [
+                "limit_max_side",
+                "fixed",
+                "letterbox",
+                "stretch"
+              ]
+            },
+            "target": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "multiple_of": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pad_value": {
+              "type": "integer"
+            },
+            "filter": {
+              "enum": [
+                "area",
+                "bilinear",
+                "triangle",
+                "lanczos3"
+              ],
+              "description": "How a shrink is filtered. area is an exact area average (INTER_AREA); bilinear is two taps at the mapped centre, PaddleOCR's own behaviour, which aliases at large shrinks; triangle and lanczos3 are PIL's antialiased downscales. Chosen per model by measurement, 2026-09-23."
+            }
           }
         }
       }
     },
-
     "output": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "type": { "enum": ["db_probability_map", "ctc_logits", "layout_regions"] },
+        "type": {
+          "enum": [
+            "db_probability_map",
+            "ctc_logits",
+            "layout_regions"
+          ]
+        },
         "postprocess": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "thresh":         { "type": "number", "minimum": 0, "maximum": 1 },
-            "box_thresh":     { "type": "number", "minimum": 0, "maximum": 1 },
-            "unclip_ratio":   { "type": "number", "minimum": 0 },
-            "max_candidates": { "type": "integer", "minimum": 1 },
-            "blank_index":    { "type": "integer", "minimum": 0 },
-            "num_classes":    { "type": "integer", "minimum": 2 },
-            "score_thresh":   { "type": "number", "minimum": 0, "maximum": 1 },
-            "nms_iou":        { "type": "number", "minimum": 0, "maximum": 1 }
+            "thresh": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "box_thresh": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "unclip_ratio": {
+              "type": "number",
+              "minimum": 0
+            },
+            "max_candidates": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "blank_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "num_classes": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "score_thresh": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "nms_iou": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
           }
         }
       }

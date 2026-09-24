@@ -47,15 +47,29 @@ struct DetResize {
 // Pure geometry; no pixels touched. Exposed for testing.
 DetResize plan_det_resize(int32_t src_w, int32_t src_h, int32_t limit, int32_t multiple_of);
 
+// How a shrink is filtered. Enlarging is always bilinear at the mapped centre.
+//   Bilinear: two taps at the centre whatever the shrink, PaddleOCR's cv2
+//             INTER_LINEAR behaviour and naina's until 2026-09-23. Aliases.
+//   Area:     exact area average of the covered source interval (INTER_AREA).
+//   Triangle, Lanczos3: PIL's BILINEAR and LANCZOS downscales, support scaled
+//             by the shrink factor.
+// Each detection model names its filter in the registry; the measured story
+// is in image_ops.cc above make_axis_taps.
+enum class ShrinkFilter { Bilinear, Area, Triangle, Lanczos3 };
+
+// Parse a registry `filter` string; unknown or empty gives `fallback`.
+ShrinkFilter shrink_filter_from_string(const char* name, ShrinkFilter fallback);
+
 // Resize `src` into a `plan.out_w` x `plan.out_h` BGR planar float32 buffer
 // with per-channel (x*scale - mean) / std normalisation. `dst` must hold
-// 3 * out_w * out_h floats. Bilinear sampling, edge-clamped.
+// 3 * out_w * out_h floats. Separable; two rows of working memory.
 void resize_det_bgr_planar_f32(const ImageView& src,
                                const DetResize& plan,
                                const float scale[3],
                                const float mean[3],
                                const float std_[3],
-                               float* dst);
+                               float* dst,
+                               ShrinkFilter filter = ShrinkFilter::Area);
 
 // Target geometry for one rectified text strip. The recogniser's input
 // height is fixed (48 for PP-OCRv6 rec); width follows the quad's aspect

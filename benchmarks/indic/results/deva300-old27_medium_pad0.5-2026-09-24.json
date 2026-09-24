@@ -1,0 +1,13 @@
+{
+ "label": "old27_medium_pad0.5",
+ "n": 300,
+ "date": "2026-09-24",
+ "chrF++": 74.01,
+ "mean_CER": 7.12,
+ "median_CER": 0.0,
+ "catastrophic_pct_CER_gt_50": 0.0,
+ "mean_WER": 47.33,
+ "empty_predictions": 0,
+ "mean_len_ratio": 0.96,
+ "metric_impl": "sacrebleu 2.6.0 chrF++ word_order=2; jiwer 4.0.0 code-point CER"
+}
