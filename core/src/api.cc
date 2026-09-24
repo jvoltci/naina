@@ -87,6 +87,14 @@ struct naina_ctx {
     // and layout ignore this: they are script-agnostic.
     std::string language;
     int num_threads = 0;
+    // Which execution providers a backend may append. Auto is the CPU on Apple
+    // platforms and CUDA or ROCm where compiled; CPU keeps every graph on the
+    // CPU; GPU and NPU ask for the accelerator providers, CoreML included.
+    // Found 2026-09-24: with identical code, macOS 27 changed the CoreML
+    // provider's answers on 1,595 of 1,651 OmniDocBench pages and moved the tiny
+    // tier's text edit from 0.248 to 0.309; the CPU reproduced the old row on
+    // every page. So the CPU is the default and the choice stays reachable.
+    naina::Device device = naina::Device::Auto;
 
     std::mutex sess_mu;
 
@@ -375,7 +383,7 @@ struct naina_ctx {
                 return nullptr;
             }
             naina::backend::SessionOptions opts;
-            opts.device = naina::Device::Auto;
+            opts.device = device;
             opts.num_threads = num_threads;
             opts.enable_fp16 = true;
             auto sess = be->load(path, opts, out_status);
@@ -443,6 +451,32 @@ extern "C" naina_status naina_init(const naina_config* cfg, naina_ctx_t** out_ct
     }
     ctx->preferred_backend = (cfg != nullptr) ? cfg->backend : NAINA_BACKEND_AUTO;
     ctx->num_threads = (cfg != nullptr) ? cfg->num_threads : 0;
+    // The config's device, then NAINA_DEVICE=auto|cpu|gpu|npu on top, so a
+    // benchmark can pin the provider without touching the binding that called it.
+    const auto device_from = [](naina_device d) {
+        switch (d) {
+            case NAINA_DEVICE_CPU:
+                return naina::Device::CPU;
+            case NAINA_DEVICE_GPU:
+                return naina::Device::GPU;
+            case NAINA_DEVICE_NPU:
+                return naina::Device::NPU;
+            case NAINA_DEVICE_AUTO:
+                break;
+        }
+        return naina::Device::Auto;
+    };
+    ctx->device = (cfg != nullptr) ? device_from(cfg->device) : naina::Device::Auto;
+    if (const char* dev = std::getenv("NAINA_DEVICE")) {
+        if (std::strcmp(dev, "cpu") == 0)
+            ctx->device = naina::Device::CPU;
+        else if (std::strcmp(dev, "gpu") == 0)
+            ctx->device = naina::Device::GPU;
+        else if (std::strcmp(dev, "npu") == 0)
+            ctx->device = naina::Device::NPU;
+        else if (std::strcmp(dev, "auto") == 0)
+            ctx->device = naina::Device::Auto;
+    }
     // `tier` only exists in config version >= 2. Older callers get Small.
     if (cfg != nullptr && cfg->version >= 2) {
         switch (cfg->tier) {

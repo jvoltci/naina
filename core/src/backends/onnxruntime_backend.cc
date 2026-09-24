@@ -4,9 +4,13 @@
 // through the naina::backend::IBackend interface, and self-registers via
 // NAINA_REGISTER_BACKEND at static-init time.
 //
-// Execution provider selection: we ask ORT to enable the GPU EPs that the
-// build supports; ORT silently falls back to CPU when an EP isn't available
-// at runtime, which keeps single-binary distributions sane.
+// Execution provider selection: Device::Auto asks for the CUDA and ROCm
+// providers where the build has them and ORT silently falls back to the CPU
+// where it does not, which keeps single-binary distributions sane. Auto never
+// asks for CoreML: measured 2026-09-23 it was slower than the CPU on every
+// naina graph, and on 2026-09-24 a macOS update changed its answers on 1,595
+// of 1,651 benchmark pages with identical code. CoreML is there for a caller
+// who asks for the GPU or the NPU by name.
 
 #include "naina/backend.hpp"
 
@@ -180,19 +184,25 @@ public:
                 ort_opts.SetIntraOpNumThreads(opts.num_threads);
             }
             ort_opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
-            // ORT silently ignores EP appends if the EP isn't compiled in,
-            // so it's safe to ask for the lot.
-            try {
-                ort_opts.AppendExecutionProvider("CoreML", {});
-            } catch (...) {
+            // ORT silently ignores an append for a provider that isn't
+            // compiled in, so asking is safe. Device::CPU asks for none.
+            const bool ask_coreml = opts.device == Device::GPU || opts.device == Device::NPU;
+            const bool ask_gpu = opts.device == Device::Auto || opts.device == Device::GPU;
+            if (ask_coreml) {
+                try {
+                    ort_opts.AppendExecutionProvider("CoreML", {});
+                } catch (...) {
+                }
             }
-            try {
-                ort_opts.AppendExecutionProvider("CUDA", {});
-            } catch (...) {
-            }
-            try {
-                ort_opts.AppendExecutionProvider("ROCm", {});
-            } catch (...) {
+            if (ask_gpu) {
+                try {
+                    ort_opts.AppendExecutionProvider("CUDA", {});
+                } catch (...) {
+                }
+                try {
+                    ort_opts.AppendExecutionProvider("ROCm", {});
+                } catch (...) {
+                }
             }
 
 #if defined(_WIN32)

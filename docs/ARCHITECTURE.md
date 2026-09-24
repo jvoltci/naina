@@ -135,7 +135,7 @@ for the C++ implementation phase:
 | Raspberry Pi 5 (ARM Cortex-A76) | NCNN (INT8) | ONNX Runtime CPU |
 | Jetson Orin Nano | TensorRT (FP16) | ONNX Runtime CUDA |
 | Intel NUC / industrial PC | OpenVINO | ONNX Runtime CPU |
-| Apple Silicon / iPhone | CoreML (ANE) | ONNX Runtime CoreML EP |
+| Apple Silicon / iPhone | ONNX Runtime CPU (measured 2026-09-24: the CoreML EP was slower on every graph and changed its answers with a macOS update; `NAINA_DEVICE=npu` asks for it) | CoreML (ANE), unmeasured |
 | Android phone | NCNN Vulkan | ONNX Runtime NNAPI |
 | Hailo-8 / Coral Edge TPU | vendor SDK | ONNX Runtime CPU |
 | x86 server w/ NVIDIA GPU | TensorRT | ONNX Runtime CUDA |

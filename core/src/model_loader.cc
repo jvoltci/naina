@@ -152,15 +152,20 @@ int curl_progress(void* user, curl_off_t dltotal, curl_off_t dlnow, curl_off_t, 
     auto* st = static_cast<ProgressState*>(user);
     constexpr curl_off_t kStep = 4LL * 1024 * 1024;
     if (dltotal > 0 && !st->announced && dltotal >= kStep) {
-        std::fprintf(stderr, "[naina] downloading %s, %.1f MB\n", st->name.c_str(),
+        std::fprintf(stderr,
+                     "[naina] downloading %s, %.1f MB\n",
+                     st->name.c_str(),
                      static_cast<double>(dltotal) / (1024.0 * 1024.0));
         st->announced = true;
     }
     if (st->announced && dlnow - st->last_reported >= kStep) {
         st->last_reported = dlnow;
-        const double pct = dltotal > 0 ? (100.0 * static_cast<double>(dlnow) /
-                                          static_cast<double>(dltotal)) : 0.0;
-        std::fprintf(stderr, "[naina]   %s %.0f%% (%.1f of %.1f MB)\n", st->name.c_str(), pct,
+        const double pct =
+            dltotal > 0 ? (100.0 * static_cast<double>(dlnow) / static_cast<double>(dltotal)) : 0.0;
+        std::fprintf(stderr,
+                     "[naina]   %s %.0f%% (%.1f of %.1f MB)\n",
+                     st->name.c_str(),
+                     pct,
                      static_cast<double>(dlnow) / (1024.0 * 1024.0),
                      static_cast<double>(dltotal) / (1024.0 * 1024.0));
     }
@@ -220,11 +225,14 @@ naina_status download_atomic(const std::string& url, const fs::path& dest) {
         // code from both branches of a ternary and threw the URL, the HTTP
         // status and curl's own message away, which left the caller with
         // "an IO error happened somewhere".
-        std::fprintf(stderr, "[naina] download failed: %s\n[naina]   url: %s\n"
-                             "[naina]   curl: %s%s%s\n",
-                     dest.filename().string().c_str(), url.c_str(),
+        std::fprintf(stderr,
+                     "[naina] download failed: %s\n[naina]   url: %s\n"
+                     "[naina]   curl: %s%s%s\n",
+                     dest.filename().string().c_str(),
+                     url.c_str(),
                      curl_easy_strerror(rc),
-                     errbuf[0] != 0 ? ": " : "", errbuf);
+                     errbuf[0] != 0 ? ": " : "",
+                     errbuf);
         if (http_code != 0) {
             std::fprintf(stderr, "[naina]   http: %ld\n", http_code);
         }
@@ -352,7 +360,8 @@ ModelRegistry ModelRegistry::load(const fs::path& yaml_path) {
                 entry.det.thresh = post["thresh"].as<float>(entry.det.thresh);
                 entry.det.box_thresh = post["box_thresh"].as<float>(entry.det.box_thresh);
                 entry.det.unclip_ratio = post["unclip_ratio"].as<float>(entry.det.unclip_ratio);
-                entry.det.max_candidates = post["max_candidates"].as<int32_t>(entry.det.max_candidates);
+                entry.det.max_candidates =
+                    post["max_candidates"].as<int32_t>(entry.det.max_candidates);
             }
         }
         if (entry.task == "layout_detect") {

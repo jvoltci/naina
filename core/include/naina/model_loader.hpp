@@ -68,7 +68,8 @@ struct ModelEntry {
     struct Detection {
         int32_t limit = 960;
         int32_t multiple_of = 32;
-        std::string filter;  // "area" | "bilinear" | "triangle" | "lanczos3"; empty = module default
+        std::string
+            filter;  // "area" | "bilinear" | "triangle" | "lanczos3"; empty = module default
         float scale[3] = {1.0F / 255.0F, 1.0F / 255.0F, 1.0F / 255.0F};
         float mean[3] = {0.485F, 0.456F, 0.406F};
         float std_[3] = {0.229F, 0.224F, 0.225F};

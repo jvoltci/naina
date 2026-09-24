@@ -12,8 +12,8 @@ using naina::internal::plan_det_resize;
 using naina::internal::plan_quad_strip;
 using naina::internal::QuadStrip;
 using naina::internal::resize_det_bgr_planar_f32;
-using naina::internal::ShrinkFilter;
 using naina::internal::shrink_filter_from_string;
+using naina::internal::ShrinkFilter;
 
 static int failures = 0;
 

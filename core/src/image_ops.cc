@@ -340,13 +340,12 @@ struct AxisTaps {
 // area average of the covered source interval, fractional at both ends
 // (OpenCV's INTER_AREA); Triangle and Lanczos3 are PIL's antialiased filters;
 // Bilinear is two taps at the mapped centre, edge-clamped, which is what
-// every path did before 2026-09-23. Enlarging is always the bilinear pair. Plain bilinear at a 4x shrink reads two of every four
-// source pixels and misses the rest; on a 2200 x 4250 newspaper shrunk to
-// 512 x 960 that aliasing collapsed the medium DBNet's probability map to a
-// maximum of 0.02 and zero boxes, while the same page pre-shrunk with an
-// area average gave 350 boxes. PaddleOCR's own cv2.resize INTER_LINEAR has
-// the same aliasing except at an exact 2x, so this is a deliberate departure
-// from the reference pipeline, measured before it was kept.
+// every path did before 2026-09-23. Enlarging is always the bilinear pair. Plain bilinear at a 4x
+// shrink reads two of every four source pixels and misses the rest; on a 2200 x 4250 newspaper
+// shrunk to 512 x 960 that aliasing collapsed the medium DBNet's probability map to a maximum of
+// 0.02 and zero boxes, while the same page pre-shrunk with an area average gave 350 boxes.
+// PaddleOCR's own cv2.resize INTER_LINEAR has the same aliasing except at an exact 2x, so this is a
+// deliberate departure from the reference pipeline, measured before it was kept.
 float sinc(float x) {
     if (std::fabs(x) < 1e-6F) {
         return 1.0F;
@@ -358,8 +357,8 @@ float sinc(float x) {
 // Taps for a windowed kernel of radius `radius` (in destination pixels) whose
 // support is scaled by the shrink factor. Taps falling off the image are
 // dropped and the rest renormalised, which is PIL's edge handling.
-void windowed_taps(AxisTaps& t, int32_t src_n, int32_t dst_n, double span, float radius,
-                   float (*kernel)(float)) {
+void windowed_taps(
+    AxisTaps& t, int32_t src_n, int32_t dst_n, double span, float radius, float (*kernel)(float)) {
     for (int32_t i = 0; i < dst_n; ++i) {
         const double centre = (static_cast<double>(i) + 0.5) * span - 0.5;
         int32_t j0 = static_cast<int32_t>(std::ceil(centre - static_cast<double>(radius) * span));

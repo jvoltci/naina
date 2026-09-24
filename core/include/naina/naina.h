@@ -66,6 +66,13 @@ typedef enum {
     NAINA_BACKEND_EXECUTORCH,
 } naina_backend;
 
+/* Where the graphs run. AUTO is the measured default for the platform: the CPU
+ * on Apple silicon (the CoreML provider was slower on every naina graph and
+ * changed its answers with a macOS update, 2026-09-24; see
+ * benchmarks/omnidocbench/README.md), CUDA or ROCm where the build has them.
+ * GPU and NPU ask for the accelerator providers by name, CoreML included, and
+ * are unmeasured. The environment variable NAINA_DEVICE=auto|cpu|gpu|npu
+ * overrides the config. */
 typedef enum {
     NAINA_DEVICE_AUTO = 0,
     NAINA_DEVICE_CPU,
