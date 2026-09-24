@@ -84,6 +84,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/jvoltci/naina
 
+extra_javascript:
+  - javascripts/a11y.js
+
 extra_css:
   - stylesheets/altrusian.tokens.css
   - stylesheets/mkdocs.css

@@ -88,12 +88,15 @@
       <!-- Drop target doubles as the empty state, and is the heaviest object on
            the page by design: --line-2 dashed --brand-7, --r-5, --rim, --space-9
            of block padding. -->
-      <section
+      <!-- A div, not a section: role="button" is not appropriate on a landmark-ish
+           element, and the name comes from the visible title and hint so what is
+           read aloud is what is shown (Lighthouse 2026-09-24). -->
+      <div
         id="drop"
         class="drop"
         tabindex="0"
         role="button"
-        aria-label="Choose an image, or drop one here"
+        aria-labelledby="drop-title drop-hint"
       >
         <input id="file" type="file" accept="image/*,application/pdf" multiple hidden />
         <div class="drop-inner">
@@ -107,10 +110,10 @@
               stroke-linejoin="round"
             />
           </svg>
-          <p class="drop-title">Drop a document</p>
-          <p class="drop-hint faint">PDF or image, paste, or click to choose</p>
+          <p class="drop-title" id="drop-title">Drop a document</p>
+          <p class="drop-hint faint" id="drop-hint">PDF or image, paste, or click to choose</p>
         </div>
-      </section>
+      </div>
 
       <!-- The strongest claim naina has, placed where the question gets asked
            rather than in the notes at the bottom. info is the achromatic status
