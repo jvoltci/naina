@@ -5,9 +5,9 @@
  "naina_version": "0.2.1",
  "device": "Apple M5 Pro, Darwin 27.0.0",
  "pages": 1651,
- "cold_first_page_ms": 200.5,
- "warm_median_ms": 183.6,
- "warm_p95_ms": 924.6,
+ "cold_first_page_ms": 140.3,
+ "warm_median_ms": 154.4,
+ "warm_p95_ms": 710.5,
  "empty_outputs": 0,
  "text_block_edit": 0.2477,
  "display_formula_edit": 0.799,
@@ -23,5 +23,8 @@
  "text_en_ch_mixed_page_avg": 0.293,
  "text_en_ch_mixed_pages": 112,
  "text_other_page_avg": 0.0599,
- "text_other_pages": 2
+ "text_other_pages": 2,
+ "execution_provider": "CPU (NAINA_DEVICE=cpu; the default since ab01c40)",
+ "note": "Accuracy from the NAINA_DEVICE=cpu run of 2026-09-24 22:15, byte-identical to the macOS 26.5 run (tiny-1651p-2026-09-23.json) on 1,651 of 1,651 pages. Speed columns from the 2026-09-25 rerun with the default provider, whose 1,651 outputs were byte-identical to that run; the battery-powered timings of the first run (200.5, 183.6, 924.6 ms) are superseded.",
+ "speed_run": "2026-09-25 01:20, default provider (no NAINA_DEVICE), quiet machine on mains power"
 }

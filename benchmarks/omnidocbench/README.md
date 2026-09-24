@@ -36,25 +36,32 @@ Edit distance is lower-is-better; TEDS is higher-is-better. Empty output scores
 looks like. Speed is a warm median with one Engine held for the whole run; the
 first page, which pays model load, is reported separately.
 
-**Full set, 1,651 pages, Apple M5 Pro. Tiny accuracy 2026-09-22 with speed re-measured 2026-09-23; small and medium 2026-09-23; see the correction below.**
+**Full set, 1,651 pages, Apple M5 Pro, macOS 27.0, CPU execution provider,
+naina 0.2.1 at ab01c40. Accuracy 2026-09-24 (tiny, small) and 2026-09-25
+(medium); speed from the same runs, see the note under the table.**
 
-| Tier | Text | Reading order | Formulas | Tables (TEDS) | Warm median | p95 |
-|---|---|---|---|---|---|---|
-| tiny | **0.248** | 0.492 | 0.799 | 0.000 | 367 ms | 2167 ms |
-| small | **0.233** | 0.460 | 0.773 | 0.000 | 1188 ms | 6456 ms |
-| medium | **0.184** | 0.442 | 0.794 | 0.000 | 2746 ms | 13177 ms |
+| Tier | Text | Reading order | Formulas | Tables (TEDS) | Empty pages | First page | Warm median | p95 |
+|---|---|---|---|---|---|---|---|---|
+| tiny | **0.248** | 0.492 | 0.799 | 0.000 | 0 | 140 ms | 154 ms | 711 ms |
+| small | **0.233** | 0.460 | 0.773 | 0.000 | 2 | 529 ms | 578 ms | 2,934 ms |
+| medium | **0.173** | 0.434 | 0.769 | 0.000 | 0 | 1,933 ms | 2,066 ms | 11,208 ms |
+
+Rows: `results/tiny-1651p-2026-09-24-cpu.json`,
+`results/small-1651p-2026-09-24-cpu.json`,
+`results/medium-1651p-2026-09-25-cpu.json`. Each row records its provider
+and what else the machine was doing.
 
 Text by page language, full set, averaged per page and then across pages
 (the evaluator's own convention; language from the ground truth's page
-attribute; the evaluator writes its breakdown only for small runs):
+attribute):
 
 | Language (pages) | tiny | small | medium |
 |---|---|---|---|
-| english (721) | 0.181 | 0.178 | 0.160 |
-| simplified_chinese (710) | 0.259 | 0.230 | 0.169 |
-| en_ch_mixed (112) | 0.293 | 0.247 | 0.219 |
-| traditional_chinese (12) | 0.585 | 0.522 | 0.461 |
-| other (2) | 0.060 | 0.114 | 0.089 |
+| english (721) | 0.181 | 0.178 | 0.145 |
+| simplified_chinese (710) | 0.259 | 0.230 | 0.156 |
+| en_ch_mixed (112) | 0.293 | 0.247 | 0.213 |
+| traditional_chinese (12) | 0.585 | 0.522 | 0.520 |
+| other (2) | 0.060 | 0.114 | 0.088 |
 
 **Corrected 2026-09-23.** An earlier version of this line averaged over matched
 blocks instead of pages (tiny english 0.276, simplified_chinese 0.384). Block
@@ -63,25 +70,59 @@ against 14,863) they made small look worse than tiny on English while it is
 better by pages. Traditional Chinese at 0.52 to 0.59 on 12 pages remains the
 script-coverage question for Task 1.
 
-**Medium, and a defect it exposed.** Medium reads a page 7.5x slower than tiny
-(2,746 ms median, p95 13.2 s, first page 3.1 s with model load) for a text
-edit distance 26 percent lower, and it is the best tier on every language.
-Five medium outputs are empty, all dense US newspaper pages (Wall Street
-Journal pages 004 and 018, USA Today 012, Washington Post 042, Boston Globe
-025) on which tiny and small produced 1,900 to 13,800 characters. Rerun alone
-on the USA Today page (4,250 x 2,200): tiny detects 437 text boxes, medium
-detects none. The medium detector under-fires on very small text after the
-960-pixel resize; on the Globe and Mail page it found 84 boxes where tiny
-found 536. Cause found the same day, by bisection: naina's own downscale samples the
-source with plain bilinear interpolation and no antialiasing, and at a 4.4x
-shrink the medium detector's probability map collapses (maximum 0.02) while
-the tiny model's survives; with an area-averaged shrink the medium map is
-normal and the same page pre-shrunk gives 367 boxes. The fix is a proper
-downsampler in `core/src/image_ops.cc`, followed by a rerun of every tier,
-because tiny's map improves too. Until then the medium row includes those
-five pages as empties, scored as such.
+**What the tiers buy.** Small reads a page 3.7x slower than tiny
+for a text edit distance 6 percent lower. Medium reads a page 13.4x
+slower than tiny and 3.6x slower than small for a text edit distance 30
+percent lower than tiny and 26 percent lower than small, and it is the best
+tier on every language. The two small-tier empties are near-blank pages (39
+and 8 characters at tiny), not a tier failure.
 
-Small reads a page 3.2x slower than tiny for a text edit distance 6 percent lower. Two small-tier pages produced empty output; both are near-blank pages (39 and 8 characters at tiny), not a tier failure. The small run's wall clock (01:33 to 07:47) is mostly the machine asleep; per-page timings are unaffected.
+**The execution provider, 2026-09-24.** Until commit ab01c40 naina appended
+ONNX Runtime's CoreML provider by default. On 2026-09-23 it measured slower
+than the CPU on every naina graph (1.3x to 4x in its default format).
+Overnight into 2026-09-24 the Mac went from macOS 26.5 to 27.0 and, with
+identical code and weights, tiny's outputs changed on 1,595 of 1,651 pages
+(text 0.248 to 0.309) and small's on 1,470. CPU-only runs under macOS 27
+reproduced the 26.5 rows: tiny byte-identical on 1,651 of 1,651 pages, small
+on 1,650 of 1,651, every score equal to four decimals. So the earlier rows
+were CPU rows in effect, and the CPU is now the default provider;
+`NAINA_DEVICE=auto|cpu|gpu|npu` overrides it. The CoreML rows are kept as
+`results/*-coreml.json` for the record and are not comparable with the table
+above. Under CoreML medium scored 0.1731 against 0.1728 here while 618 pages
+differed in content: the provider moved medium's outputs without moving its
+aggregate. Rows compare only inside one provider and one OS.
+
+**Medium, the defect it exposed, and the fix.** On 2026-09-23 five medium
+outputs were empty, all dense US newspaper pages (Wall Street Journal pages
+004 and 018, USA Today 012, Washington Post 042, Boston Globe 025) on which
+tiny and small produced 1,900 to 13,800 characters. Rerun alone on the USA
+Today page (4,250 x 2,200): tiny detected 437 text boxes, medium none. Cause,
+by bisection the same day: naina's own downscale sampled the source with
+plain bilinear interpolation and no antialiasing, and at a 4.4x shrink the
+medium detector's probability map collapsed (maximum 0.02) while the tiny
+model's survived; the same page pre-shrunk with an area average gave 367
+boxes. The fix is a separable resampler in `core/src/image_ops.cc` with the
+filter chosen per tier on the full set and pinned in the registry: tiny
+bilinear, small bilinear, medium triangle. Lanczos3 won a 30-page subset for
+tiny and lost the full set (0.3115 against 0.2477), so a subset picks a
+candidate and never a winner. Judged in one environment, old code against
+new code, both macOS 27 under the CoreML provider then in use: medium 0.1839
+to 0.1731 text, 5 empty pages to 0, every document type improved or held.
+The medium row above is the new code on the CPU. The evidence and the reject
+table are in the lab's private note on the detector resampler (2026-09-23).
+
+**Speed, and what the machine was doing.** Every speed above is from the same
+run as its accuracy row, on mains power, with the prediction process alone on
+the machine apart from an editor and an idle browser: an ordinary desktop,
+not a lab. Small's first ten minutes shared the machine with a wheel build
+and a core rebuild; the median is robust to that, the p95 less so. Tiny's
+speed is from a rerun on a quiet machine after the others finished, whose
+1,651 outputs were byte-identical to its accuracy run. As the check this
+README promised on 2026-09-23, 50 pages spread across the set were then read
+warm three times each, in isolation: tiny 172 ms against 154 ms over the full run, small 599 against 578,
+medium 2,112 against 2,066, each within 11 percent, the sample being a
+little heavier in newspapers than the set. Rule kept: no speed is
+published from a machine running another job or on battery.
 
 The full set is harder than the 18-page demo (tiny text 0.248 here against 0.185
 there), which is why the demo table below is kept only as a record and never
@@ -103,10 +144,10 @@ downloads and the evaluator shared the machine; file timestamps put the demo
 run wholly inside the tiny run. Rerun alone on 2026-09-23 the predictions were
 byte-identical (`diff -rq`, 0 files differ), so the accuracy columns did not
 move, and the warm median fell to 367 ms, p95 to 2,167 ms, first page to
-179 ms. Even that rerun shared the desktop with ordinary use, so every speed
-here is an ordinary-desktop number, not lab-idle. Rule adopted: no speed is
+179 ms. Those figures were taken under the CoreML provider on macOS 26.5 and
+are superseded by the table above. Rule adopted that day: no speed is
 published from a machine running any other job, and a full run's per-page
-times are checked against an isolated warm read of the same page.
+times are checked against an isolated warm read.
 
 **The medium tier's cost, profiled 2026-09-23.** The demo table's medium
 timing called `naina.read()`, which builds a throwaway Engine per call. With
@@ -119,8 +160,7 @@ CoreML provider in its default format is slower than the CPU on every naina
 graph (1.3x to 4x); in MLProgram format it is 1.5x faster for medium
 detection and 1.9x for recognition, and cannot compile the medium layout
 graph. Thread count is not a lever (best setting 1.10x over the default at
-tiny, none at medium). The medium and small rows are being filled by the
-same sequential rerun.
+tiny, none at medium).
 
 For scale, the reference PaddleOCR pipeline scores 0.071 on English text over
 the full set. Naina's medium tier at 0.094 English on eighteen pages is in the
