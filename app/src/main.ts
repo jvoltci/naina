@@ -680,3 +680,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 }
 
 wireThemeToggles();
+
+// A door, not a secret: three taps on the mark within a second and a half open
+// Wake (public/wake/), where 4,096 stars learn a galaxy and then the visitor.
+// Nothing hints at it, and the page works the same without it.
+let taps: number[] = [];
+document.querySelector('.brand')?.addEventListener('click', () => {
+  const now = performance.now();
+  taps = taps.filter((t) => now - t < 1500).concat(now);
+  if (taps.length >= 3) location.href = './wake/';
+});

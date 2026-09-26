@@ -260,37 +260,26 @@ body {
   padding-block: var(--space-4);
 }
 
-/* A stylised eye: naina means eyes.
- *
- * IT WAS INK, AND THAT WAS THE WRONG CALL. The old note read "Ink, not an accent
- * hue", on the same reasoning that kept the accent off first paint: hue is
- * reserved for meaning, and a logo means nothing. Rendered, the consequence was
- * that the only saturated pixels above the fold were a dashed border and a 40px
- * arrow — the page read as a wireframe of itself.
- *
- * A logo is the one place a brand hue is the meaning. --brand-11 rather than
- * --brand-9, because this is a 1.5px stroke and a 7px pupil at 22px: step 11 is
- * the text role (5.14:1 on --neutral-1 light, 5.32:1 dark) and clears 1.4.11's
- * 3:1 for a graphical object with room to spare, where step 9 is solved as a
- * FILL and its contrast contract is about its ink, not about the page behind it.
- * The wordmark stays --neutral-12: two brand objects side by side would make the
- * header the loudest thing on the page, which is the mistake the offline badge
- * used to make in green. */
+/* The mark: naina's transit, the same drawing as the favicon and
+ * docs/brand/naina-mark.svg. The ring is ink and the disc is Altrusian Blue,
+ * as on every
+ * Altrusian mark: the one place a brand hue is the
+ * meaning. It replaced a CSS eye in the retired violet on 2026-09-26. The brand
+ * block takes no text selection and no double-tap zoom, so three quick taps on
+ * it read as nothing at all. */
+.brand {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
 .eye {
   width: 22px;
   height: 22px;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  border: 1.5px solid var(--brand-11);
-  position: relative;
-  display: inline-block;
   flex: none;
+  color: var(--neutral-12);
 }
-.eye::after {
-  content: '';
-  position: absolute;
-  inset: 32% 34%;
-  border-radius: 50%;
-  background: var(--brand-11);
+.eye .disc {
+  fill: var(--brand-9);
 }
 
 .wordmark {
