@@ -37,7 +37,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-REPO = "lognjais/naina"
+REPO = "jvoltci/naina"
 TAG = "models-v1"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STAGING = REPO_ROOT / "build" / "model-mirror"

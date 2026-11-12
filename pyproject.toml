@@ -27,11 +27,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lognjais/naina"
-Source = "https://github.com/lognjais/naina"
-Documentation = "https://lognjais.github.io/naina/doc/"
-Demo = "https://lognjais.github.io/naina/"
-Changelog = "https://github.com/lognjais/naina/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/jvoltci/naina"
+Source = "https://github.com/jvoltci/naina"
+Documentation = "https://jvoltci.github.io/naina/doc/"
+Demo = "https://jvoltci.github.io/naina/"
+Changelog = "https://github.com/jvoltci/naina/blob/master/CHANGELOG.md"
 
 [tool.scikit-build]
 cmake.version = ">=3.24"

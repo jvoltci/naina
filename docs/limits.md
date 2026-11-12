@@ -24,7 +24,7 @@ so the default has to be displaced by a margin rather than merely beaten.
     88 MB where a named language needs 11 MB. On a build with no network in the
     core (browser, Android), stage the candidates first or name the language.
 
-    The [web app](https://lognjais.github.io/naina/) handles this in two phases:
+    The [web app](https://jvoltci.github.io/naina/) handles this in two phases:
     read with the default, and only if the result is weak fetch the other
     alphabets and ask the core to decide. So a Latin document still costs 11 MB.
 
@@ -141,7 +141,7 @@ WebGPU is opt-in until there are real numbers.
 - **Autoregressive VLM parsing** (PaddleOCR-VL, DeepSeek-OCR). These need a
   tokenizer, KV cache and sampling loop, a different engine, not a module.
 - **Face and person understanding.** naina v0.1 was this. It is preserved on the
-  [`face-stack`](https://github.com/lognjais/naina/tree/face-stack) branch.
+  [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack) branch.
 - Vector stores, dashboards, UI frameworks.
 - Crime prediction, risk scoring, government-ID matching.
 

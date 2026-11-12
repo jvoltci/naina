@@ -2,8 +2,8 @@ name: Deploy web app to GitHub Pages
 
 # Publishes two things to one Pages site:
 #
-#   lognjais.github.io/naina/       the OCR tool
-#   lognjais.github.io/naina/doc/   the documentation
+#   jvoltci.github.io/naina/       the OCR tool
+#   jvoltci.github.io/naina/doc/   the documentation
 #
 # Pages serves a single artifact, so the docs are built into the app's dist/doc
 # and the whole tree is uploaded together.

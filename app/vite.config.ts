@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 const WASM_SRC = resolve(__dirname, '../bindings/wasm/dist/naina.wasm');
 
 export default defineConfig({
-  // Served from https://lognjais.github.io/naina/ in production, / in dev.
+  // Served from https://jvoltci.github.io/naina/ in production, / in dev.
   base: process.env.VITE_BASE ?? '/',
 
   plugins: [

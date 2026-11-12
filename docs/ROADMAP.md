@@ -8,8 +8,8 @@ fully usable surface, not a half-built layer.
 > manifest-driven model loader. v0.2 repurposed that engine for document
 > reading, which is what the name always suited, *naina* means eyes. The face
 > modules are preserved on the
-> [`face-stack`](https://github.com/lognjais/naina/tree/face-stack) branch. See
-> [the design spec](https://github.com/lognjais/naina/blob/master/docs/design/specs/2026-07-28-naina-ocr-design.md) for why.
+> [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack) branch. See
+> [the design spec](https://github.com/jvoltci/naina/blob/master/docs/design/specs/2026-07-28-naina-ocr-design.md) for why.
 
 ## v0.1: Engine  *(shipped)*
 
@@ -153,13 +153,13 @@ Turn a bag of lines into a document.
       via `stagingPlan()`, so the cache layout has one definition.
 - [x] Verified reading a real A4 page: 33 lines, mean confidence 0.99,
       correct `#`/`##` structure, deterministic across runs.
-- [x] Production web app at `lognjais.github.io/naina/`, client-side only, no
+- [x] Production web app at `jvoltci.github.io/naina/`, client-side only, no
       upload, no account, no page limit. PDFs via pdf.js, multi-page batches, OCR
       in a Web Worker so the tab never freezes, offline after first visit.
       Verified end to end in real Chrome via Playwright (`app/test/e2e.mjs`),
       which is the only test that can reach OffscreenCanvas, createImageBitmap,
       module workers and ASYNCIFY-in-a-worker.
-- [x] mkdocs-material documentation at `lognjais.github.io/naina/doc/`
+- [x] mkdocs-material documentation at `jvoltci.github.io/naina/doc/`
 - [x] **Weights are served same-origin, not from the GitHub release.** Release
       assets 302 to release-assets.githubusercontent.com and neither hop sends
       `Access-Control-Allow-Origin`, so a browser cannot fetch them at all,

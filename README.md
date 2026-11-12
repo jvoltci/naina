@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://lognjais.github.io/naina/doc/assets/hero.svg" alt="naina, reads any document, one C++ core, every language" width="100%">
+  <img src="https://jvoltci.github.io/naina/doc/assets/hero.svg" alt="naina, reads any document, one C++ core, every language" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/lognjais/naina/actions/workflows/ci.yml"><img src="https://github.com/lognjais/naina/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/lognjais/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-1634C2.svg" alt="License"></a>
-  <a href="https://github.com/lognjais/naina/stargazers"><img src="https://img.shields.io/github/stars/lognjais/naina.svg?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/jvoltci/naina/actions/workflows/ci.yml"><img src="https://github.com/jvoltci/naina/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-1634C2.svg" alt="License"></a>
+  <a href="https://github.com/jvoltci/naina/stargazers"><img src="https://img.shields.io/github/stars/jvoltci/naina.svg?style=social" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -19,14 +19,14 @@
 <h3 align="center">Read any document. One C++ core, everywhere.</h3>
 
 <p align="center">
-  <a href="https://lognjais.github.io/naina/"><b>Try it online</b></a> ·
-  <a href="https://lognjais.github.io/naina/doc/"><b>Documentation</b></a> ·
+  <a href="https://jvoltci.github.io/naina/"><b>Try it online</b></a> ·
+  <a href="https://jvoltci.github.io/naina/doc/"><b>Documentation</b></a> ·
   <a href="docs/ARCHITECTURE.md"><b>Architecture</b></a> ·
   <a href="docs/ROADMAP.md"><b>Roadmap</b></a> ·
-  <a href="https://github.com/lognjais/naina/releases/tag/models-v1"><b>Model weights</b></a>
+  <a href="https://github.com/jvoltci/naina/releases/tag/models-v1"><b>Model weights</b></a>
 </p>
 
-**[Use it in your browser now →](https://lognjais.github.io/naina/)** No install, no
+**[Use it in your browser now →](https://jvoltci.github.io/naina/)** No install, no
 upload, no account. PDFs and images, in ten scripts.
 
 ## Scripts
@@ -147,12 +147,12 @@ browser build could not describe document structure. See
 | Python | ✅ published | `pip install naina` |
 | Rust | ✅ published | `cargo add naina` |
 | Flutter | ✅ published | `flutter pub add naina`, Android verified on device, iOS unproven |
-| WASM / browser | ✅ published | `npm i @jvoltci/naina-wasm`, or [use it online](https://lognjais.github.io/naina/) |
+| WASM / browser | ✅ published | `npm i @jvoltci/naina-wasm`, or [use it online](https://jvoltci.github.io/naina/) |
 | Node / TypeScript | ✅ published | `npm i @jvoltci/naina`, needs a local toolchain to build on install |
 | MCP (for LLM tools) | ✅ | [`mcp/`](mcp/), two tools, ten scripts, verified over stdio |
 
 **Weights are mirrored, not borrowed.** naina fetches from
-[its own release](https://github.com/lognjais/naina/releases/tag/models-v1), not
+[its own release](https://github.com/jvoltci/naina/releases/tag/models-v1), not
 from upstream hosting, so an upstream re-tag or deletion cannot break installs.
 Every file is pinned by sha256, so a corrupted or substituted download fails
 closed rather than producing silently wrong output. Provenance for each artifact
@@ -185,7 +185,7 @@ Reproduce: `ctest --preset macos-arm64 -R test_ocr_e2e --output-on-failure`
 on the A4 page at `tiny`, native produced 35 lines and WASM 33, with 33
 character-identical. One marginal blob landed on the other side of DBNet's 0.3
 threshold because arm64 NEON and WASM SIMD kernels differ in the last float bits.
-Details in [what it cannot do](https://lognjais.github.io/naina/doc/limits/).
+Details in [what it cannot do](https://jvoltci.github.io/naina/doc/limits/).
 
 > **On the accuracy numbers everyone quotes.** Vendors self-report 96.33% on
 > OmniDocBench v1.6 while independent evaluation of the same benchmark tops out
@@ -206,11 +206,11 @@ Details in [what it cannot do](https://lognjais.github.io/naina/doc/limits/).
 | Layout → structured markdown, column-aware reading order | ✅ |
 | Geometry, convex hull, min-area rect, polygon offset, no OpenCV | ✅ |
 | Browser, WASM core + onnxruntime-web, PDF, offline | ✅ |
-| Web app + docs live at [lognjais.github.io/naina](https://lognjais.github.io/naina/) | ✅ |
+| Web app + docs live at [jvoltci.github.io/naina](https://jvoltci.github.io/naina/) | ✅ |
 | ONNX Runtime backend | ✅ |
 | Android on-device (Flutter) | ✅ 33 lines at 0.992 on a real page |
 | iOS | ⚠️ podspec written, never built or run |
-| WebGPU | ⚠️ off by default, it silently drops layout, see [limits](https://lognjais.github.io/naina/doc/limits/) |
+| WebGPU | ⚠️ off by default, it silently drops layout, see [limits](https://jvoltci.github.io/naina/doc/limits/) |
 | NCNN backend | ⚠️ compiles, but `FindNCNN.cmake` does not locate a brew install |
 | Recognition batching (one strip per call today) | ⚠️ correct but unoptimised |
 | Detecting a script mismatch rather than trusting the caller | ❌ |
@@ -283,7 +283,7 @@ dependency bump away, not a rewrite.
 *naina* (नैना) means **eyes** in Hindi. The library reads.
 
 It began as a face-recognition runtime under the same name. That work is
-preserved on the [`face-stack`](https://github.com/lognjais/naina/tree/face-stack)
+preserved on the [`face-stack`](https://github.com/jvoltci/naina/tree/face-stack)
 branch, and the engine it produced, C ABI, backend abstraction, manifest-driven
 model loader, is what made this pivot cheap.
 

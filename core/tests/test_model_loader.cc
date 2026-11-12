@@ -96,7 +96,7 @@ int main() {
             // an upstream re-tag or deletion cannot break installs. ${release_base}
             // must have been substituted.
             const std::string& url = det->files.at("onnx").url;
-            EXPECT(url.find("github.com/lognjais/naina/releases") != std::string::npos);
+            EXPECT(url.find("github.com/jvoltci/naina/releases") != std::string::npos);
             EXPECT(url.find("${release_base}") == std::string::npos);
             EXPECT(url.find("${hf}") == std::string::npos);
             // The detection blocks are parsed, not skipped: these are the

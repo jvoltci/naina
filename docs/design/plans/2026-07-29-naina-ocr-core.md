@@ -480,7 +480,7 @@ face weights) and add an `hf` base:
 ```yaml
 defaults:
   cache_root: "${NAINA_CACHE:-~/.cache/naina/models}"
-  release_base: "https://github.com/lognjais/naina/releases/download/models-v1"
+  release_base: "https://github.com/jvoltci/naina/releases/download/models-v1"
   # PaddleOCR publishes permissively-licensed ONNX exports on the Hugging
   # Face Hub. ${hf} resolves to this base.
   hf: "https://huggingface.co/PaddlePaddle"

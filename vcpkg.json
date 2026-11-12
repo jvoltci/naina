@@ -3,7 +3,7 @@
     "name": "naina",
     "version-string": "0.1.0-dev",
     "description": "Embeddable computer-vision runtime for face & person understanding",
-    "homepage": "https://github.com/lognjais/naina",
+    "homepage": "https://github.com/jvoltci/naina",
     "license": "Apache-2.0",
     "dependencies": [],
     "features": {

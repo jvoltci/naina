@@ -18,8 +18,8 @@ This plan spans two working directories. **Every task states which.**
 
 | Path | Repo | State |
 |---|---|---|
-| `~/Documents/code/achroma` | `lognjais/achroma` | does not exist yet; created in Task 1 |
-| `~/Documents/code/naina` | `lognjais/naina` | on branch `achroma-design-system` |
+| `~/Documents/code/achroma` | `jvoltci/achroma` | does not exist yet; created in Task 1 |
+| `~/Documents/code/naina` | `jvoltci/naina` | on branch `achroma-design-system` |
 
 **Ordering constraint, non-negotiable:** naina's CI runs `actions/checkout@v4` then `npm install` in `app/` and checks out *only naina*. A `file:../../achroma` dependency resolves on a laptop and fails in Actions. So **Task 11 publishes `achroma@0.1.0` before Phase B begins.**
 
@@ -101,9 +101,9 @@ Expected: `Initialized empty Git repository in .../achroma/.git/`
   "keywords": ["design-system", "design-tokens", "css", "achromatic", "monochrome", "greyscale"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lognjais/achroma.git"
+    "url": "git+https://github.com/jvoltci/achroma.git"
   },
-  "homepage": "https://lognjais.github.io/achroma/",
+  "homepage": "https://jvoltci.github.io/achroma/",
   "exports": {
     "./achroma.css": "./achroma.css",
     "./achroma.tailwind.css": "./achroma.tailwind.css",
@@ -163,7 +163,7 @@ meaning.
 Zero dependencies. Plain CSS custom properties, no build step, no runtime. React,
 Next, Vite, Astro and a bare `.html` file all consume the identical file.
 
-Live token reference: <https://lognjais.github.io/achroma/>
+Live token reference: <https://jvoltci.github.io/achroma/>
 
 ## Install
 
@@ -1457,7 +1457,7 @@ git commit -m "feat: proof.html — the review surface for a file you cannot rea
 ```yaml
 name: Deploy web app to GitHub Pages
 
-# Publishes proof.html as lognjais.github.io/achroma/ — the living token
+# Publishes proof.html as jvoltci.github.io/achroma/ — the living token
 # reference.
 #
 # No build step: achroma is plain CSS. The artifact is proof.html renamed to
@@ -1548,9 +1548,9 @@ git commit -m "ci: publish proof.html to Pages, gated on the ramp assertions"
 
 ```bash
 cd ~/Documents/code/achroma
-gh repo create lognjais/achroma --public \
+gh repo create jvoltci/achroma --public \
   --description "An achromatic design system. Zero dependencies, plain CSS custom properties." \
-  --homepage "https://lognjais.github.io/achroma/" \
+  --homepage "https://jvoltci.github.io/achroma/" \
   --source=. --remote=origin --push
 ```
 
@@ -1559,8 +1559,8 @@ Expected: the repo URL, then a push summary.
 - [ ] **Step 2: Enable Pages**
 
 ```bash
-gh api -X POST repos/lognjais/achroma/pages -f build_type=workflow 2>&1 | head -5
-gh workflow run deploy-web.yml --repo lognjais/achroma
+gh api -X POST repos/jvoltci/achroma/pages -f build_type=workflow 2>&1 | head -5
+gh workflow run deploy-web.yml --repo jvoltci/achroma
 ```
 
 Pages needs no paid plan on a public repo. If the POST reports the site already exists, that is fine — proceed to the workflow run.
@@ -1579,10 +1579,10 @@ Expected: only the files this plan created. No `.env`, no keys, no `node_modules
 - [ ] **Step 4: Confirm the workflow went green**
 
 ```bash
-sleep 45 && gh run list --repo lognjais/achroma --limit 3
+sleep 45 && gh run list --repo jvoltci/achroma --limit 3
 ```
 
-Expected: a `completed` / `success` run. If it failed, read the log before proceeding: `gh run view --repo lognjais/achroma --log-failed`.
+Expected: a `completed` / `success` run. If it failed, read the log before proceeding: `gh run view --repo jvoltci/achroma --log-failed`.
 
 ---
 
@@ -1720,13 +1720,13 @@ Every id in the DOM contract is preserved. The Google Fonts link goes (fonts now
          SVG (and GitHub raw serves .svg as text/plain regardless). -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="naina" />
-    <meta property="og:url" content="https://lognjais.github.io/naina/" />
+    <meta property="og:url" content="https://jvoltci.github.io/naina/" />
     <meta property="og:title" content="naina — free OCR that runs in your browser" />
     <meta
       property="og:description"
       content="Read text out of PDFs and images entirely on your device. No upload, no account, no limits. Ten scripts including Devanagari. Works offline after the first visit."
     />
-    <meta property="og:image" content="https://lognjais.github.io/naina/og.png" />
+    <meta property="og:image" content="https://jvoltci.github.io/naina/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
@@ -1740,7 +1740,7 @@ Every id in the DOM contract is preserved. The Google Fonts link goes (fonts now
       name="twitter:description"
       content="PDFs and images, read on your device. No upload, no account, no limits. Ten scripts. Works offline."
     />
-    <meta name="twitter:image" content="https://lognjais.github.io/naina/og.png" />
+    <meta name="twitter:image" content="https://jvoltci.github.io/naina/og.png" />
   </head>
   <body>
     <header class="top">
@@ -1750,7 +1750,7 @@ Every id in the DOM contract is preserved. The Google Fonts link goes (fonts now
       </div>
       <nav>
         <a href="./doc/">Docs</a>
-        <a href="https://github.com/lognjais/naina">GitHub</a>
+        <a href="https://github.com/jvoltci/naina">GitHub</a>
         <span id="offline-badge" class="badge" hidden>offline ready</span>
       </nav>
     </header>
@@ -1910,7 +1910,7 @@ Every id in the DOM contract is preserved. The Google Fonts link goes (fonts now
     <footer>
       <p>
         Apache-2.0 · PP-OCRv6 and PP-DocLayout weights, mirrored and hash-pinned ·
-        <a href="https://github.com/lognjais/naina">source</a>
+        <a href="https://github.com/jvoltci/naina">source</a>
       </p>
     </footer>
 
@@ -2646,7 +2646,7 @@ git commit -m "docs: mark the Achroma spec implemented for naina"
 
 # Phase C — documentation (last)
 
-Deliberately last, so the docs describe what shipped rather than what was planned. Scope is naina's: mkdocs-material, a handful of pages, no bespoke site. `proof.html` remains the live token reference at `lognjais.github.io/achroma/`; these pages land at `/achroma/doc/`, mirroring naina's `/naina/doc/` split exactly.
+Deliberately last, so the docs describe what shipped rather than what was planned. Scope is naina's: mkdocs-material, a handful of pages, no bespoke site. `proof.html` remains the live token reference at `jvoltci.github.io/achroma/`; these pages land at `/achroma/doc/`, mirroring naina's `/naina/doc/` split exactly.
 
 ## Task 19: Documentation pages
 
@@ -2666,9 +2666,9 @@ Two deliberate departures from naina's config, both because this is an achromati
 ```yaml
 site_name: achroma
 site_description: An achromatic design system. Black, white and greys, with hue reserved for meaning. Zero dependencies.
-site_url: https://lognjais.github.io/achroma/doc/
-repo_url: https://github.com/lognjais/achroma
-repo_name: lognjais/achroma
+site_url: https://jvoltci.github.io/achroma/doc/
+repo_url: https://github.com/jvoltci/achroma
+repo_name: jvoltci/achroma
 edit_uri: edit/master/docs/
 
 docs_dir: docs
@@ -2733,7 +2733,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/lognjais/achroma
+      link: https://github.com/jvoltci/achroma
 
 extra_css:
   - assets/extra.css

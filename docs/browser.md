@@ -2,7 +2,7 @@
 
 The same C++ core, compiled to WebAssembly. **143 KB brotli.**
 
-Use the hosted tool at **[lognjais.github.io/naina](https://lognjais.github.io/naina/)**,
+Use the hosted tool at **[jvoltci.github.io/naina](https://jvoltci.github.io/naina/)**,
 or embed it.
 
 ## Install

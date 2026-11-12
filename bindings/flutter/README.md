@@ -1,19 +1,19 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/lognjais/naina/master/bindings/flutter/doc/assets/hero.png" alt="naina — read text from images, on the device" width="620">
+  <img src="https://raw.githubusercontent.com/jvoltci/naina/master/bindings/flutter/doc/assets/hero.png" alt="naina — read text from images, on the device" width="620">
 </p>
 
 <p align="center">
   <a href="https://pub.dev/packages/naina"><img src="https://img.shields.io/pub/v/naina.svg" alt="pub"></a>
-  <a href="https://github.com/lognjais/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="license"></a>
+  <a href="https://github.com/jvoltci/naina/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="license"></a>
   <img src="https://img.shields.io/badge/platforms-Android%20%7C%20iOS-lightgrey.svg" alt="platforms">
 </p>
 
 <h3 align="center">Read text from images, on the device.</h3>
 
 <p align="center">
-  <a href="https://lognjais.github.io/naina/doc/">Documentation</a> ·
-  <a href="https://lognjais.github.io/naina/">Try it in a browser</a> ·
-  <a href="https://github.com/lognjais/naina">Source</a>
+  <a href="https://jvoltci.github.io/naina/doc/">Documentation</a> ·
+  <a href="https://jvoltci.github.io/naina/">Try it in a browser</a> ·
+  <a href="https://github.com/jvoltci/naina">Source</a>
 </p>
 
 ```dart
@@ -128,7 +128,7 @@ naina's Python, Node and browser packages, not yet here.
 
 **`arm64-v8a` and `x86_64` only.** No 32-bit ABIs.
 
-Full list: [lognjais.github.io/naina/doc/limits](https://lognjais.github.io/naina/doc/limits/).
+Full list: [jvoltci.github.io/naina/doc/limits](https://jvoltci.github.io/naina/doc/limits/).
 
 ## Status
 

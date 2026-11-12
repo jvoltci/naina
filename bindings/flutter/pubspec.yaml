@@ -1,9 +1,9 @@
 name: naina
 description: Read text from images on-device. OCR from naina's C++ core over FFI, with no network calls and no cloud API.
-homepage: https://lognjais.github.io/naina/
-repository: https://github.com/lognjais/naina
-issue_tracker: https://github.com/lognjais/naina/issues
-documentation: https://lognjais.github.io/naina/doc/
+homepage: https://jvoltci.github.io/naina/
+repository: https://github.com/jvoltci/naina
+issue_tracker: https://github.com/jvoltci/naina/issues
+documentation: https://jvoltci.github.io/naina/doc/
 version: 0.2.1
 
 topics:

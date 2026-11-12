@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const URL_ = 'https://lognjais.github.io/naina/';
+const URL_ = 'https://jvoltci.github.io/naina/';
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage();
 const errs = [];

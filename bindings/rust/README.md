@@ -77,7 +77,7 @@ assumed.
 Arabic, Tamil, Telugu, Thai, Korean and Cyrillic are not wired up yet.
 Handwriting is unreliable. Tables are located and labelled but their cell
 structure is not parsed. Full list:
-[lognjais.github.io/naina/doc/limits](https://lognjais.github.io/naina/doc/limits/).
+[jvoltci.github.io/naina/doc/limits](https://jvoltci.github.io/naina/doc/limits/).
 
 ## Publishing
 

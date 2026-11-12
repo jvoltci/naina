@@ -312,14 +312,14 @@ Both are wanted; one Pages site per repo. **The app is the front door** — a
 visitor should be able to read a document before reading a word of prose.
 
 ```
-lognjais.github.io/naina/         → the in-browser OCR PWA
-lognjais.github.io/naina/doc/     → mkdocs-material documentation
+jvoltci.github.io/naina/         → the in-browser OCR PWA
+jvoltci.github.io/naina/doc/     → mkdocs-material documentation
 ```
 
 Build order in the Pages workflow, into a single artifact:
 
 1. `mkdocs build --site-dir _site/doc` — with `site_url` set to
-   `https://lognjais.github.io/naina/doc/` so internal links and the search
+   `https://jvoltci.github.io/naina/doc/` so internal links and the search
    index resolve correctly.
 2. Vite build of `app/` into `_site/` with `base: '/naina/'`.
 3. One `actions/upload-pages-artifact` on `_site`.

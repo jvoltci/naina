@@ -201,7 +201,7 @@ naina_status download_atomic(const std::string& url, const fs::path& dest) {
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 60L);
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1024L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "naina/0.1 (+https://github.com/lognjais/naina)");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "naina/0.1 (+https://github.com/jvoltci/naina)");
 
     char errbuf[CURL_ERROR_SIZE] = {0};
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);

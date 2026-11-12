@@ -6,13 +6,13 @@
     "types": "dist/index.d.ts",
     "type": "commonjs",
     "license": "Apache-2.0",
-    "homepage": "https://github.com/lognjais/naina",
+    "homepage": "https://github.com/jvoltci/naina",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/lognjais/naina.git"
+        "url": "git+https://github.com/jvoltci/naina.git"
     },
     "bugs": {
-        "url": "https://github.com/lognjais/naina/issues"
+        "url": "https://github.com/jvoltci/naina/issues"
     },
     "engines": {
         "node": ">=18"
@@ -44,7 +44,7 @@
     "binary": {
         "module_name": "naina-node",
         "module_path": "./build/Release/",
-        "host": "https://github.com/lognjais/naina/releases/download/",
+        "host": "https://github.com/jvoltci/naina/releases/download/",
         "remote_path": "v{version}",
         "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz"
     }

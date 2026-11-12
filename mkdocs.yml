@@ -1,8 +1,8 @@
 site_name: naina
 site_description: "Embeddable document-reading runtime. OCR from one C++ core: server, laptop, phone, Pi, browser."
-site_url: https://lognjais.github.io/naina/doc/
-repo_url: https://github.com/lognjais/naina
-repo_name: lognjais/naina
+site_url: https://jvoltci.github.io/naina/doc/
+repo_url: https://github.com/jvoltci/naina
+repo_name: jvoltci/naina
 edit_uri: edit/master/docs/
 
 docs_dir: docs
@@ -82,7 +82,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/lognjais/naina
+      link: https://github.com/jvoltci/naina
 
 extra_javascript:
   - javascripts/a11y.js

@@ -1,7 +1,7 @@
 # Achroma — an achromatic design system
 
-**Status:** implemented and shipped, 2026-07-30. `lognjais/achroma` is public with
-CI green; `lognjais.github.io/achroma/` serves `proof.html` and `/doc/`. naina's app
+**Status:** implemented and shipped, 2026-07-30. `jvoltci/achroma` is public with
+CI green; `jvoltci.github.io/achroma/` serves `proof.html` and `/doc/`. naina's app
 is restyled and approved.
 
 **Two things remain open.** `npm publish` is blocked on 2FA and must be run by
@@ -74,7 +74,7 @@ not free.
 | Question | Decision |
 |---|---|
 | Hue policy | Achromatic + **semantic hue only**. Greys carry all structure, hierarchy, brand and interaction. Hue appears only where it *means* something. |
-| Where it lives | Its **own repo**, `lognjais/achroma`, published to npm as `@jvoltci/achroma` with zero dependencies. Not in naina — naina is a C++ OCR library, and every future site would otherwise depend on it to get its greys. |
+| Where it lives | Its **own repo**, `jvoltci/achroma`, published to npm as `@jvoltci/achroma` with zero dependencies. Not in naina — naina is a C++ OCR library, and every future site would otherwise depend on it to get its greys. |
 | Character | Editorial/Swiss skeleton + an atmospheric layer. |
 | Type | **Geist + Geist Mono**, self-hosted, variable. |
 | Modes | Both. **Light canonical**, dark derived. |
@@ -225,7 +225,7 @@ One file, plain CSS custom properties, no build step.
 
 ## Architecture
 
-A new repository, `lognjais/achroma`, at `~/Documents/code/achroma`. **Public and
+A new repository, `jvoltci/achroma`, at `~/Documents/code/achroma`. **Public and
 open source**, Apache-2.0. Published to npm as unscoped **`achroma`** (verified
 available 2026-07-30, as was `@jvoltci/achroma`).
 
@@ -263,7 +263,7 @@ Vite, Astro and a bare `.html` all consume the identical file.
 `proof.html` exists because a token file cannot be reviewed by reading it. It
 renders the full ramp, every type step, both modes side by side, the grain on and
 off, and each component pattern. The Pages workflow publishes it as
-`lognjais.github.io/achroma/`, which makes it the living reference rather than a
+`jvoltci.github.io/achroma/`, which makes it the living reference rather than a
 local scratch file.
 
 ### Ordering constraint

@@ -4,8 +4,8 @@ Read documents. One C++ core, everywhere.
 
 *naina* means **eyes** in Hindi.
 
-[Try it in your browser →](https://lognjais.github.io/naina/){ .md-button .md-button--primary }
-[GitHub →](https://github.com/lognjais/naina){ .md-button }
+[Try it in your browser →](https://jvoltci.github.io/naina/){ .md-button .md-button--primary }
+[GitHub →](https://github.com/jvoltci/naina){ .md-button }
 
 ---
 

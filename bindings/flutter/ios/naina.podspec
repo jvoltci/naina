@@ -6,9 +6,9 @@ Pod::Spec.new do |s|
   s.version          = '0.2.0'
   s.summary          = 'On-device OCR from naina\'s C++ core.'
   s.description      = 'Reads text from images entirely on device. No network calls.'
-  s.homepage         = 'https://github.com/lognjais/naina'
+  s.homepage         = 'https://github.com/jvoltci/naina'
   s.license          = { :type => 'Apache-2.0', :file => '../LICENSE' }
-  s.author           = { 'jvoltci' => 'https://github.com/lognjais' }
+  s.author           = { 'jvoltci' => 'https://github.com/jvoltci' }
   s.source           = { :path => '.' }
   s.platform         = :ios, '13.0'
   s.dependency 'Flutter'

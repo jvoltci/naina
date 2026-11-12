@@ -25,7 +25,7 @@ schema_version: 1
 
 defaults:
   cache_root: "${NAINA_CACHE:-~/.cache/naina/models}"
-  release_base: "https://github.com/lognjais/naina/releases/download/models-v1"
+  release_base: "https://github.com/jvoltci/naina/releases/download/models-v1"
   # PaddleOCR publishes permissively-licensed ONNX exports on the Hugging
   # Face Hub. The `${hf}` placeholder resolves to this base URL.
   hf: "https://huggingface.co/PaddlePaddle"

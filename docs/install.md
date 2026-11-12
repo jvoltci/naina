@@ -39,7 +39,7 @@ console.log(page.markdown);
 
 ## Browser
 
-Nothing to install, [use the tool](https://lognjais.github.io/naina/).
+Nothing to install, [use the tool](https://jvoltci.github.io/naina/).
 
 To embed it in your own page:
 
@@ -54,7 +54,7 @@ See [Browser](browser.md); there is one deployment detail you cannot skip.
 Needs CMake 3.24+, a C++20 compiler, and ONNX Runtime.
 
 ```bash
-git clone https://github.com/lognjais/naina
+git clone https://github.com/jvoltci/naina
 cd naina
 cmake --preset macos-arm64        # or linux-x64, windows-x64
 cmake --build build/macos-arm64
